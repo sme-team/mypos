@@ -52,7 +52,7 @@ mypos/
 | Backend | Node.js (Fastify) |
 | Database | SQLite (offline) / PostgreSQL (cloud option) |
 | CI/CD | GitHub Actions |
-| License | MIT License |
+| License | GNU License |
 
 ---
 
