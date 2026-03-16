@@ -1,0 +1,106 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient for screen -->
+    <linearGradient id="screenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22c55e;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="32" dy="32" stdDeviation="32" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Gradient for "my" text -->
+    <linearGradient id="myTextGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b9d;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient for "Pos" text -->
+    <linearGradient id="posTextGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Text shadow filter -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="4" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="480" fill="url(#bgGradient)" stroke="#ffffff" stroke-width="32"/>
+  
+  <!-- POS Terminal Base -->
+  <rect x="192" y="576" width="640" height="256" rx="64" ry="64" fill="#2d3748" filter="url(#dropShadow)"/>
+  
+  <!-- POS Screen -->
+  <rect x="256" y="256" width="512" height="384" rx="48" ry="48" fill="#1a202c" stroke="#4a5568" stroke-width="16"/>
+  <rect x="288" y="288" width="448" height="256" rx="32" ry="32" fill="url(#screenGradient)"/>
+  
+  <!-- Screen content - simplified chart/graph -->
+  <line x1="352" y1="480" x2="416" y2="416" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  <line x1="416" y1="416" x2="480" y2="448" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  <line x1="480" y1="448" x2="544" y2="352" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  <line x1="544" y1="352" x2="608" y2="384" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  <line x1="608" y1="384" x2="672" y2="320" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  
+  <!-- Small dots for data points -->
+  <circle cx="352" cy="480" r="25.6" fill="#ffffff"/>
+  <circle cx="416" cy="416" r="25.6" fill="#ffffff"/>
+  <circle cx="480" cy="448" r="25.6" fill="#ffffff"/>
+  <circle cx="544" cy="352" r="25.6" fill="#ffffff"/>
+  <circle cx="608" cy="384" r="25.6" fill="#ffffff"/>
+  <circle cx="672" cy="320" r="25.6" fill="#ffffff"/>
+  
+  <!-- Keypad buttons -->
+  <rect x="288" y="608" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  <rect x="384" y="608" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  <rect x="480" y="608" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  
+  <rect x="288" y="672" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  <rect x="384" y="672" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  <rect x="480" y="672" width="64" height="48" rx="9.6" fill="#4a5568"/>
+  
+  <!-- Card reader slot -->
+  <rect x="608" y="624" width="128" height="96" rx="16" fill="#1a202c" stroke="#4a5568" stroke-width="9.6"/>
+  <rect x="624" y="656" width="96" height="9.6" fill="#4a5568"/>
+  
+  <!-- Small accent -->
+  <circle cx="832" cy="256" r="64" fill="#fbbf24" opacity="0.8"/>
+  <text x="832" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#ffffff">$</text>
+  
+  <!-- myPos text in center with modern styling -->
+  <defs>
+    <!-- Gradient for "my" text -->
+    <linearGradient id="myTextGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b9d;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient for "Pos" text -->
+    <linearGradient id="posTextGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Text shadow filter -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="4" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Modern styled myPos text -->
+  <g filter="url(#textShadow)">
+    <text x="410" y="540" text-anchor="middle" font-family="'Segoe UI', 'Roboto', 'Inter', sans-serif" font-size="140" font-weight="800" fill="url(#myTextGradient)" letter-spacing="-2">my</text>
+    <text x="630" y="540" text-anchor="middle" font-family="'Segoe UI', 'Roboto', 'Inter', sans-serif" font-size="140" font-weight="300" fill="url(#posTextGradient)" letter-spacing="1">Pos</text>
+  </g>
+</svg>

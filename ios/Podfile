@@ -1,0 +1,27 @@
+require_relative '../node_modules/react-native/scripts/react_native_pods'
+
+prepare_react_native_project!
+
+# 0.76 yêu cầu iOS 15.1
+platform :ios, '15.1'
+
+prepare_react_native_project!
+
+# LƯU Ý: Nếu tên dự án của bạn không phải myPos, hãy đổi tên ở dòng dưới
+target 'myPos' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true,
+    :fabric_enabled => false # Tạm để false để build cho nhẹ
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false
+    )
+  end
+end
