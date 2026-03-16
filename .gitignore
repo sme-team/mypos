@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 # android build
 android/app/build/
 android/build/
+*.apk
+*.aab
