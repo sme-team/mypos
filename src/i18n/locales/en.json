@@ -130,5 +130,24 @@
     "about": "About the App",
     "aboutDesc": "Version, terms, and policies",
     "support": "SUPPORT & INFORMATION"
+  },
+  "category": {
+    "title": "Category Management",
+    "addCategory": "Add Category",
+    "addVariant": "Add Variant",
+    "variants": "VARIANTS",
+    "categoryName": "Category Name",
+    "variantName": "Variant Name",
+    "price": "Price",
+    "unit": "Unit",
+    "tab": {
+      "all": "All",
+      "selling": "Selling",
+      "storage": "Storage"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save"
   }
 }

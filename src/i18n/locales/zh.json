@@ -1,0 +1,228 @@
+{
+  "landing": {
+    "title": "myPOS",
+    "welcome": "欢迎来到 myPOS",
+    "welcome_back": "欢迎回来",
+    "welcome_login": "请登录以继续",
+    "description": "为您的企业提供智能 POS 和住宿管理解决方案",
+    "register": "立即注册",
+    "login": "登录",
+    "no_account": "还没有账户？"
+  },
+  "auth": {
+    "welcomeTitle": "欢迎来到 myPOS",
+    "welcomeSubtitle": "智能高效的销售点管理",
+    "signInTitle": "登录",
+    "signInSubtitle": "使用您的 Google 账户继续",
+    "btnGoogle": "使用 Google 继续",
+    "btnTryDemo": "免费试用",
+    "orDivider": "或",
+    "step1Hint": "点击上面的按钮打开浏览器并使用 Google 登录。",
+    "step2Title": "粘贴授权代码",
+    "step2Desc": "使用 Google 成功登录后，从回调 URL 复制代码并粘贴到此处：",
+    "codePlaceholder": "在此粘贴授权代码…",
+    "btnConfirm": "确认登录",
+    "btnCancel": "取消，返回",
+    "connecting": "正在连接…",
+    "processing": "正在处理…",
+    "errNoCode": "请在下面的字段中粘贴授权代码。",
+    "errLoginFailed": "登录失败。请重试。",
+    "errNetworkFailed": "无法连接到服务器。检查网络连接。",
+    "successMsg": "登录成功！",
+    "placeholderEmail": "用户名/电子邮件",
+    "placeholderPassword": "密码",
+    "placeholderloginEmail": "输入电子邮件或用户名",
+    "placeholderloginPassword": "输入密码",
+    "showPassword": "显示",
+    "hidePassword": "隐藏",
+    "rememberMe": "记住我",
+    "forgotPassword": "忘记密码",
+    "btnSignIn": "登录"
+  },
+  "home": {
+    "greeting": "你好，{{name}}！",
+    "role": "角色：{{role}}",
+    "btnLogout": "登出",
+    "confirmLogout": "你确定要登出吗？",
+    "confirmLogoutCancel": "取消",
+    "confirmLogoutConfirm": "登出"
+  },
+  "common": {
+    "back": "返回",
+    "ok": "确定",
+    "error": "发生错误",
+    "cancel": "取消",
+    "delete": "删除"
+  },
+  "dashboard": {
+    "overview": "概览",
+    "updatedAt": "更新于",
+    "today": "今天",
+    "revenueToday": "今日收入",
+    "newOrders": "新订单",
+    "roomCapacity": "房间容量",
+    "checkins": "入住",
+    "recentActivity": "最近活动",
+    "viewAll": "查看全部",
+    "pos": "销售",
+    "hotel": "住宿",
+    "cost": "运营成本"
+  },
+  "sidebar": {
+    "dashboard": "盘板",
+    "sales": "销售",
+    "categories": "类别",
+    "customers": "客户",
+    "report": "报告",
+    "setting": "设置"
+  },
+  "pos": {
+    "title": "销售",
+    "search_placeholder": "搜索产品...",
+    "search_placeholder_combined": "产品 Products",
+    "category_all": "全部",
+    "category_food": "食品",
+    "category_drink": "饮料",
+    "category_refreshment": "饮料",
+    "category_merchandise": "商品",
+    "no_products": "未找到产品",
+    "select_business_type": "选择业务类型",
+    "select_business_subtitle": "请选择您要管理的类别",
+    "food_and_drink": "食品和饮料",
+    "food_and_drink_desc": "管理食品和饮料",
+    "accommodation": "住宿",
+    "accommodation_desc": "管理房间和预订",
+    "status_all": "全部",
+    "status_empty": "空房",
+    "status_occupied": "已占用",
+    "status_cleaning": "清洁中",
+    "status_maintenance": "维护中",
+    "cart": "购物车",
+    "guest": "散客",
+    "member": "会员",
+    "subtotal": "小计",
+    "tax": "税金",
+    "total": "总计"
+  },
+  "payment": {
+    "title": "支付",
+    "clear": "清除",
+    "search_customers": "搜索客户...",
+    "cart_empty": "购物车为空",
+    "select_table": "选择桌子"
+  },
+  "place": {
+    "title": "分类和地点",
+    "description": "这是您可以管理分类和地点的地方。"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "常规设置",
+    "notifications": "通知",
+    "account": "账户",
+    "language": "语言",
+    "systemLanguage": "系统语言",
+    "profile": "个人资料",
+    "profileDesc": "更新您的个人信息",
+    "currency": "货币管理",
+    "currencyDesc": "管理货币和汇率",
+    "organization": "组织结构",
+    "organizationDesc": "管理分支和组织结构",
+    "history": "活动历史",
+    "historyDesc": "查看系统活动日志",
+    "help": "帮助和支持",
+    "helpDesc": "支持中心和使用指南",
+    "about": "关于应用",
+    "aboutDesc": "版本、条款和政策",
+    "support": "支持和信息"
+  },
+  "tabs": {
+    "overview": "概览",
+    "sale": "销售",
+    "room": "房间",
+    "report": "报告",
+    "settings": "设置"
+  },
+  "report": {
+    "title": "详细报告",
+    "exportExcel": "导出 Excel",
+    "totalRevenue": "总收入",
+    "viewAll": "查看全部",
+    "filter": {
+      "fromDate": "开始日期",
+      "toDate": "结束日期",
+      "displayAs": "显示为",
+      "selectFromDate": "选择开始日期",
+      "selectToDate": "选择结束日期"
+    },
+    "displayMode": {
+      "day": "天",
+      "week": "周",
+      "month": "月"
+    },
+    "chart": {
+      "title": "收入概览",
+      "sales": "销售",
+      "lodging": "住宿",
+      "gym": "健身房"
+    },
+    "section": {
+      "sales": "销售业务",
+      "lodging": "住宿业务",
+      "totalRevenue": "总收入"
+    },
+    "items": {
+      "blackCoffee": "冰黑咖啡",
+      "phoBeef": "特色牛肉粉",
+      "peachTea": "蜜桃茶柠檬草",
+      "deluxe302": "豪华房 302",
+      "suite101": "套房 101",
+      "family205": "家庭房 205"
+    },
+    "export": {
+      "title": "导出 Excel 文件",
+      "export": "立即导出",
+      "templateexport": "报告模板",
+      "confirmDelete": "你想删除这个工作表吗",
+      "dataexport": "导出数据",
+      "create": "添加新工作表",
+      "description": "您可以将多种报告添加到同一个 Excel 文件中，以便更有效地比较数据。"
+    }
+  },
+  "calendar": {
+    "cancel": "取消",
+    "confirm": "确认"
+  },
+  "excel": {
+    "orderDetail": "订单详情",
+    "revenueByDay": "按天收入汇总",
+    "topSelling": "畅销商品报告",
+    "roomOccupancy": "房间入住率报告",
+    "bookingHistoryDetail": "预订历史详情",
+    "revenueByRoomType": "按房间类型收入",
+    "select": "选择报告类型...",
+    "select_template": "选择模板...",
+    "select_before": "请选择上面的报告类型",
+    "s1aHkd": "表格 S1a-HKD",
+    "s2aHkd": "表格 S2a-HKD"
+  },
+  "category": {
+    "title": "分类管理",
+    "addCategory": "添加分类",
+    "addVariant": "添加变体",
+    "variants": "变体",
+    "categoryName": "分类名称",
+    "variantName": "变体名称",
+    "price": "价格",
+    "unit": "单位",
+    "tab": {
+      "all": "全部",
+      "selling": "销售",
+      "storage": "存储"
+    }
+  },
+  "common": {
+    "cancel": "取消",
+    "save": "保存"
+  }
+}

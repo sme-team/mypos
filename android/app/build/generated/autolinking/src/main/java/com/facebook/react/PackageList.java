@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;
 // react-native-bootsplash
 import com.zoontek.rnbootsplash.RNBootSplashPackage;
+// react-native-image-picker
+import com.imagepicker.ImagePickerPackage;
 // react-native-randombytes
 import com.bitgo.randombytes.RandomBytesPackage;
 // react-native-safe-area-context
@@ -69,6 +71,7 @@ public class PackageList {
       new MainReactPackage(mConfig),
       new AsyncStoragePackage(),
       new RNBootSplashPackage(),
+      new ImagePickerPackage(),
       new RandomBytesPackage(),
       new SafeAreaContextPackage(),
       new SQLitePluginPackage(),

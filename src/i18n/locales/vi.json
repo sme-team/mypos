@@ -50,7 +50,9 @@
   "common": {
     "back": "Quay lại",
     "ok": "Đồng ý",
-    "error": "Đã xảy ra lỗi"
+    "error": "Đã xảy ra lỗi",
+    "cancel": "Huỷ",
+    "save": "Lưu"
   },
   "dashboard": {
     "overview": "Tổng quan",
@@ -61,7 +63,10 @@
     "roomCapacity": "Công suất phòng",
     "checkins": "Lượt check-in",
     "recentActivity": "Hoạt động gần đây",
-    "viewAll": "Xem tất cả"
+    "viewAll": "Xem tất cả",
+    "pos": "Bán hàng",
+    "hotel": "Lưu trú",
+    "cost": "Chi phí vận hành"
   },
   "sidebar": {
     "dashboard": "Bảng điều khiển",
@@ -130,5 +135,90 @@
     "about": "Về ứng dụng",
     "aboutDesc": "Phiên bản, điều khoản và chính sách",
     "support": "HỖ TRỢ & THÔNG TIN"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "sale": "Sale",
+    "room": "Phòng",
+    "report": "Báo cáo",
+    "settings": "Cài đặt"
+  },
+  "report": {
+    "title": "Báo cáo chi tiết",
+    "exportExcel": "Xuất Excel",
+    "totalRevenue": "Tổng doanh thu",
+    "viewAll": "Xem tất cả",
+    "filter": {
+      "fromDate": "Từ ngày",
+      "toDate": "Tới ngày",
+      "displayAs": "Hiển thị theo",
+      "selectFromDate": "Chọn ngày bắt đầu",
+      "selectToDate": "Chọn ngày kết thúc"
+    },
+    "displayMode": {
+      "day": "Ngày",
+      "week": "Tuần",
+      "month": "Tháng"
+    },
+    "chart": {
+      "title": "Tổng quát doanh thu",
+      "sales": "Bán hàng ",
+      "lodging": "Lưu trú ",
+      "gym": "Gym"
+    },
+    "section": {
+      "sales": "Kinh doanh bán hàng",
+      "lodging": "Kinh doanh lưu trú",
+      "totalRevenue": "Tổng doanh thu"
+    },
+    "items": {
+      "blackCoffee": "Cà phê đen đá",
+      "phoBeef": "Phở bò đặc biệt",
+      "peachTea": "Trà đào cam sả",
+      "deluxe302": "Phòng Deluxe 302",
+      "suite101": "Phòng Suite 101",
+      "family205": "Phòng Family 205"
+    },
+    "export": {
+      "title": "Xuất file Excel",
+      "export": "Xuất file ngay",
+      "templateexport": "Mẫu báo cáo",
+      "confirmDelete": "Bạn có muốn xóa sheet này không",
+      "dataexport": "Dữ liệu xuất file",
+      "create": "Tạo thêm sheet mới",
+      "description": "Bạn có thể thêm nhiều loại báo cáo khác nhau vào cùng một file Excel để so sánh dữ liệu hiệu quả hơn."
+    }
+  },
+  "calendar": {
+    "cancel": "Hủy",
+    "confirm": "Xác nhận"
+  },
+  "excel": {
+    "orderDetail": "123",
+    "revenueByDay": "Tổng hợp doanh thu theo ngày",
+    "topSelling": "Báo cáo hàng bán chạy",
+    "roomOccupancy": "Báo cáo công suất phòng",
+    "bookingHistoryDetail": "Lịch sử đặt phòng chi tiết",
+    "revenueByRoomType": "Doanh thu theo loại phòng",
+    "select": "Chọn loại báo cáo...",
+    "select_template": "Chọn mẫu...",
+    "select_before": "Hãy chọn loại báo cáo ở phía trên",
+    "s1aHkd": "Mẫu số S1a-HKD",
+    "s2aHkd": "Mẫu số S2a-HKD"
+  },
+  "category": {
+    "title": "Quản lý danh mục",
+    "addCategory": "Thêm danh mục",
+    "addVariant": "Thêm biến thể",
+    "variants": "CÁC BIẾN THỂ",
+    "categoryName": "Tên danh mục",
+    "variantName": "Tên biến thể",
+    "price": "Giá",
+    "unit": "Đơn vị",
+    "tab": {
+      "all": "Tất cả",
+      "selling": "Bán hàng",
+      "storage": "Lưu trú"
+    }
   }
 }

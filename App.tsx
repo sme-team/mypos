@@ -30,8 +30,12 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import PreLogin from './src/screens/login/PreLogin';
 import {UILogin} from './src/screens/login/UILogin';
 import DashBoard from './src/screens/dashboard/Dashboard';
+import PosResident from './src/screens/pos/PosResident';
 import PlaceScreen from './src/screens/booking/Place';
 import Setting from './src/screens/setting/Setting';
+import Report from './src/screens/report/Report';
+import ReportExport from './src/screens/excel-export/ExcelExport';
+import CategoryManagement from './src/screens/category/CategoryManagement';
 
 import Sidebar from './src/components/Sidebar';
 import {AuthProvider, useAuth} from './src/store/authStore';
@@ -52,8 +56,9 @@ type Screen =
   | 'report'
   | 'setting'
   | 'pos_resident'
-  | 'place_resident';
-import PosResident from './src/screens/pos/PosResident';
+  | 'place_resident'
+  | 'report_export';
+
 // ─── Inner app ────────────────────────────────────────────────────────────────
 const AppContent: React.FC = () => {
   const {state: auth, logout} = useAuth();
@@ -227,28 +232,6 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* ── Categories (Place - Legacy) ────────────────────────────────── */}
-      {screen === 'categories' && (
-        <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-          <View className="flex-row items-center px-4 pt-3 pb-2 border-b border-gray-100">
-            <TouchableOpacity
-              onPress={() => setIsSidebarVisible(true)}
-              className="p-1">
-              <Icon name="menu" size={28} color="#4B5563" />
-            </TouchableOpacity>
-            <Text className="text-lg font-bold ml-4 text-gray-800">
-              {t('sidebar.categories')}
-            </Text>
-          </View>
-          <View className="flex-1 items-center justify-center">
-            <Icon name="category" size={64} color="#CBD5E1" />
-            <Text className="text-gray-400 mt-4 font-medium italic">
-              Chức năng đang được phát triển
-            </Text>
-          </View>
-        </View>
-      )}
-
       {/* ── POS Resident ───────────────────────────────────────── */}
       {screen === 'pos_resident' && (
         <PosResident
@@ -291,6 +274,31 @@ const AppContent: React.FC = () => {
         </View>
       )} */}
 
+      {/* ── Categories (Place - Legacy) ────────────────────────────────── */}
+      {screen === 'categories' && (
+        <CategoryManagement
+          onOpenMenu={() => setIsSidebarVisible(true)}
+          onBack={() => setScreen('categories')}
+        />
+      )}
+
+      {/* ── Report ─────────────────────────────────────────────── */}
+      {screen === 'report' && (
+        <Report
+          onOpenMenu={() => setIsSidebarVisible(true)}
+          onExport={() => setScreen('report_export')}
+        />
+      )}
+
+      {/* ── Report Export ───────────────────────────────────────── */}
+      {screen === 'report_export' && (
+        <ReportExport
+          onOpenMenu={() => setIsSidebarVisible(true)}
+          onBack={() => setScreen('report')}
+        />
+      )}
+
+      {/* ── Setting ─────────────────────────────────────────────── */}
       {screen === 'setting' && (
         <Setting
           onOpenMenu={() => setIsSidebarVisible(true)}

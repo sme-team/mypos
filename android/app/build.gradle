@@ -115,7 +115,7 @@ dependencies {
     implementation project(":react-native-safe-area-context")
     implementation project(":react-native-sqlite-storage")
     implementation project(":react-native-vector-icons")
-
+    implementation project(':react-native-image-picker')
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

@@ -1,4 +1,5 @@
-com.mypos:xml/rn_dev_preferences = 0x7f100000
+com.mypos:xml/rn_dev_preferences = 0x7f100001
+com.mypos:xml/imagepicker_provider_paths = 0x7f100000
 com.mypos:styleable/ViewStubCompat = 0x7f0f0032
 com.mypos:styleable/View = 0x7f0f0030
 com.mypos:styleable/SwitchCompat = 0x7f0f002d
