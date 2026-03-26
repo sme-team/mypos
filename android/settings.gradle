@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+}
+
+plugins {
+    id("com.facebook.react.settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand()
+}
+
+rootProject.name = "myPOS-Resident"
+include(":app")
+
+// Manual includes to ensure these libraries are available to the build.
+// (Autolinking should handle this, but missing includes will break PackageList compilation.)
+include(":react-native-safe-area-context")
+project(":react-native-safe-area-context").projectDir = new File(rootProject.projectDir, "../node_modules/react-native-safe-area-context/android")
+
+include(":react-native-vector-icons")
+project(":react-native-vector-icons").projectDir = new File(rootProject.projectDir, "../node_modules/react-native-vector-icons/android")
+
+include ':react-native-image-picker'
+project(':react-native-image-picker').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-image-picker/android')
