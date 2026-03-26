@@ -46,17 +46,17 @@ export const useResponsive = () => {
     default: T;
   }): T => {
     if (isLargeTablet && values.largeTablet !== undefined)
-      return values.largeTablet;
+      {return values.largeTablet;}
 
-    if (isTablet && values.tablet !== undefined) return values.tablet;
+    if (isTablet && values.tablet !== undefined) {return values.tablet;}
 
     if (isLargePhone && values.largePhone !== undefined)
-      return values.largePhone;
+      {return values.largePhone;}
 
-    if (isPhone && values.phone !== undefined) return values.phone;
+    if (isPhone && values.phone !== undefined) {return values.phone;}
 
     if (isSmallPhone && values.smallPhone !== undefined)
-      return values.smallPhone;
+      {return values.smallPhone;}
 
     return values.default;
   };

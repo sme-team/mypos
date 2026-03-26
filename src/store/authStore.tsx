@@ -16,7 +16,7 @@
  * Đây là file quan trọng nhất để kết nối giữa logic và giao diện người dùng (UI).
  *  Nó sử dụng React Context API và useReducer.
 Nhiệm vụ: Quản lý trạng thái "Đang đăng nhập hay chưa" cho toàn bộ ứng dụng.
-Cơ chế Hydrate (Hồi phục): Khi app vừa mở lên (trong useEffect), 
+Cơ chế Hydrate (Hồi phục): Khi app vừa mở lên (trong useEffect),
 nó gọi tokenManager.init(). Nếu tìm thấy token cũ trong máy, nó tự động set isAuthenticated: true.
 Đây là lý do tại sao bạn không phải đăng nhập lại mỗi khi mở app.
 Giao tiếp UI: Nó cung cấp hook useAuth(). Bất kỳ màn hình nào (Login, Profile, Home) cũng có thể gọi:
@@ -33,6 +33,7 @@ import React, {
 } from 'react';
 
 import { tokenManager } from '../services/token-manager';
+import { authService } from '../services/auth.service';
 
 import { createModuleLogger, AppModules } from '../logger';
 const logger = createModuleLogger(AppModules.AUTH_STORE);
@@ -121,6 +122,8 @@ interface AuthContextValue {
   loginCredentials: (emailOrUsername: string, password: string) => Promise<boolean>;
   /** Đăng nhập Google – nhận authorization code từ deep-link hoặc paste thủ công */
   loginWithCode: (code: string) => Promise<boolean>;
+  /** Xử lý login qua token deep-link */
+  handleDeepLinkToken: (token: string) => Promise<boolean>;
   /** Đăng xuất (tự nhận diện method) */
   logout: () => Promise<void>;
   /** Xoá error banner */
@@ -190,6 +193,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
+  // ── handleDeepLinkToken ───────────────────────────────────────────────────
+  const handleDeepLinkToken = useCallback(async (token: string): Promise<boolean> => {
+    dispatch({ type: 'CLEAR_ERROR' });
+    try {
+      await tokenManager.updateTokens({
+        accessToken: token,
+      });
+
+      const { user } = await authService.getMe();
+
+      await tokenManager.setTokens({
+        accessToken: token,
+        refreshToken: '',
+        authMethod: 'google',
+        user: user,
+      });
+
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: { user, authMethod: 'google' },
+      });
+      return true;
+    } catch (err: any) {
+      logger.error('[AuthStore] Deep link token error:', err?.message);
+      dispatch({ type: 'SET_ERROR', payload: err.message });
+      await tokenManager.clearAll();
+      return false;
+    }
+  }, []);
+
   // ── loginWithCode (Google OAuth) ──────────────────────────────────────────
   const loginWithCode = useCallback(async (_code: string): Promise<boolean> => {
     dispatch({ type: 'CLEAR_ERROR' });
@@ -225,7 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   return (
-    <AuthContext.Provider value={{ state, loginCredentials, loginWithCode, logout, clearError }}>
+    <AuthContext.Provider value={{ state, loginCredentials, loginWithCode, handleDeepLinkToken, logout, clearError }}>
       {children}
     </AuthContext.Provider>
   );

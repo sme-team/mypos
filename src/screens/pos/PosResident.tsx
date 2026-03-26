@@ -5,215 +5,102 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Image,
   SafeAreaView,
-  Animated,
   useWindowDimensions,
   StatusBar,
+  Modal,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ResponsivePanel from '../../components/pos/ResponsivePanel';
-import useHideOnScroll from '../../hooks/useHidenOnScroll';
 import ProductCard from '../../components/pos/ProductCard';
 import RoomCard from '../../components/pos/RoomCard';
 import CartItemRow from '../../components/pos/CartItemRow';
-import {Product, Room, RoomStatus, CartItem} from './types';
+import {Product, Room, RoomStatus, CartItem, PosCategory} from './types';
 import {useTheme} from '../../hooks/useTheme';
+import BookingScreen from '../booking/BookingScreen';
+import { PosQueryService } from '../../services/PosSevices/PosQueryService';
+import { RoomQueryService } from '../../services/ResidentServices/RoomQueryService';
+import { RoomActionService } from '../../services/ResidentServices/RoomActionService';
+import RoomDetailScreen from '../booking/RoomDetailScreen';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const GAP = 12;
-const HEADER_TABS_HEIGHT = 160; // Increased to accommodate safe area and avoid overlap
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Cà phê sữa',
-    price: 25000,
-    image: 'https://images.unsplash.com/photo-1504630083234-14187a9df0f5?w=400',
-    category: 'Đồ uống',
-    available: true,
-  },
-  {
-    id: '2',
-    name: 'Trà đào',
-    price: 35000,
-    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400',
-    category: 'Đồ uống',
-    available: true,
-  },
-  {
-    id: '3',
-    name: 'Bánh mì',
-    price: 15000,
-    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400',
-    category: 'Thực phẩm',
-    available: true,
-  },
-  {
-    id: '4',
-    name: 'Nước suối',
-    price: 10000,
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
-    category: 'Giải khát',
-    available: true,
-  },
-  {
-    id: '5',
-    name: 'Sinh tố xoài',
-    price: 40000,
-    image: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=400',
-    category: 'Đồ uống',
-    available: true,
-  },
-  {
-    id: '6',
-    name: 'Bánh croissant',
-    price: 28000,
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400',
-    category: 'Thực phẩm',
-    available: true,
-  },
-  {
-    id: '7',
-    name: 'Pepsi',
-    price: 10000,
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
-    category: 'Giải khát',
-    available: true,
-  },
-  {
-    id: '8',
-    name: 'Coca Cola',
-    price: 10000,
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
-    category: 'Giải khát',
-    available: true,
-  },
-  {
-    id: '9',
-    name: 'bánh nho ngọt',
-    price: 10000,
-    image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
-    category: 'Thực phẩm',
-    available: true,
-  },
-];
-
-const ROOMS: Room[] = [
-  {
-    id: 'P.101',
-    status: 'occupied',
-    label: 'Đang ở',
-    price: 500000,
-    tag: 'Hết hạn: 30/11',
-    tagColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
-  },
-  {
-    id: 'P.102',
-    status: 'available',
-    label: 'Sẵn sàng',
-    price: 450000,
-    tag: 'Checkout: 12:00 15/10',
-    tagColor: '#4E9FFF',
-    borderColor: '#4CAF50',
-  },
-  {
-    id: 'P.103',
-    status: 'cleaning',
-    label: 'Đang dọn',
-    price: 450000,
-    tag: 'Hết hạn: 25/11',
-    tagColor: '#FF6B6B',
-    borderColor: '#FFA726',
-  },
-  {
-    id: 'P.104',
-    status: 'available',
-    label: 'Sẵn sàng',
-    price: 600000,
-    tag: 'Checkout: 14:00 16/10',
-    tagColor: '#4E9FFF',
-    borderColor: '#4CAF50',
-  },
-  {
-    id: 'P.105',
-    status: 'occupied',
-    label: 'Đang ở',
-    price: 500000,
-    tag: 'Hết hạn: 05/12',
-    tagColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
-  },
-  {
-    id: 'P.106',
-    status: 'available',
-    label: 'Sẵn sàng',
-    price: 480000,
-    borderColor: '#4CAF50',
-  },
-  {
-    id: 'P.107',
-    status: 'maintenance',
-    label: 'Bảo trì',
-    price: 520000,
-    borderColor: '#9E9E9E',
-  },
-  {
-    id: 'P.108',
-    status: 'available',
-    label: 'Sẵn sàng',
-    price: 450000,
-    tag: 'Checkout: 10:00 18/10',
-    tagColor: '#4E9FFF',
-    borderColor: '#4CAF50',
-  },
-];
-
 const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
+
+// ─── Data fetch happen inside PosResident ───────────────────────────────────
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PosResident({
   onOpenMenu,
-  initialMode = 'food',
 }: {
   onOpenMenu: () => void;
-  initialMode?: 'food' | 'accommodation';
 }) {
   const {t} = useTranslation();
   const {isDark} = useTheme();
   const insets = useSafeAreaInsets();
   const {width: screenWidth} = useWindowDimensions();
 
-  const [mode, setMode] = useState<'food' | 'accommodation'>(initialMode);
-  const [activeFoodCategory, setActiveFoodCategory] = useState<string>(
-    t('pos.category_all'),
-  );
-  const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>(
-    'all',
-  );
+  const [categories, setCategories] = useState<PosCategory[]>([]);
+  const [activeMainCategory, setActiveMainCategory] = useState<string>(''); // Default will be set later
+  const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
+  const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>('all');
   const [searchText, setSearchText] = useState('');
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+
+  React.useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRoomPress = (room: Room) => {
+    if (room.status === 'available') {
+      setBookingRoom(room);
+    } else if (room.status === 'occupied') {
+      setSelectedRoom(room);
+      setDetailModalVisible(true);
+    }
+  };
+
+  const loadData = async () => {
+    const prods = await PosQueryService.getProducts();
+    const rms = await RoomQueryService.getRooms();
+    const cats = await PosQueryService.getCategories();
+
+    setProducts(prods);
+    setRooms(rms);
+    if (cats.length > 0) {
+      setCategories(cats);
+      // Auto select the first main category if none is selected
+      const mainCats = cats.filter(c => !c.parent_id);
+      if (mainCats.length > 0 && !activeMainCategory) {
+        setActiveMainCategory(mainCats[0].id);
+      }
+    }
+  };
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [panelVisible, setPanelVisible] = useState(false);
   const [activeCustomerTab, setActiveCustomerTab] = useState(t('pos.guest'));
+  const [bookingRoom, setBookingRoom] = useState<Room | null>(null);
 
-  const {translateY, onScroll} = useHideOnScroll(HEADER_TABS_HEIGHT);
+  // Detail Modal
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
-  const foodCategories = useMemo(
-    () => [
-      t('pos.category_all'),
-      t('pos.category_food'),
-      t('pos.category_drink'),
-      t('pos.category_refreshment'),
-      t('pos.category_merchandise'),
-    ],
-    [t],
-  );
+  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id), [categories]);
+
+  const subCategories = useMemo(() => {
+    if (!activeMainCategory) {return [];}
+    return categories.filter(c => c.parent_id === activeMainCategory);
+  }, [categories, activeMainCategory]);
+
+  const activeMainCatObj = useMemo(() => mainCategories.find(c => c.id === activeMainCategory), [mainCategories, activeMainCategory]);
+  const isRoomMode = activeMainCatObj?.category_code?.toLowerCase() === 'room';
 
   const roomStatuses: {key: RoomStatus | 'all'; label: string}[] = useMemo(
     () => [
@@ -221,7 +108,6 @@ export default function PosResident({
       {key: 'available', label: t('pos.status_empty')},
       {key: 'occupied', label: t('pos.status_occupied')},
       {key: 'cleaning', label: t('pos.status_cleaning')},
-      {key: 'maintenance', label: t('pos.status_maintenance')},
     ],
     [t],
   );
@@ -230,15 +116,22 @@ export default function PosResident({
   const numCols = screenWidth > 700 ? 4 : screenWidth > 500 ? 3 : 2;
   const cardWidth = (screenWidth - 32 - GAP * (numCols - 1)) / numCols;
 
-  const filteredProducts = PRODUCTS.filter(p => {
-    const matchCat =
-      activeFoodCategory === foodCategories[0] ||
-      p.category === activeFoodCategory;
+  const filteredProducts = products.filter(p => {
+    // Collect allowed category IDs for this main category
+    let allowedCategoryIds: string[] = [];
+    if (activeSubCategory !== 'all') {
+      allowedCategoryIds = [activeSubCategory];
+    } else {
+      // If "Tất cả" is selected, allow the main category itself and all its sub-categories
+      allowedCategoryIds = [activeMainCategory, ...subCategories.map(c => c.id)];
+    }
+
+    const matchCat = allowedCategoryIds.includes(p.category_id);
     const matchSearch = p.name.toLowerCase().includes(searchText.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const filteredRooms = ROOMS.filter(r => {
+  const filteredRooms = rooms.filter(r => {
     const matchStatus =
       activeRoomStatus === 'all' || r.status === activeRoomStatus;
     const matchSearch = r.id.toLowerCase().includes(searchText.toLowerCase());
@@ -246,8 +139,8 @@ export default function PosResident({
   });
 
   const handleAdd = (id: string) => {
-    const product = PRODUCTS.find(p => p.id === id);
-    if (!product) return;
+    const product = products.find(p => p.id === id);
+    if (!product) {return;}
     setCartItems(prev => {
       const existing = prev.find(i => i.product.id === id);
       if (existing) {
@@ -272,8 +165,8 @@ export default function PosResident({
   const handleDecrease = (id: string) => {
     setCartItems(prev => {
       const item = prev.find(i => i.product.id === id);
-      if (!item) return prev;
-      if (item.quantity === 1) return prev.filter(i => i.product.id !== id);
+      if (!item) {return prev;}
+      if (item.quantity === 1) {return prev.filter(i => i.product.id !== id);}
       return prev.map(i =>
         i.product.id === id ? {...i, quantity: i.quantity - 1} : i,
       );
@@ -301,22 +194,16 @@ export default function PosResident({
   const inputBg = isDark ? '#374151' : '#fff';
 
   return (
-    <View style={{flex: 1, backgroundColor: bgColor}}>
+    <SafeAreaView style={{flex: 1, backgroundColor: bgColor}}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* ── Header + Tabs ── */}
-      <Animated.View
+      <View
         style={{
-          transform: [{translateY}],
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           backgroundColor: headerBg,
           borderBottomWidth: 1,
           borderBottomColor: borderColor,
-          paddingTop: insets.top,
+          zIndex: 10,
         }}>
         {/* Header */}
         <View
@@ -368,76 +255,66 @@ export default function PosResident({
               style={{flex: 1, fontSize: 13, color: textColor, padding: 0}}
             />
             <Icon name="search" size={20} color="#9ca3af" />
+            {/* SyncDatabaseButton was removed and migrated to Settings */}
           </View>
         </View>
 
-        {/* Mode Switcher */}
-        <View
-          style={{
-            flexDirection: 'row',
+        {/* Main Categories Menu */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
             paddingHorizontal: 16,
             paddingBottom: 10,
             gap: 12,
           }}>
-          <TouchableOpacity
-            onPress={() => setMode('food')}
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: mode === 'food' ? '#3b82f6' : cardBg,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              elevation: mode === 'food' ? 4 : 1,
-              borderWidth: mode === 'food' ? 0 : 1,
-              borderColor: borderColor,
-            }}>
-            <Icon
-              name="restaurant"
-              size={18}
-              color={mode === 'food' ? '#fff' : '#3b82f6'}
-            />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: mode === 'food' ? '#fff' : subTextColor,
-              }}>
-              {t('pos.food_and_drink')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setMode('accommodation')}
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              height: 40,
-              borderRadius: 12,
-              backgroundColor: mode === 'accommodation' ? '#3b82f6' : cardBg,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              elevation: mode === 'accommodation' ? 4 : 1,
-              borderWidth: mode === 'accommodation' ? 0 : 1,
-              borderColor: borderColor,
-            }}>
-            <Icon
-              name="hotel"
-              size={18}
-              color={mode === 'accommodation' ? '#fff' : '#3b82f6'}
-            />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: mode === 'accommodation' ? '#fff' : subTextColor,
-              }}>
-              {t('pos.accommodation')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          {mainCategories.map(cat => {
+            const isActive = activeMainCategory === cat.id;
+
+            // Generate icon based on abstract category code
+            let iconName = 'category';
+            const code = (cat.category_code || '').toLowerCase();
+            if (code.includes('food') || code.includes('drink') || code.includes('cafe')) {iconName = 'restaurant';}
+            else if (code.includes('room') || code.includes('hotel')) {iconName = 'hotel';}
+            else if (code.includes('grocery')) {iconName = 'storefront';}
+
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() => {
+                  setActiveMainCategory(cat.id);
+                  setActiveSubCategory('all');
+                }}
+                style={{
+                  flexDirection: 'row',
+                  height: 40,
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  backgroundColor: isActive ? '#3b82f6' : cardBg,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  elevation: isActive ? 4 : 1,
+                  borderWidth: isActive ? 0 : 1,
+                  borderColor: borderColor,
+                }}>
+                <Icon
+                  name={iconName}
+                  size={18}
+                  color={isActive ? '#fff' : '#3b82f6'}
+                />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: isActive ? '#fff' : subTextColor,
+                  }}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
         {/* Filters */}
         <ScrollView
@@ -448,13 +325,13 @@ export default function PosResident({
             paddingBottom: 10,
             gap: 10,
           }}>
-          {mode === 'food'
-            ? foodCategories.map(cat => {
-                const active = activeFoodCategory === cat;
+          {!isRoomMode
+            ? [{id: 'all', name: t('pos.category_all')}, ...subCategories].map(cat => {
+                const active = activeSubCategory === cat.id;
                 return (
                   <TouchableOpacity
-                    key={cat}
-                    onPress={() => setActiveFoodCategory(cat)}
+                    key={cat.id}
+                    onPress={() => setActiveSubCategory(cat.id)}
                     style={{
                       paddingHorizontal: 16,
                       height: 36,
@@ -472,7 +349,7 @@ export default function PosResident({
                         fontWeight: '600',
                         color: active ? '#fff' : subTextColor,
                       }}>
-                      {cat}
+                      {cat.name}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -506,22 +383,20 @@ export default function PosResident({
                 );
               })}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* Grid Content */}
-      <Animated.ScrollView
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: HEADER_TABS_HEIGHT + insets.top,
-          paddingBottom: 100,
+          paddingTop: GAP,
+          paddingBottom: insets.bottom + 100,
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: GAP,
         }}>
-        {mode === 'food' ? (
+        {!isRoomMode ? (
           filteredProducts.length === 0 ? (
             <View style={{flex: 1, alignItems: 'center', marginTop: 60}}>
               <Text style={{color: '#9ca3af', fontSize: 14}}>
@@ -551,13 +426,13 @@ export default function PosResident({
           </View>
         ) : (
           filteredRooms.map(item => (
-            <RoomCard key={item.id} room={item} cardWidth={cardWidth} />
+            <RoomCard key={item.id} room={item} cardWidth={cardWidth} onPress={() => handleRoomPress(item)} />
           ))
         )}
-      </Animated.ScrollView>
+      </ScrollView>
 
       {/* FAB */}
-      {mode === 'food' && (
+      {!isRoomMode && (
         <TouchableOpacity
           onPress={() => setPanelVisible(true)}
           style={{
@@ -791,6 +666,39 @@ export default function PosResident({
           </View>
         </View>
       </ResponsivePanel>
-    </View>
+
+      {/* Booking Modal */}
+      {bookingRoom && (
+        <BookingScreen
+          room={{ code: bookingRoom.id, floor: '' }}
+          onClose={() => {
+            setBookingRoom(null);
+            loadData();
+          }}
+          onConfirm={async (form) => {
+            try {
+              await RoomActionService.checkIn(bookingRoom.id, form);
+              setBookingRoom(null);
+              loadData();
+            } catch (err) {
+              console.error('Check-in failed:', err);
+            }
+          }}
+        />
+      )}
+
+      {/* Room Detail Modal for Occupied Rooms */}
+      <Modal visible={detailModalVisible} animationType="slide">
+        {selectedRoom && (
+          <RoomDetailScreen
+            room={selectedRoom}
+            onBack={() => {
+              setDetailModalVisible(false);
+              loadData();
+            }}
+          />
+        )}
+      </Modal>
+    </SafeAreaView>
   );
 }

@@ -22,6 +22,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -61,13 +62,12 @@ type Screen =
 
 // ─── Inner app ────────────────────────────────────────────────────────────────
 const AppContent: React.FC = () => {
-  const {state: auth, logout} = useAuth();
+  const {state: auth, logout, handleDeepLinkToken} = useAuth();
   const {isDark} = useTheme();
   const {t} = useTranslation();
   const [screen, setScreen] = useState<Screen>('landing');
   const [dbReady, setDbReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [posMode, setPosMode] = useState<'food' | 'accommodation'>('food');
 
   useEffect(() => {
     const startApp = async () => {
@@ -84,6 +84,32 @@ const AppContent: React.FC = () => {
     };
     startApp();
   }, []);
+
+  useEffect(() => {
+    const handleUrl = async ({url}: {url: string}) => {
+      if (url && url.startsWith('mypos://callback')) {
+        const tokenMatch = url.match(/token=([^&]+)/);
+        if (tokenMatch && tokenMatch[1]) {
+          const token = tokenMatch[1];
+          const success = await handleDeepLinkToken(token);
+          if (success) {
+            setScreen('dashboard');
+          }
+        }
+      }
+    };
+
+    Linking.getInitialURL().then(url => {
+      if (url) {
+        handleUrl({url});
+      }
+    });
+
+    const subscription = Linking.addEventListener('url', handleUrl);
+    return () => {
+      subscription.remove();
+    };
+  }, [handleDeepLinkToken]);
 
   useEffect(() => {
     if (!auth.isLoading && auth.isAuthenticated) {
@@ -234,10 +260,7 @@ const AppContent: React.FC = () => {
 
       {/* ── POS Resident ───────────────────────────────────────── */}
       {screen === 'pos_resident' && (
-        <PosResident
-          onOpenMenu={() => setIsSidebarVisible(true)}
-          initialMode={posMode}
-        />
+        <PosResident onOpenMenu={() => setIsSidebarVisible(true)} />
       )}
 
       {/* ── Place Resident ───────────────────────────────────────── */}

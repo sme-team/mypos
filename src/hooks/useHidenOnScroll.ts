@@ -15,7 +15,7 @@ export default function useHideOnScroll(height: number = 60) {
         const diff = currentY - lastScrollY.current;
 
         // Không xử lý khi scroll quá đầu (bounce effect iOS)
-        if (currentY < 0) return;
+        if (currentY < 0) {return;}
 
         if (diff > 0) {
           // Scroll xuống → ẩn header

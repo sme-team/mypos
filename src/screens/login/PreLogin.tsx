@@ -8,8 +8,12 @@ import {
   ScrollView,
   useWindowDimensions,
   TouchableOpacity,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
+const WEB_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -102,7 +106,7 @@ const PreLogin = ({ onLogin }: any) => {
               {t('landing.no_account')}
             </Text>
 
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(`${WEB_URL}/register`)}>
               <Text
                 className={`text-xs font-bold underline ml-1 ${isDark ? 'text-white' : 'text-blue-600'
                   }`}>

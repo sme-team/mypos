@@ -261,7 +261,7 @@ export const googleAuthService = {
       logger.info('[GoogleAuth] 🔗 Linking Google account to current user');
       const response = await googleAuthApiClient.post<LinkAccountResponse>('/link', { code });
       const result = response.data;
-      if (result.success) logger.info('[GoogleAuth] ✅ Google account linked successfully');
+      if (result.success) {logger.info('[GoogleAuth] ✅ Google account linked successfully');}
       return result;
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;
@@ -280,7 +280,7 @@ export const googleAuthService = {
       logger.info('[GoogleAuth] 🔓 Unlinking Google account');
       const response = await googleAuthApiClient.delete<UnlinkAccountResponse>('/unlink');
       const result = response.data;
-      if (result.success) logger.info('[GoogleAuth] ✅ Google account unlinked successfully');
+      if (result.success) {logger.info('[GoogleAuth] ✅ Google account unlinked successfully');}
       return result;
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;
@@ -313,7 +313,7 @@ export const googleAuthService = {
       });
 
       const result = response.data;
-      if (result.success) logger.info('[GoogleAuth] ✅ Google logout successful');
+      if (result.success) {logger.info('[GoogleAuth] ✅ Google logout successful');}
 
       await tokenManager.clearAll();
       return result;

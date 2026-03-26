@@ -1,38 +1,81 @@
-import React, {useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import IconIon from 'react-native-vector-icons/Ionicons';
 import {useTranslation} from 'react-i18next';
-import {useTheme} from '../../hooks/useTheme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import SettingsHeader from '../../components/setting/SettingsHeader';
 import SettingsSection from '../../components/setting/SettingsSection';
 import SettingsItem from '../../components/setting/SettingsItem';
+import { databaseSeeder } from '../../database/seeder/GoogleSheetSeeder';
+
+const SHEET_LINK_KEY = 'GOOGLE_SHEET_URL';
 
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
 }
-export default function Setting({onOpenMenu, onBack}: SettingProps) {
+export default function Setting({onOpenMenu, onBack: _onBack}: SettingProps) {
   const {t, i18n} = useTranslation();
-  const {isDark} = useTheme();
-  const [langOpen, setLangOpen] = useState(false);
+  const [sheetLink, setSheetLink] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const languages = [
-    {value: 'vi', label: 'Tiếng Việt'},
-    {value: 'en', label: 'English'},
-    {value: 'zh', label: '中文'},
-  ];
+  useEffect(() => {
+    AsyncStorage.getItem(SHEET_LINK_KEY).then(saved => {
+      if (saved) {setSheetLink(saved);}
+    });
+  }, []);
 
-  const currentLang = languages.find(l => l.value === i18n.language);
+  const toggleLanguage = () => {
+    const newLng = i18n.language === 'vi' ? 'en' : 'vi';
+    i18n.changeLanguage(newLng);
+  };
+  const currentLangLabel = i18n.language === 'vi' ? 'Tiếng Việt' : 'English';
 
-  const handleLanguageChange = (lang: string) => {
-    i18n.changeLanguage(lang);
-    setLangOpen(false);
+  const handleSync = (strategy: 'merge' | 'overwrite') => {
+    if (!sheetLink) {
+      Alert.alert(t('error', 'Lỗi'), t('settings.sheetLinkRequired', 'Vui lòng nhập đường dẫn Google Sheets.'));
+      return;
+    }
+
+    setIsSyncing(true);
+    // Save the link for future use
+    AsyncStorage.setItem(SHEET_LINK_KEY, sheetLink).catch(err => console.error('Failed to save sheetLink', err));
+
+    databaseSeeder.seedRunner(sheetLink, strategy)
+      .then(() => {
+        Alert.alert(t('success', 'Thành công'), t('settings.syncSuccess', 'Đồng bộ dữ liệu thành công!'));
+      })
+      .catch((error: any) => {
+        Alert.alert(t('error', 'Lỗi đồng bộ'), error.message || 'Unknown error');
+      })
+      .finally(() => {
+        setIsSyncing(false);
+      });
+  };
+
+  const showSyncStrategyPrompt = () => {
+    if (!sheetLink) {
+      Alert.alert(t('error', 'Lỗi'), t('settings.sheetLinkRequired', 'Vui lòng nhập đường dẫn Google Sheets.'));
+      return;
+    }
+    Alert.alert(
+      t('settings.syncData', 'Đồng bộ dữ liệu'),
+      t('settings.syncStrategyPrompt', 'Bạn muốn ghi đè (xoá dữ liệu cũ) hay kết hợp (giữ nguyên những gì có sẵn) dữ liệu mới?'),
+      [
+        { text: t('settings.merge', 'Kết hợp (Merge)'), onPress: () => handleSync('merge') },
+        { text: t('settings.overwrite', 'Ghi đè (Overwrite)'), onPress: () => handleSync('overwrite'), style: 'destructive' },
+        { text: t('settings.cancel', 'Hủy'), style: 'cancel' },
+      ]
+    );
   };
 
   const generalSettings = [
@@ -72,50 +115,11 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
   ];
 
   return (
-    <SafeAreaView
-      className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      {/* Header */}
-      <View
-        className={`flex-row items-center justify-between px-4 py-3 border-b ${
-          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-        }`}>
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={onOpenMenu}>
-            <IconIon
-              name="menu"
-              size={28}
-              color={isDark ? '#e5e7eb' : '#000'}
-            />
-          </TouchableOpacity>
-          <Text
-            className={`text-2xl font-black font-semibold ml-3 ${
-              isDark ? 'text-white' : 'text-gray-800'
-            }`}>
-            {t('settings.title')}
-          </Text>
-        </View>
-
-        <View className="flex-row">
-          <TouchableOpacity className="mr-3">
-            <IconIon
-              name="notifications-outline"
-              size={22}
-              color={isDark ? '#9ca3af' : '#000'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity>
-            <IconIon
-              name="search-outline"
-              size={22}
-              color={isDark ? '#9ca3af' : '#000'}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView className="flex-1 bg-gray-100">
+      <SettingsHeader onOpenMenu={onOpenMenu} />
       <ScrollView className="px-4">
         {/* GENERAL */}
-        <SettingsSection title="settings.general" isDark={isDark}>
+        <SettingsSection title="settings.general">
           {generalSettings.map((item, i) => (
             <SettingsItem
               key={i}
@@ -127,57 +131,71 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
         </SettingsSection>
 
         {/* Language Setting */}
-        <View className="mt-3">
-          <Text
-            className={`text-xs uppercase tracking-widest mb-2 px-1 ${
-              isDark ? 'text-gray-500' : 'text-gray-400'
-            }`}>
+        <View className="mt-6">
+          <Text className="text-xs  text-gray-400 uppercase tracking-widest mb-2 px-1">
             {t('settings.language')}
           </Text>
 
-          <TouchableOpacity
-            onPress={() => setLangOpen(!langOpen)}
-            activeOpacity={0.9}
-            className={`rounded-2xl px-4 py-3 flex-row items-center ${
-              isDark ? 'bg-gray-800' : 'bg-white'
-            }`}>
-            <View
-              className={`w-10 h-10 rounded-xl items-center justify-center mr-3 ${
-                isDark ? 'bg-blue-900/40' : 'bg-blue-50'
-              }`}>
+          <View className="bg-white rounded-2xl px-4 py-3 flex-row items-center">
+            <View className="w-10 h-10 rounded-xl bg-blue-50 items-center justify-center mr-3">
               <Icon name="translate" size={20} color="#3B82F6" />
             </View>
             <View className="flex-1">
-              <Text
-                className={`text-base font-semibold ${
-                  isDark ? 'text-white' : 'text-gray-800'
-                }`}>
+              <Text className="text-base font-semibold text-gray-800">
                 {t('settings.systemLanguage')}
               </Text>
             </View>
-            <View
-              className={`flex-row items-center border rounded-lg px-3 py-1.5 ${
-                isDark
-                  ? 'border-gray-600 bg-gray-700'
-                  : 'border-gray-200 bg-white'
-              }`}>
-              <Text
-                className={`text-sm mr-1 ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                {currentLang?.label}
+            <TouchableOpacity
+              onPress={toggleLanguage}
+              activeOpacity={0.7}
+              className="flex-row items-center border border-gray-200 rounded-lg px-3 py-1.5">
+              <Text className="text-sm text-gray-700 mr-1">
+                {currentLangLabel}
               </Text>
-              <Icon
-                name={langOpen ? 'expand-less' : 'expand-more'}
-                size={18}
-                color={isDark ? '#9ca3af' : '#6B7280'}
-              />
-            </View>
-          </TouchableOpacity>
+              <Icon name="keyboard-arrow-down" size={18} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* DATA SYNC */}
+        <View className="mt-6">
+          <Text className="text-xs text-gray-400 uppercase tracking-widest mb-2 px-1">
+            {t('settings.dataSync', 'ĐỒNG BỘ DỮ LIỆU')}
+          </Text>
+
+          <View className="bg-white rounded-2xl px-4 py-4">
+            <Text className="text-sm font-semibold text-gray-800 mb-2">
+              {t('settings.googleSheetUrl', 'Đường dẫn Google Sheets (URL)')}
+            </Text>
+            <TextInput
+              className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-4"
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              placeholderTextColor="#9CA3AF"
+              value={sheetLink}
+              onChangeText={setSheetLink}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TouchableOpacity
+              onPress={showSyncStrategyPrompt}
+              disabled={isSyncing}
+              className={`flex-row items-center justify-center py-3 rounded-xl ${isSyncing ? 'bg-blue-300' : 'bg-blue-500'}`}
+            >
+              {isSyncing ? (
+                <ActivityIndicator color="#fff" size="small" className="mr-2" />
+              ) : (
+                <Icon name="sync" size={20} color="#fff" style={{ marginRight: 8 }} />
+              )}
+              <Text className="text-white font-semibold text-base">
+                {isSyncing ? t('settings.syncing', 'Đang đồng bộ...') : t('settings.syncDataBtn', 'Đồng bộ dữ liệu')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* SUPPORT */}
-        <SettingsSection title="settings.support" isDark={isDark}>
+        <SettingsSection title="settings.support">
           {supportSettings.map((item, i) => (
             <SettingsItem
               key={i}
@@ -188,48 +206,6 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
           ))}
         </SettingsSection>
       </ScrollView>
-
-      {/* Language Dropdown - Outside ScrollView for overlay effect */}
-      {langOpen && (
-        <View
-          className={`absolute left-4 right-4 top-auto border rounded-lg overflow-hidden z-50 ${
-            isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'
-          }`}
-          style={{bottom: 280}}>
-          {languages.map((lang, idx) => (
-            <TouchableOpacity
-              key={lang.value}
-              onPress={() => handleLanguageChange(lang.value)}
-              className={`px-4 py-3 flex-row items-center justify-between ${
-                idx < languages.length - 1
-                  ? isDark
-                    ? 'border-b border-gray-700'
-                    : 'border-b border-gray-100'
-                  : ''
-              } ${
-                i18n.language === lang.value
-                  ? isDark
-                    ? 'bg-blue-900/50'
-                    : 'bg-blue-50'
-                  : ''
-              }`}>
-              <Text
-                className={`text-base ${
-                  i18n.language === lang.value
-                    ? 'text-blue-600 font-semibold'
-                    : isDark
-                    ? 'text-gray-300'
-                    : 'text-gray-700'
-                }`}>
-                {lang.label}
-              </Text>
-              {i18n.language === lang.value && (
-                <Icon name="check" size={20} color="#3B82F6" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
     </SafeAreaView>
   );
 }

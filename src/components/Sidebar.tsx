@@ -37,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, o
 
   return (
     <View style={[styles.container, { width: SIDEBAR_WIDTH, height: SCREEN_HEIGHT, backgroundColor: bgColor }]}>
-      
+
       {/* Header — paddingTop động theo insets.top */}
       <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: borderColor }]}>
         {/*                         ✅ insets.top thay cho số cứng 60 */}
@@ -61,21 +61,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, o
               onPress={() => { onNavigate(item.id === 'sales' ? 'pos_resident' : item.id); onClose?.(); }}
               activeOpacity={0.7}
               style={[
-                styles.menuItem, 
-                isActive ? (isDark ? { backgroundColor: '#1e3a8a' } : styles.menuItemActive) : {}
+                styles.menuItem,
+                isActive ? (isDark ? { backgroundColor: '#1e3a8a' } : styles.menuItemActive) : {},
               ]}
             >
               <View style={[
-                styles.iconWrapper, 
+                styles.iconWrapper,
                 { backgroundColor: itemHoverColor },
-                isActive && (isDark ? { backgroundColor: '#2563eb' } : styles.iconWrapperActive)
+                isActive && (isDark ? { backgroundColor: '#2563eb' } : styles.iconWrapperActive),
               ]}>
                 <Icon name={item.icon} size={22} color={isActive ? (isDark ? '#fff' : '#2563eb') : '#94a3b8'} />
               </View>
               <Text style={[
-                styles.menuLabel, 
+                styles.menuLabel,
                 { color: subTextColor },
-                isActive && (isDark ? { color: '#fff' } : styles.menuLabelActive)
+                isActive && (isDark ? { color: '#fff' } : styles.menuLabelActive),
               ]}>
                 {item.label}
               </Text>

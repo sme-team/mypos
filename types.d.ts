@@ -1,8 +1,12 @@
 /// <reference types="nativewind/types" />
 
-import "react-native";
+declare module '@env' {
+  export const AUTH_API_BASE: string;
+}
 
-declare module "react-native" {
+import 'react-native';
+
+declare module 'react-native' {
   interface ViewProps {
     className?: string;
   }

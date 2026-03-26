@@ -47,32 +47,32 @@ class TokenStore {
 
     async setAccessToken(token: string | null) {
         this.data[KEYS.ACCESS_TOKEN] = token;
-        if (token) await AsyncStorage.setItem(KEYS.ACCESS_TOKEN, token);
-        else await AsyncStorage.removeItem(KEYS.ACCESS_TOKEN);
+        if (token) {await AsyncStorage.setItem(KEYS.ACCESS_TOKEN, token);}
+        else {await AsyncStorage.removeItem(KEYS.ACCESS_TOKEN);}
     }
 
     async setRefreshToken(token: string | null) {
         this.data[KEYS.REFRESH_TOKEN] = token;
-        if (token) await AsyncStorage.setItem(KEYS.REFRESH_TOKEN, token);
-        else await AsyncStorage.removeItem(KEYS.REFRESH_TOKEN);
+        if (token) {await AsyncStorage.setItem(KEYS.REFRESH_TOKEN, token);}
+        else {await AsyncStorage.removeItem(KEYS.REFRESH_TOKEN);}
     }
 
     async setAuthMethod(method: string | null) {
         this.data[KEYS.AUTH_METHOD] = method;
-        if (method) await AsyncStorage.setItem(KEYS.AUTH_METHOD, method);
-        else await AsyncStorage.removeItem(KEYS.AUTH_METHOD);
+        if (method) {await AsyncStorage.setItem(KEYS.AUTH_METHOD, method);}
+        else {await AsyncStorage.removeItem(KEYS.AUTH_METHOD);}
     }
 
     async setUser(user: any | null) {
         this.data[KEYS.USER] = user;
-        if (user) await AsyncStorage.setItem(KEYS.USER, JSON.stringify(user));
-        else await AsyncStorage.removeItem(KEYS.USER);
+        if (user) {await AsyncStorage.setItem(KEYS.USER, JSON.stringify(user));}
+        else {await AsyncStorage.removeItem(KEYS.USER);}
     }
 
     async setExpiresAt(expiresAt: number | null) {
         this.data[KEYS.EXPIRES_AT] = expiresAt;
-        if (expiresAt) await AsyncStorage.setItem(KEYS.EXPIRES_AT, expiresAt.toString());
-        else await AsyncStorage.removeItem(KEYS.EXPIRES_AT);
+        if (expiresAt) {await AsyncStorage.setItem(KEYS.EXPIRES_AT, expiresAt.toString());}
+        else {await AsyncStorage.removeItem(KEYS.EXPIRES_AT);}
     }
 
     async clear() {

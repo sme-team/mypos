@@ -24,7 +24,7 @@ class TokenManager {
    * Ví dụ: trong App.tsx -> useEffect(() => { tokenManager.init() }, [])
    */
   async init(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initialized) {return;}
     await tokenStore.init();
     this.loadFromStorage();
     this.initialized = true;
@@ -149,12 +149,12 @@ class TokenManager {
   }
 
   isAccessTokenExpired(): boolean {
-    if (!this.expiresAt) return true;
+    if (!this.expiresAt) {return true;}
     return Date.now() >= this.expiresAt - 5 * 60 * 1000; // 5 phút buffer
   }
 
   getTimeToExpire(): number {
-    if (!this.expiresAt) return 0;
+    if (!this.expiresAt) {return 0;}
     return Math.floor(Math.max(0, this.expiresAt - Date.now()) / 1000);
   }
 

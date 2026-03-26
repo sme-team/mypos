@@ -40,7 +40,7 @@
 25-->[androidx.core:core:1.9.0] C:\Users\ADMIN\.gradle\caches\transforms-4\bf09ec18413f82b2af0d1229dd15efc2\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
 26
 27    <application
-27-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:9:5-28:19
+27-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:9:5-38:19
 28        android:name="com.mypos.MainApplication"
 28-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:10:7-38
 29        android:allowBackup="false"
@@ -60,84 +60,102 @@
 37        android:usesCleartextTraffic="true" >
 37-->D:\cap2\mypos\android\app\src\debug\AndroidManifest.xml:6:9-44
 38        <activity
-38-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:16:7-27:18
+38-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:17:7-37:18
 39            android:name="com.mypos.MainActivity"
-39-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:17:9-37
+39-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:18:9-37
 40            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-40-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:19:9-118
+40-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:20:9-118
 41            android:exported="true"
-41-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:22:9-32
+41-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:23:9-32
 42            android:label="@string/app_name"
-42-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:18:9-41
+42-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:19:9-41
 43            android:launchMode="singleTask"
-43-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:20:9-40
+43-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:21:9-40
 44            android:windowSoftInputMode="adjustResize" >
-44-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:21:9-51
+44-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:22:9-51
 45            <intent-filter>
-45-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:23:9-26:25
+45-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:25:9-28:25
 46                <action android:name="android.intent.action.MAIN" />
-46-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:24:13-65
-46-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:24:21-62
+46-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:26:13-65
+46-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:26:21-62
 47
 48                <category android:name="android.intent.category.LAUNCHER" />
-48-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:25:13-73
-48-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:25:23-70
+48-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:27:13-73
+48-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:27:23-70
 49            </intent-filter>
-50        </activity>
-51
-52        <provider
-52-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-16:20
-53            android:name="com.imagepicker.ImagePickerProvider"
-53-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-63
-54            android:authorities="com.mypos.imagepickerprovider"
-54-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-71
-55            android:exported="false"
-55-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-37
-56            android:grantUriPermissions="true" >
-56-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:13-47
-57            <meta-data
-57-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:13-15:70
-58                android:name="android.support.FILE_PROVIDER_PATHS"
-58-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:14:17-67
-59                android:resource="@xml/imagepicker_provider_paths" />
-59-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:15:17-67
-60        </provider>
-61
-62        <activity
-62-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:19:9-21:40
-63            android:name="com.facebook.react.devsupport.DevSettingsActivity"
-63-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:20:13-77
-64            android:exported="false" />
-64-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:21:13-37
-65
-66        <provider
-66-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
-67            android:name="androidx.startup.InitializationProvider"
-67-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:25:13-67
-68            android:authorities="com.mypos.androidx-startup"
-68-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:26:13-68
-69            android:exported="false" >
-69-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:27:13-37
-70            <meta-data
-70-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
-71                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-71-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:30:17-75
-72                android:value="androidx.startup" />
-72-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:31:17-49
-73            <meta-data
-73-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
-74                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-74-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
-75                android:value="androidx.startup" />
-75-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
-76        </provider>
-77
-78        <meta-data
-78-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:12:9-14:37
-79            android:name="com.facebook.soloader.enabled"
-79-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:13:13-57
-80            android:value="false" />
-80-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:14:13-34
-81    </application>
-82
-83</manifest>
+50            <intent-filter android:label="@string/app_name" >
+50-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:30:9-35:25
+50-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:30:24-56
+51                <action android:name="android.intent.action.VIEW" />
+51-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:31:13-65
+51-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:31:21-62
+52
+53                <category android:name="android.intent.category.DEFAULT" />
+53-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:32:13-72
+53-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:32:23-69
+54                <category android:name="android.intent.category.BROWSABLE" />
+54-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:33:13-74
+54-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:33:23-71
+55
+56                <data android:scheme="mypos" />
+56-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:34:13-44
+56-->D:\cap2\mypos\android\app\src\main\AndroidManifest.xml:34:19-41
+57            </intent-filter>
+58        </activity>
+59
+60        <provider
+60-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-16:20
+61            android:name="com.imagepicker.ImagePickerProvider"
+61-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-63
+62            android:authorities="com.mypos.imagepickerprovider"
+62-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:10:13-71
+63            android:exported="false"
+63-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:13-37
+64            android:grantUriPermissions="true" >
+64-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:13-47
+65            <meta-data
+65-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:13-15:70
+66                android:name="android.support.FILE_PROVIDER_PATHS"
+66-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:14:17-67
+67                android:resource="@xml/imagepicker_provider_paths" />
+67-->[:react-native-image-picker] D:\cap2\mypos\node_modules\react-native-image-picker\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:15:17-67
+68        </provider>
+69
+70        <activity
+70-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:19:9-21:40
+71            android:name="com.facebook.react.devsupport.DevSettingsActivity"
+71-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:20:13-77
+72            android:exported="false" />
+72-->[com.facebook.react:react-android:0.76.0] C:\Users\ADMIN\.gradle\caches\transforms-4\9927a32377e6fbb9fa8637e3e5b34d1c\transformed\jetified-react-android-0.76.0-debug\AndroidManifest.xml:21:13-37
+73
+74        <provider
+74-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+75            android:name="androidx.startup.InitializationProvider"
+75-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:25:13-67
+76            android:authorities="com.mypos.androidx-startup"
+76-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:26:13-68
+77            android:exported="false" >
+77-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:27:13-37
+78            <meta-data
+78-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+79                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+79-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:30:17-75
+80                android:value="androidx.startup" />
+80-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ADMIN\.gradle\caches\transforms-4\dbda8362b945943fa0cec5ea16021725\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:31:17-49
+81            <meta-data
+81-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
+82                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+82-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
+83                android:value="androidx.startup" />
+83-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ADMIN\.gradle\caches\transforms-4\2137173bdc975eea48da34c12fcb6cd6\transformed\jetified-lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
+84        </provider>
+85
+86        <meta-data
+86-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:12:9-14:37
+87            android:name="com.facebook.soloader.enabled"
+87-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:13:13-57
+88            android:value="false" />
+88-->[com.facebook.soloader:soloader:0.12.1] C:\Users\ADMIN\.gradle\caches\transforms-4\32d1ed9194c2e7ea8baf314ec0d613de\transformed\jetified-soloader-0.12.1\AndroidManifest.xml:14:13-34
+89    </application>
+90
+91</manifest>

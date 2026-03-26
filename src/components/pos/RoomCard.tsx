@@ -1,7 +1,7 @@
 /**
  * @file: RoomCard.tsx
  * @description: Component hiển thị thẻ thông tin phòng trong phân hệ LƯU TRÚ.
- * Hiển thị số phòng, trạng thái (màu sắc động), giá tiền và các nhãn (tags).
+ * Hiển thị số phòng, tầng, trạng thái (màu sắc động), giá tiền và các nhãn (tags).
  * @path: src/components/pos/RoomCard.tsx
  */
 
@@ -9,32 +9,21 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
-/**
- * Định nghĩa kiểu dữ liệu cho một Phòng
- */
-interface Room {
-    id: string; // Số phòng (e.g., P.101)
-    status: 'available' | 'occupied' | 'cleaning' | 'maintenance'; // Trạng thái
-    label: string; // Nhãn hiển thị trạng thái (e.g., Đang ở, Sẵn sàng)
-    price: number; // Giá phòng
-    tag?: string;  // Nhãn phụ (e.g., Hết hạn: 30/11)
-    tagColor?: string;
-    borderColor: string; // Màu viền bên trái để nhận diện nhanh
-}
+import { Room } from '../../screens/pos/types';
 
 interface RoomCardProps {
     room: Room;
     cardWidth: number; // Chiều rộng thẻ tính toán theo thiết bị
+    onPress?: () => void;
 }
 
 /**
  * Bảng màu tương ứng với từng trạng thái phòng
  */
 const STATUS_DOT: Record<Room['status'], string> = {
-    occupied: "#FF4444",    // Đang có khách - Đỏ
-    available: "#4CAF50",   // Trống/Sẵn sàng - Xanh lá
-    cleaning: "#FFA726",    // Đang dọn dẹp - Cam
-    maintenance: "#9E9E9E", // Bảo trì - Xám
+    occupied: '#FF4444',    // Đang có khách - Đỏ
+    available: '#4CAF50',   // Trống/Sẵn sàng - Xanh lá
+    cleaning: '#FFA726',    // Đang dọn dẹp - Cam
 };
 
 /**
@@ -42,7 +31,7 @@ const STATUS_DOT: Record<Room['status'], string> = {
  */
 const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
 
-const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth }) => {
+const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
     const { isDark } = useTheme();
 
     // Thiết lập màu sắc linh hoạt theo giao diện Sáng/Tối
@@ -52,16 +41,22 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth }) => {
     const tagBg = isDark ? '#374151' : '#FEE2E2';
     const tagBorder = isDark ? '#4B5563' : '#FECACA';
 
+    // Parse floor from metadata JSON
+    const roomMeta = room.metadata ? JSON.parse(room.metadata) : {};
+    const floorNumber = roomMeta.floor || '?';
+    const statusText = room.status === 'available' ? 'Trống' : 'Đang ở';
+
     return (
         <TouchableOpacity
             activeOpacity={0.7}
+            onPress={onPress}
             style={[
                 styles.roomCard,
                 {
                     width: cardWidth,
                     borderLeftColor: room.borderColor, // Vạch màu bên trái thẻ
                     backgroundColor: cardBg,
-                }
+                },
             ]}>
 
             {/* --- PHẦN TIÊU ĐỀ: SỐ PHÒNG & TAG THỜI GIAN --- */}
@@ -77,10 +72,15 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth }) => {
                 )}
             </View>
 
-            {/* --- PHẦN TRẠNG THÁI: CHẤM TRÒN & TEXT --- */}
-            <View style={styles.roomStatusRow}>
-                <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[room.status] }]} />
-                <Text style={[styles.roomStatusLabel, { color: subTextColor }]}>{room.label}</Text>
+            {/* --- PHẦN TRẠNG THÁI & TẦNG --- */}
+            <View style={[styles.roomStatusRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View style={styles.floorBadge}>
+                    <Text style={styles.floorText}>Tầng {floorNumber}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[room.status] }]} />
+                    <Text style={[styles.roomStatusLabel, { color: subTextColor }]}>{statusText}</Text>
+                </View>
             </View>
 
             {/* --- PHẦN GIÁ TIỀN --- */}
@@ -127,6 +127,17 @@ const styles = StyleSheet.create({
         gap: 6,
         marginBottom: 8,
     },
+    floorBadge: {
+        backgroundColor: '#E5E7EB',
+        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    floorText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#6B7280',
+    },
     statusDot: {
         width: 8,
         height: 8,
@@ -142,3 +153,4 @@ const styles = StyleSheet.create({
 });
 
 export default RoomCard;
+

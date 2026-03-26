@@ -53,5 +53,16 @@
 		<string>Ionicons.ttf</string>
 		<string>MaterialIcons.ttf</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>mypos</string>
+    </array>
+    <key>CFBundleURLName</key>
+    <string>mypos</string>
+  </dict>
+</array>
 </dict>
 </plist>

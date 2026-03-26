@@ -202,6 +202,13 @@ export const authService = {
   },
 
   /**
+   * Lấy thông tin user hiện tại (alias)
+   */
+  async getMe(): Promise<UserProfileResponse> {
+    return this.getCurrentUser();
+  },
+
+  /**
    * Lấy thông tin user hiện tại
    */
   async getCurrentUser(): Promise<UserProfileResponse> {

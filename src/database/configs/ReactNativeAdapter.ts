@@ -59,7 +59,7 @@ class ReactNativeConnection {
           const result = results[0];
           logger.debug(
             AppModules.REACTNATIVE_ADAPTER,
-            `SQL SELECT result:`,
+            'SQL SELECT result:',
             result,
           );
           // Chuyển đổi ResultSet thành array
@@ -68,7 +68,7 @@ class ReactNativeConnection {
           }
           logger.debug(
             AppModules.REACTNATIVE_ADAPTER,
-            `SQL SELECT rows:`,
+            'SQL SELECT rows:',
             rows,
           );
         }
@@ -85,7 +85,7 @@ class ReactNativeConnection {
           const result = results[0];
           logger.debug(
             AppModules.REACTNATIVE_ADAPTER,
-            `SQL execution result:`,
+            'SQL execution result:',
             result,
           );
           return {
@@ -103,7 +103,7 @@ class ReactNativeConnection {
     } catch (error) {
       logger.error(
         AppModules.REACTNATIVE_ADAPTER,
-        `SQL execution failed`,
+        'SQL execution failed',
         error,
       );
       throw error;
@@ -114,7 +114,7 @@ class ReactNativeConnection {
     try {
       await this.db.close();
     } catch (error) {
-      logger.error(AppModules.REACTNATIVE_ADAPTER, `Close Error:`, error);
+      logger.error(AppModules.REACTNATIVE_ADAPTER, 'Close Error:', error);
       throw error;
     }
   }

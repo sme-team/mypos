@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
-import {useTranslation} from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
@@ -39,13 +39,12 @@ const StatCard = ({
       <View className="flex-row justify-between ">
         <View
           className="w-9 h-9 rounded-xl items-center justify-center"
-          style={{backgroundColor: iconBg}}>
+          style={{ backgroundColor: iconBg }}>
           <Icon name={icon} size={18} color={iconColor} />
         </View>
         <Text
-          className={`text-xs font-semibold ${
-            changePositive ? 'text-green-500' : 'text-red-500'
-          }`}>
+          className={`text-xs font-semibold ${changePositive ? 'text-green-500' : 'text-red-500'
+            }`}>
           {change}
         </Text>
       </View>
@@ -81,7 +80,7 @@ const ActivityItem = ({
     <View className="flex-row items-center py-3 px-1">
       <View
         className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-        style={{backgroundColor: iconBg}}>
+        style={{ backgroundColor: iconBg }}>
         <Icon name={icon} size={20} color={iconColor} />
       </View>
       <View className="flex-1">
@@ -89,9 +88,8 @@ const ActivityItem = ({
         <Text className="text-gray-400 text-xs mt-0.5">{subtitle}</Text>
       </View>
       <Text
-        className={`text-sm font-bold ${
-          amountPositive ? 'text-green-500' : 'text-gray-900'
-        }`}>
+        className={`text-sm font-bold ${amountPositive ? 'text-green-500' : 'text-gray-900'
+          }`}>
         {amount}
       </Text>
     </View>
@@ -102,21 +100,15 @@ const ActivityItem = ({
 const Divider = () => <View className="h-px bg-gray-100 mx-1" />;
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
-const DashBoard = ({
-  onOpenMenu,
-  onNavigate,
-}: {
-  onOpenMenu: () => void;
-  onNavigate: (screen: string) => void;
-}) => {
-  const {t} = useTranslation();
+const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavigate: (screen: string) => void }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'pos' | 'hotel' | 'warehouse'>(
     'pos',
   );
 
   const tabs = [
-    {key: 'pos', label: t('dashboard.pos', 'Bán hàng')},
-    {key: 'hotel', label: t('dashboard.hotel', 'Lưu trú')},
+    { key: 'pos', label: t('dashboard.pos', 'Bán hàng') },
+    { key: 'hotel', label: t('dashboard.hotel', 'Lưu trú') },
   ] as const;
 
   return (
@@ -132,9 +124,7 @@ const DashBoard = ({
           </Text>
         </View>
       </View>
-      <ScrollView
-        className="flex-1 bg-slate-50"
-        showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 bg-slate-50" showsVerticalScrollIndicator={false}>
         {/* ── Page Title ── */}
         <View className="px-4 mt-6">
           <Text className="text-2xl font-bold text-gray-900 leading-tight">
@@ -210,17 +200,15 @@ const DashBoard = ({
               <TouchableOpacity
                 key={tab.key}
                 onPress={() => setActiveTab(tab.key)}
-                className={`mr-6 pb-3 border-b-2 ${
-                  activeTab === tab.key
-                    ? 'border-blue-600'
-                    : 'border-transparent'
-                }`}>
-                <Text
-                  className={`text-sm ${
-                    activeTab === tab.key
-                      ? 'text-blue-600 font-bold'
-                      : 'text-gray-400 font-medium'
+                className={`mr-6 pb-3 border-b-2 ${activeTab === tab.key
+                  ? 'border-blue-600'
+                  : 'border-transparent'
                   }`}>
+                <Text
+                  className={`text-sm ${activeTab === tab.key
+                    ? 'text-blue-600 font-bold'
+                    : 'text-gray-400 font-medium'
+                    }`}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -275,6 +263,7 @@ const DashBoard = ({
             )}
           </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );

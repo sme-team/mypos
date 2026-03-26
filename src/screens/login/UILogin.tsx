@@ -53,7 +53,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
   // ── Handlers (Defined first to be used in effects) ─────────────────────────
   const processGoogleCode = useCallback(async (codeOverride?: string) => {
     const finalCode = (codeOverride ?? oauthCode).trim();
-    if (!finalCode) return;
+    if (!finalCode) {return;}
     setGoogleStep('processing');
     const success = await loginWithCode(finalCode);
     if (success) {
@@ -68,7 +68,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
     setIsLoading(true);
     const success = await loginCredentials(email, password);
     setIsLoading(false);
-    if (success) onLoginSuccess();
+    if (success) {onLoginSuccess();}
   };
 
   const handleGetAuthUrl = useCallback(async () => {
@@ -92,7 +92,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
   useEffect(() => {
     const handleUrl = ({ url }: { url: string }) => {
       logger.info('[UILogin] Deep link received:', url);
-      if (!url.startsWith(DEEP_LINK_SCHEME)) return;
+      if (!url.startsWith(DEEP_LINK_SCHEME)) {return;}
 
       let receivedCode = '';
       if (url.includes('code=')) {
@@ -109,7 +109,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
 
     const subscription = Linking.addListener('url', handleUrl);
     Linking.getInitialURL().then(url => {
-      if (url) handleUrl({ url });
+      if (url) {handleUrl({ url });}
     });
     return () => subscription.remove();
   }, [processGoogleCode]);
@@ -143,8 +143,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
               className={`p-2 w-10 h-10 items-center justify-center rounded-lg shadow-sm mr-4 ${C.googleBtnBg}`}>
               <Text className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-700'}`}>←</Text>
             </TouchableOpacity>
-            <Text className={`text-lg font-bold ${C.text}`}>
-            </Text>
+            <Text className={`text-lg font-bold ${C.text}`} />
           </View>
 
           <View className="flex-1 justify-center py-8">
@@ -246,7 +245,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                         onPress={() => setShowPassword(!showPassword)}
                         className="absolute right-4 top-3">
                         <Icon
-                          name={showPassword ? "visibility-off" : "visibility"}
+                          name={showPassword ? 'visibility-off' : 'visibility'}
                           size={20}
                           color={isDark ? '#4B5563' : '#9CA3AF'}
                         />

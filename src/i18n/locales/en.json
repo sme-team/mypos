@@ -50,7 +50,9 @@
   "common": {
     "back": "Go back",
     "ok": "OK",
-    "error": "An error occurred"
+    "error": "An error occurred",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "dashboard": {
     "overview": "Overview",
@@ -145,9 +147,5 @@
       "selling": "Selling",
       "storage": "Storage"
     }
-  },
-  "common": {
-    "cancel": "Cancel",
-    "save": "Save"
   }
 }

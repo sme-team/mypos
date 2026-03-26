@@ -81,7 +81,7 @@ function createAuthApiClient(apiPrefix: string, tag: string): AxiosInstance {
           const authMethod = tokenManager.getAuthMethod();
           const refreshToken = tokenManager.getRefreshToken();
 
-          if (!refreshToken) throw new Error('No refresh token available');
+          if (!refreshToken) {throw new Error('No refresh token available');}
 
           let refreshSuccess = false;
 

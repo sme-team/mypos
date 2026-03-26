@@ -1,1 +1,0 @@
-__tests__/App.test.tsx(9,3): error TS2304: Cannot find name 'expect'.

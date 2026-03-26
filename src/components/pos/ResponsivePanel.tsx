@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import {View, Modal, TouchableOpacity, useWindowDimensions} from 'react-native';
+import {View, Modal, TouchableOpacity, useWindowDimensions, SafeAreaView} from 'react-native';
 import {useTheme} from '../../hooks/useTheme';
 
 interface Props {
@@ -55,14 +55,14 @@ export default function ResponsivePanel({visible, onClose, children}: Props) {
         <TouchableOpacity style={{flex: 1}} onPress={onClose} />
 
         {/* Nội dung bảng chiếm 85% chiều ngang màn hình điện thoại */}
-        <View
+        <SafeAreaView
           style={{
             width: width * 0.85,
             height: height,
             backgroundColor: panelBg,
           }}>
           {children}
-        </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
