@@ -1,6 +1,7 @@
-import {DatabaseManager} from '@dqcai/sqlite';
-import {googleSheetService} from '../../services/GooglesheetServices/GoogleSheetToJson';
-import {createModuleLogger, AppModules} from '../../logger';
+// === PHIÊN BẢN TỐI ƯU (Khuyến nghị dùng) ===
+import { DatabaseManager } from '@dqcai/sqlite';
+import { googleSheetService } from '../../services/GooglesheetServices/GoogleSheetToJson';
+import { createModuleLogger, AppModules } from '../../logger';
 
 const logger = createModuleLogger(AppModules.DATABASE);
 
@@ -8,295 +9,715 @@ export interface SeedResult {
   success: boolean;
   totalImported: number;
   totalFailed: number;
-  errors: Array<{
-    table: string;
-    rowId: string | number;
-    message: string;
-  }>;
+  errors: Array<{ table: string; rowId: string | number; message: string; skippedColumns?: string[] }>;
   summary: string;
+  importedTables: Record<string, number>;
 }
 
 export class DatabaseSeeder {
-  /**
-   * Làm sạch dữ liệu trước khi insert (xử lý null → giá trị mặc định)
-   */
-  private cleanData(tableName: string, dataArray: any[]): any[] {
-    const metadataIds = [
-      'varchar',
-      'text',
-      'int',
-      'float',
-      'decimal',
-      'date',
-      'datetime',
-      'Mã danh mục',
-      'Mô tả',
-      'Kiểu dữ liệu',
-      'Length',
-      'Type',
-      'uuid',
-      'tự sinh',
-    ];
+  // All available table names from schema
+  private readonly AVAILABLE_TABLES = [
+    'categories', 'units', 'products', 'product_variants', 'prices',
+    'customers', 'bill_cycles', 'bills', 'bill_details', 'payments',
+    'receivables', 'contracts', 'contract_members', 'residents'
+  ];
 
-    return dataArray
-      .filter(row => {
-        // Filter empty rows
-        if (
-          !row ||
-          !Object.values(row).some(
-            v => v !== null && v !== undefined && v !== '',
-          )
-        ) {
-          return false;
-        }
-        // Filter metadata rows by ID
-        if (
-          row.id &&
-          typeof row.id === 'string' &&
-          metadataIds.includes(row.id.trim().toLowerCase())
-        ) {
-          return false;
-        }
-        return true;
-      })
-      .map((row, idx) => {
-        const r: any = {};
+  private readonly SHEET_TO_TABLE_MAP: Record<string, string> = {
+    'pos_categories': 'categories',
+    'pos_units': 'units',
+    'pos_products': 'products',
+    'pos_product_variants': 'product_variants',
+    'pos_prices': 'prices',
+    'pos_customers': 'customers',
+    'pos_bill_cycles': 'bill_cycles',
+    'pos_bills': 'bills',
+    'pos_bill_details': 'bill_details',
+    'pos_payments': 'payments',
+    'pos_receivables': 'receivables',
+    'res_contracts': 'contracts',
+    'res_contract_members': 'contract_members',
+    'res_residents': 'residents',
+  };
 
-        Object.keys(row).forEach(key => {
-          let val = row[key];
+  private readonly TABLE_SCHEMA_MAP: Record<string, string[]> = {
+    categories: ['id', 'store_id', 'parent_id', 'category_code', 'name', 'icon', 'color_code', 'apply_to', 'sort_order', 'status', 'sync_status', 'created_at', 'updated_at'],
+    units: ['id', 'store_id', 'unit_code', 'name', 'unit_type', 'sort_order', 'status', 'sync_status', 'created_at', 'updated_at'],
+    products: [
+    'id','store_id','category_id','unit_id','product_code','barcode',
+    'name','short_name','description','image_url',          // ← thêm image_url
+    'product_type','pricing_type','is_active_pos',
+    'is_trackable','tax_rate','sort_order',                 // ← thêm is_trackable, tax_rate
+    'status','sync_status','created_at','updated_at'        // ← thêm created_at, updated_at
+  ],
+    product_variants: ['id', 'store_id', 'product_id', 'variant_code', 'name', 'attributes', 'image_url', 'is_default', 'sort_order', 'status', 'sync_status'],
+    prices: ['id', 'store_id', 'variant_id', 'unit_id', 'price_list_name', 'price', 'cost_price', 'effective_from', 'effective_to', 'sort_order'],
+    customers: ['id', 'store_id', 'customer_code', 'full_name', 'id_number', 'date_of_birth', 'gender', 'phone', 'email', 'address', 'customer_group', 'status'],
+    bill_cycles: ['id', 'store_id', 'cycle_code', 'name', 'cycle_days', 'billing_day', 'auto_generate', 'sort_order'],
+    bills: ['id', 'store_id', 'bill_number', 'customer_id', 'cashier_user_id', 'bill_type', 'cycle_id', 'total_amount', 'bill_status'],
+    bill_details: ['id', 'store_id', 'bill_id', 'product_id', 'variant_id', 'unit_id', 'line_description', 'quantity', 'unit_price', 'amount'],
+    payments: ['id', 'store_id', 'bill_id', 'payment_method', 'amount', 'paid_at'],
+    receivables: ['id', 'store_id', 'customer_id', 'contract_id', 'bill_id', 'receivable_code', 'receivable_type', 'description', 'amount'],
+    contracts: [
+    'id','store_id','contract_number','customer_id','product_id','variant_id',
+    'start_date','end_date','signed_date',                  // ← thêm signed_date
+    'rent_amount','deposit_amount',
+    'electric_rate','water_rate','billing_day','cycle_id',  // ← thêm cả block này
+    'electric_reading_init','water_reading_init',
+    'status','notes','created_at','updated_at'
+  ],   
+   contract_members: ['id', 'store_id', 'contract_id', 'customer_id', 'is_primary', 'joined_date', 'left_date'],
+   residents: [
+    'id','store_id','customer_id','hometown','occupation','workplace',
+    'id_card_front_url','id_card_back_url','portrait_url',  // ← thêm portrait_url
+    'temp_residence_from','temp_residence_to',              // ← thêm block tạm trú
+    'temp_residence_status','police_ref_number',
+    'approved_by','approved_date','note','status','created_at','updated_at'
+  ],
+};
 
-          // Xóa khoảng trắng thừa và chuẩn hóa null
-          if (val === null || val === undefined || String(val).trim() === '') {
-            if (
-              [
-                'price',
-                'amount',
-                'rent_amount',
-                'deposit_amount',
-                'unit_price',
-                'quantity',
-                'cost_price',
-                'tax_rate',
-              ].includes(key)
-            ) {
-              r[key] = 0;
-            } else if (
-              key.includes('date') ||
-              key === 'start_date' ||
-              key === 'end_date' ||
-              key === 'signed_date' ||
-              key === 'due_date'
-            ) {
-              r[key] = '2024-01-01';
-            } else if (key === 'status') {
-              r[key] = 'active';
-            } else if (
-              key === 'name' ||
-              key === 'short_name' ||
-              key === 'description' ||
-              key === 'line_description'
-            ) {
-              r[key] = `Unnamed_${tableName}_${idx + 1}`;
-            } else {
-              r[key] = null;
-            }
-          } else {
-            // Convert sang số nếu là cột số
-            if (
-              [
-                'price',
-                'amount',
-                'rent_amount',
-                'deposit_amount',
-                'unit_price',
-                'quantity',
-              ].includes(key)
-            ) {
-              r[key] = Number(val) || 0;
-            } else if (typeof val === 'string') {
-              r[key] = val.trim();
-            } else {
-              r[key] = val;
-            }
-          }
-        });
+  private readonly TABLE_ORDER = [
+    'categories', 'units', 'products', 'product_variants', 'prices',
+    'customers', 'bill_cycles',
+    'contracts', 'contract_members', 'residents',
+    'bills', 'bill_details', 'receivables', 'payments'
+  ];
 
-        // Bổ sung thêm nếu thiếu trường quan trọng
-        if (tableName === 'products' && !r.name)
-          r.name = `Sản phẩm ${r.id || idx + 1}`;
-        if (tableName === 'prices' && r.price === undefined) r.price = 0;
-        if (tableName === 'contracts') {
-          if (!r.start_date) r.start_date = '2024-01-01';
-          if (r.rent_amount === undefined) r.rent_amount = 0;
-        }
-
-        return r;
-      });
+  private async generateUUID(): Promise<string> {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
+
   /**
-   * Seed một bảng (đã được làm sạch dữ liệu)
+   * Fuzzy match sheet name to database table using multiple strategies:
+   * 1. Exact match (with normalization)
+   * 2. Prefix match (pos_categories → categories)
+   * 3. Levenshtein distance (fuzzy match)
    */
-  private async seedTable(
-    tableName: string,
-    rawData: any[],
-    errors: SeedResult['errors'],
-  ): Promise<{success: number; failed: number}> {
-    if (!rawData || rawData.length === 0) {
-      logger.warn(`Không có dữ liệu cho bảng ${tableName}`);
-      return {success: 0, failed: 0};
+  private fuzzyMatchSheetToTable(sheetName: string): string | null {
+    const normalized = sheetName.toLowerCase().trim();
+
+    console.log(`[MAPPING] Analyzing sheet: "${sheetName}" -> normalized: "${normalized}"`);
+
+    // Custom mappings for specific sheet patterns
+     if (normalized.includes('s1a') || normalized.includes('s2a')) {
+    logger.info(`[SKIP] Sheet kế toán "${sheetName}" - bỏ qua`);
+    return null;  // ← return null thay vì return 'prices'
+  }
+
+    // Strategy 1: Exact match in predefined map
+    if (this.SHEET_TO_TABLE_MAP[normalized]) {
+      console.log(`[MAPPING] Found exact match: "${normalized}" -> "${this.SHEET_TO_TABLE_MAP[normalized]}"`);
+      return this.SHEET_TO_TABLE_MAP[normalized];
     }
 
-    const cleanedData = this.cleanData(tableName, rawData);
+    // Strategy 2: Check if sheet name contains or matches a table name
+    const tableMatch = this.AVAILABLE_TABLES.find(table => {
+      // Direct substring match (case-insensitive)
+      if (normalized.includes(table)) return true;
+      // Reverse substring (table includes sheet)
+      if (table.includes(normalized.replace(/[_-]/g, ''))) return true;
+      // Vietnamese common names
+      const vietnameseMap: Record<string, string> = {
+        'khachhang': 'customers',
+        'khách hàng': 'customers',
+        'customer': 'customers',
+        'hopdong': 'contracts',
+        'hợp đồng': 'contracts',
+        'contract': 'contracts',
+        'thanhtoan': 'payments',
+        'thanh toán': 'payments',
+        'payment': 'payments',
+        'hoadon': 'bills',
+        'hóa đơn': 'bills',
+        'bill': 'bills',
+        'chitiet': 'bill_details',
+        'chi tiết': 'bill_details',
+        'ky': 'bill_cycles',
+        'kỳ': 'bill_cycles',
+        'cycle': 'bill_cycles',
+        'congno': 'receivables',
+        'công nợ': 'receivables',
+        'receivable': 'receivables',
+        'cuutru': 'residents',
+        'cư trú': 'residents',
+        'resident': 'residents',
+        'gia': 'prices',
+        'giá': 'prices',
+        'price': 'prices',
+      };
+      
+      if (vietnameseMap[normalized]) return vietnameseMap[normalized];
+      if (Object.keys(vietnameseMap).some(key => normalized.includes(key))) {
+        return vietnameseMap[Object.keys(vietnameseMap).find(key => normalized.includes(key))!];
+      }
+      
+      return false;
+    });
+    if (tableMatch) {
+      console.log(`[MAPPING] Found substring match: "${sheetName}" -> "${tableMatch}"`);
+      return tableMatch;
+    }
+
+    // Strategy 3: Levenshtein distance (fuzzy matching)
+    const scores = this.AVAILABLE_TABLES.map(table => ({
+      table,
+      score: this.levenshteinDistance(normalized, table)
+    }));
+
+    // Sort by score (lower is better)
+    scores.sort((a, b) => a.score - b.score);
+
+    // Return match if score is below threshold (max 3 character differences)
+    const bestMatch = scores[0];
+    if (bestMatch && bestMatch.score <= 3) {
+      console.log(`[MAPPING] Found fuzzy match: "${sheetName}" -> "${bestMatch.table}" (distance: ${bestMatch.score})`);
+      return bestMatch.table;
+    }
+
+    console.log(`[MAPPING] No match found for sheet: "${sheetName}"`);
+    return null;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const track = Array(str2.length + 1).fill(null).map(() =>
+      Array(str1.length + 1).fill(null)
+    );
+
+    for (let i = 0; i <= str1.length; i += 1) {
+      track[0][i] = i;
+    }
+    for (let j = 0; j <= str2.length; j += 1) {
+      track[j][0] = j;
+    }
+
+    for (let j = 1; j <= str2.length; j += 1) {
+      for (let i = 1; i <= str1.length; i += 1) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        track[j][i] = Math.min(
+          track[j][i - 1] + 1,
+          track[j - 1][i] + 1,
+          track[j - 1][i - 1] + indicator
+        );
+      }
+    }
+
+    return track[str2.length][str1.length];
+  }
+
+private async mapToSchema(
+  tableName: string,
+  sheetName: string,
+  rawRow: any
+): Promise<any> {
+  const schema = this.TABLE_SCHEMA_MAP[tableName];
+  if (!schema) {
+    console.warn(`No schema defined for table: ${tableName}`);
+    return null;
+  }
+
+  // ─── Defaults ───────────────────────────────────────────────────────────
+  const mappedRow: any = {
+    id:         await this.generateUUID(),
+    store_id:   '00000000-0000-0000-0000-000000000001',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    status:     'active',
+    sync_status:'local',
+  };
+
+  // ─── Bỏ qua sheet kế toán (S1a / S2a) ──────────────────────────────────
+  const isAccountingSheet = ['s1a', 's2a'].some(s =>
+    sheetName.toLowerCase().includes(s)
+  );
+  if (isAccountingSheet) return null;
+
+  const rowKeys = Object.keys(rawRow);
+
+  // ─── Name-based mapping (ưu tiên): key = tên cột DB ────────────────────
+  const hasNamedKeys = schema.some(col => col in rawRow);
+
+  if (hasNamedKeys) {
+    for (const dbCol of schema) {
+      const rawValue = rawRow[dbCol];
+      if (rawValue == null || String(rawValue).trim() === '') continue;
+      mappedRow[dbCol] = this.convertValue(dbCol, rawValue);
+    }
+
+    // THÊM: Ghi đè default nếu sheet có giá trị thực (từ version 1)
+    if (rawRow['id'])          mappedRow.id          = String(rawRow['id']).trim();
+    if (rawRow['store_id'])    mappedRow.store_id    = String(rawRow['store_id']).trim();
+    if (rawRow['status'])      mappedRow.status      = String(rawRow['status']).trim();
+    if (rawRow['sync_status']) mappedRow.sync_status = String(rawRow['sync_status']).trim();
+    if (rawRow['created_at'])  mappedRow.created_at  = String(rawRow['created_at']).trim();
+    if (rawRow['updated_at'])  mappedRow.updated_at  = String(rawRow['updated_at']).trim();
+
+    return mappedRow;
+  }
+
+  // ─── Fallback: Fuzzy header mapping (tiếng Việt) ───────────────────────
+  const FUZZY_HEADER_MAP: Record<string, string> = {
+    // customers / residents
+    'họ và tên':            'full_name',
+    'họ và tên chủ hộ':    'full_name',
+    'số điện thoại':        'phone',
+    'điện thoại':           'phone',
+    'địa chỉ thường trú':  'address',
+    'địa chỉ':              'address',
+    'cccd số':              'id_number',
+    'căn cước công dân':    'id_number',
+    'ngày tháng năm sinh':  'date_of_birth',
+    'giới tính':            'gender',
+    'quê quán':             'hometown',
+    'nghề nghiệp':          'occupation',
+    'nơi làm việc / trường':'workplace',
+    // contracts
+    'số hợp đồng':          'contract_number',
+    'ngày bắt đầu':         'start_date',
+    'ngày kết thúc':        'end_date',
+    'đơn giá phòng / tháng':'rent_amount',
+    'tiền cọc':             'deposit_amount',
+    'đã cọc số tiền':       'deposit_amount',
+    'chỉ số điện ban đầu':  'electric_reading_init',
+    // products / prices
+    'tên':                  'name',
+    'tên sản phẩm':         'name',
+    'mã':                   'product_code',
+    'mã sp':                'product_code',
+    'tên ngắn':             'short_name',
+    'giá':                  'price',
+    'đơn giá':              'unit_price',
+  };
+
+  for (const excelCol of rowKeys) {
+    const normalizedKey = excelCol.toLowerCase().trim();
+    const dbCol = FUZZY_HEADER_MAP[normalizedKey];
+
+    if (dbCol && schema.includes(dbCol)) {
+      const rawValue = rawRow[excelCol];
+      if (rawValue == null || String(rawValue).trim() === '') continue;
+      mappedRow[dbCol] = this.convertValue(dbCol, rawValue);
+    }
+  }
+
+  return mappedRow;
+}
+
+// ─── Helper: convert giá trị theo tên cột ─────────────────────────────────
+private convertValue(dbCol: string, value: any): any {
+  const str = String(value).trim();
+
+  // Số tiền / số lượng
+  if (/^(price|amount|rent_amount|deposit_amount|unit_price|quantity|cost_price|electric_rate|water_rate|tax_rate|electric_reading_init|water_reading_init)$/i.test(dbCol)) {
+    const num = parseFloat(str.replace(/[^\d.-]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Số nguyên
+  if (/^(sort_order|cycle_days|billing_day|loyalty_points)$/i.test(dbCol)) {
+    const num = parseInt(str, 10);
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Boolean
+  if (/^(is_default|is_primary|is_active_pos|is_trackable|auto_generate|is_offline)$/i.test(dbCol)) {
+    if (typeof value === 'boolean') return value ? 1 : 0;
+    return ['1', 'true', 'yes', 'có'].includes(str.toLowerCase()) ? 1 : 0;
+  }
+
+  // Ngày (date only)
+  if (/^(effective_from|effective_to|start_date|end_date|date_of_birth|signed_date|joined_date|left_date|due_date|billing_date)$/i.test(dbCol)) {
+    if (value instanceof Date) return value.toISOString().split('T')[0];
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? str : parsed.toISOString().split('T')[0];
+  }
+
+  // Timestamp
+  if (/^(created_at|updated_at|paid_at|issued_at|due_at)$/i.test(dbCol)) {
+    if (value instanceof Date) return value.toISOString();
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? str : parsed.toISOString();
+  }
+
+  return str;
+}
+
+  private async cleanData(tableName: string, sheetName: string, rawRows: any[]): Promise<any[]> {
+  if (!rawRows || rawRows.length === 0) return [];
+
+  // CẢI TIẾN: Filter out metadata/empty rows + JUNK ID PATTERNS
+  const dataRows = rawRows.filter(row => {
+    if (!row || Object.values(row).every(v => v == null || String(v).trim() === '')) return false;
+if (tableName === 'residents' && !row.customerid && !row['họ và tên']) {
+      console.log(`[SKIP] ${tableName}: No customer mapping possible - row keys: ${Object.keys(row).slice(0, 5).join(', ')}`);
+      return false;
+    }
+    //  Fix: id của data thực luôn có pattern cụ thể (cat-001, prod-001, v.v.)
+    // Còn row rác thì id = "Mã danh mục", "varchar", "Khóa chính"
+    const idVal = String(row['id'] ?? '').trim().toLowerCase();
+    
+    const JUNK_ID_PATTERNS = [
+      /^mã /,           // "Mã danh mục", "Mã sản phẩm"
+      /^varchar/,       // "varchar", "varchar(30)"  
+      /^khóa/,          // "Khóa chính"
+      /^fk/,            // "FK → stores.id"
+      /^null/,          // "NULL = gốc"
+      /^integer/,
+      /^decimal/,
+      /^boolean/,
+      /^timestamp/,
+      /^text/,
+      /^primary/,
+    ];
+    
+    if (JUNK_ID_PATTERNS.some(p => p.test(idVal))) {
+      console.log(`[SKIP-JUNK] ${tableName}: id="${idVal.slice(0, 30)}"`);
+      return false;
+    }
+
+    // Legacy: Skip metadata rows (column descriptions) - giữ lại cho an toàn
+    const firstVal = String(row[Object.keys(row)[0]] || '').toLowerCase();
+    const metadataKeywords = ['varchar', 'text', 'int', 'float', 'integer', 'decimal', 'uuid', 'primary key', 'khóa chính'];
+    return !metadataKeywords.some(k => firstVal.includes(k));
+  });
+
+  const mappedRows = [];
+  let validCount = 0;
+  let invalidCount = 0;
+
+  for (const rawRow of dataRows) {
+    try {
+      const mapped = await this.mapToSchema(tableName, sheetName, rawRow);
+      
+      // Enhanced validation: Check for required fields and data quality
+      if (mapped && this.validateMappedRow(tableName, mapped)) {
+        mappedRows.push(mapped);
+        validCount++;
+      } else {
+        invalidCount++;
+        if (mapped) {
+          console.warn(`[INVALID] ${tableName}: Row validation failed -`, {
+            id: mapped.id,
+            hasData: Object.values(mapped).some(v => v != null && String(v).trim() !== ''),
+            keys: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
+          });
+        }
+      }
+    } catch (error) {
+      invalidCount++;
+      console.error(`[ERROR] ${tableName}: Failed to map row -`, error);
+    }
+  }
+
+  console.log(`[CLEAN] ${tableName}: ${validCount} valid, ${invalidCount} invalid from ${dataRows.length} total rows`);
+  return mappedRows;
+}
+
+  /**
+   * Validate mapped row against table requirements
+   */
+  private validateMappedRow(tableName: string, mapped: any): boolean {
+    // Check if row has any meaningful data
+    const hasData = Object.values(mapped).some(v => v != null && String(v).trim() !== '');
+    if (!hasData) return false;
+
+    // Table-specific validation rules
+    const requiredFields: Record<string, string[]> = {
+      categories: ['name', 'category_code'],
+      products: ['name', 'product_code'],
+      customers: ['full_name', 'customer_code'],
+      contracts: ['contract_number', 'customer_id'],
+      units: ['name', 'unit_code'],
+      prices: ['variant_id', 'price'],
+      bill_cycles: ['name', 'cycle_days'],
+      bills: ['bill_number', 'customer_id'],
+      bill_details: ['bill_id', 'product_id'],
+      payments: ['bill_id', 'payment_method', 'amount'],
+      receivables: ['customer_id', 'amount'],
+      residents: ['customer_id'],
+      contract_members: ['contract_id', 'customer_id'],
+    };
+
+    const tableRequired = requiredFields[tableName];
+    if (tableRequired) {
+      const hasRequired = tableRequired.every(field => 
+        mapped[field] && String(mapped[field]).trim() !== ''
+      );
+      if (!hasRequired) {
+        console.warn(`[VALIDATION] ${tableName}: Missing required fields`, {
+          required: tableRequired,
+          present: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
+        });
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async seedTable(tableName: string, sheetName: string, rawData: any[], errors: SeedResult['errors'], dryRun: boolean = false): Promise<{ success: number, failed: number, tableErrors: number }> {
+    let tableErrors = 0;
+    const cleanedData = await this.cleanData(tableName, sheetName, rawData);
+
+    if (cleanedData.length === 0) {
+      console.log(`[SKIP] ${tableName}: No valid data after cleaning`);
+      return { success: 0, failed: 0, tableErrors: 0 };
+    }
+
+    const schema = this.TABLE_SCHEMA_MAP[tableName];
+    if (!schema) {
+      console.error(`[ERROR] ${tableName}: No schema defined, skipping`);
+      return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
+    }
+
+    let success = 0, failed = 0, tableErrCount = 0;
+
+    if (dryRun) {
+      console.log(`[DRY-RUN] ${tableName}: Would import ${cleanedData.length} rows`);
+      return { success: cleanedData.length, failed: 0, tableErrors: 0 };
+    }
 
     const db = DatabaseManager.get('mypos');
     if (!db) {
-      logger.error(`Không kết nối được DB cho bảng ${tableName}`);
-      return {success: 0, failed: 0};
+      console.error(`[ERROR] ${tableName}: No database connection`);
+      return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
     }
 
-    let successCount = 0;
-    let errorCount = 0;
+    console.log(`[IMPORT] ${tableName}: Starting import of ${cleanedData.length} rows`);
 
-    logger.info(
-      `Bắt đầu seed bảng ${tableName} với ${cleanedData.length} dòng (sử dụng transaction)...`,
-    );
+    // ✅ CODE MỚI - batch transaction, mỗi batch 50 rows
+const BATCH_SIZE = 50;
 
-    try {
-      await db.transaction(async (tx: any) => {
-        // Fix type issue
-        for (const row of cleanedData) {
-          try {
-            const columns = Object.keys(row).filter(
-              col => row[col] !== undefined && row[col] !== null,
-            );
-            const placeholders = columns.map(() => '?').join(', ');
-            const values = columns.map(col => row[col]);
+for (let batchStart = 0; batchStart < cleanedData.length; batchStart += BATCH_SIZE) {
+  const batch = cleanedData.slice(batchStart, batchStart + BATCH_SIZE);
+  const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+  const totalBatches = Math.ceil(cleanedData.length / BATCH_SIZE);
 
-            const sql = `INSERT OR REPLACE INTO ${tableName} (${columns.join(
-              ', ',
-            )} ) VALUES (${placeholders})`;
+  await db.execute('BEGIN TRANSACTION');
+  try {
+    for (let i = 0; i < batch.length; i++) {
+      const row = batch[i];
+      const globalIndex = batchStart + i;
 
-            await tx.execute(sql, values);
-            successCount++;
-          } catch (rowErr: any) {
-            errorCount++;
-            const rowId = row.id || row.code || row.name || `row_${errorCount}`;
-            errors.push({
-              table: tableName,
-              rowId,
-              message: `${rowErr.message}`.substring(0, 200),
-            });
-            logger.warn(`Lỗi dòng ${rowId} bảng ${tableName}:`, rowErr.message);
-          }
-        }
+      const columns = schema.filter(col => {
+        const value = row[col];
+        return value !== undefined && value !== null && String(value).trim() !== '';
       });
 
-      logger.info(
-        `✅ Bảng ${tableName}: ${successCount} OK, ${errorCount} lỗi`,
-      );
-    } catch (txErr: any) {
-      logger.error(`❌ Transaction fail ${tableName}:`, txErr);
-      return {success: 0, failed: cleanedData.length};
+      if (columns.length === 0) {
+        failed++;
+        console.warn(`[SKIP-ROW] ${tableName}[${row.id || globalIndex + 1}]: No valid columns`);
+        continue;
+      }
+
+      const validationResult = this.validateRowData(tableName, row, columns);
+      if (!validationResult.valid) {
+        failed++;
+        tableErrCount++;
+        const rowId = row.id || `row_${globalIndex + 1}`;
+        errors.push({
+          table: tableName,
+          rowId,
+          message: validationResult.error || 'Data validation failed',
+          skippedColumns: validationResult.skippedColumns
+        });
+        console.warn(`[VALIDATION-ERROR] ${tableName}[${rowId}]: ${validationResult.error}`);
+        continue;
+      }
+
+      try {
+        const placeholders = columns.map(() => '?');
+        const sql = `INSERT OR REPLACE INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`;
+        const values = columns.map(col => row[col]);
+        await db.execute(sql, values);
+        success++;
+
+        if (success <= 3 || success % 10 === 0) {
+          console.log(`[SUCCESS] ${tableName}[${row.id || globalIndex + 1}]: Inserted (${success}/${cleanedData.length})`);
+        }
+      } catch (err: any) {
+        // ✅ Lỗi 1 row chỉ skip row đó, không ảnh hưởng cả batch
+        failed++;
+        tableErrCount++;
+        const rowId = row.id || `row_${globalIndex + 1}`;
+        errors.push({
+          table: tableName,
+          rowId,
+          message: this.formatDatabaseError(err, row, columns),
+        });
+        console.error(`[DB-ERROR] ${tableName}[${rowId}]:`, err.message);
+      }
     }
-    return {success: successCount, failed: errorCount};
+
+    await db.execute('COMMIT');
+    console.log(`[BATCH] ${tableName}: batch ${batchNum}/${totalBatches} committed (${batch.length} rows)`);
+
+  } catch (e: any) {
+    // Chỉ rollback batch hiện tại, không ảnh hưởng batch đã commit trước đó
+    await db.execute('ROLLBACK');
+    console.error(`[BATCH-FAILED] ${tableName} batch ${batchNum}/${totalBatches}:`, e.message);
+    failed += batch.length;
+  }
+}
+ return { success, failed, tableErrors: tableErrCount };
+  }
+  /**
+   * Validate row data before database insertion
+   */
+  private validateRowData(tableName: string, row: any, columns: string[]): { valid: boolean; error?: string; skippedColumns?: string[] } {
+    // Check for required fields
+    const requiredFields: Record<string, string[]> = {
+      categories: ['name'],
+      products: ['name'],
+      customers: ['full_name'],
+      contracts: ['contract_number'],
+      units: ['name'],
+      prices: ['variant_id', 'price'],
+    };
+
+    const tableRequired = requiredFields[tableName];
+    if (tableRequired) {
+      const missingRequired = tableRequired.filter(field => !columns.includes(field) || !row[field]);
+      if (missingRequired.length > 0) {
+        return {
+          valid: false,
+          error: `Missing required fields: ${missingRequired.join(', ')}`,
+          skippedColumns: missingRequired
+        };
+      }
+    }
+
+    // Data type validation
+    if (tableName === 'prices' && row.price) {
+      const price = parseFloat(String(row.price).replace(/[^\d.-]/g, ''));
+      if (isNaN(price) || price < 0) {
+        return { valid: false, error: 'Invalid price value' };
+      }
+    }
+
+    return { valid: true };
   }
 
   /**
-   * Hàm chính chạy seeding
+   * Format database error messages for better user understanding
    */
-  public async seedRunner(
-    sheetLink: string,
-    strategy: 'overwrite' | 'merge' = 'merge',
-  ): Promise<SeedResult> {
-    const errors: SeedResult['errors'] = [];
-    let totalImported = 0;
-    let totalFailed = 0;
+  private formatDatabaseError(err: any, row: any, columns: string[]): string {
+    const errorMsg = err.message || err.toString();
+    
+    // Common SQLite errors
+    if (errorMsg.includes('UNIQUE constraint failed')) {
+      return `Duplicate data: ${columns.join(', ')} already exists`;
+    }
+    if (errorMsg.includes('NOT NULL constraint failed')) {
+      const nullField = errorMsg.match(/NOT NULL constraint failed: (\w+)/);
+      return `Missing required field: ${nullField ? nullField[1] : 'unknown'}`;
+    }
+    if (errorMsg.includes('FOREIGN KEY constraint failed')) {
+      return `Invalid reference: Related record not found`;
+    }
+    if (errorMsg.includes('datatype mismatch')) {
+      return `Data type mismatch for one of the fields: ${columns.join(', ')}`;
+    }
 
-    try {
-      logger.info('Bắt đầu quy trình fetch và seed dữ liệu...');
+    return errorMsg;
+  }
+public async seedRunner(sheetLink: string, strategy: 'overwrite' | 'merge' | 'dry-run' = 'merge', dryRun: boolean = false): Promise<SeedResult> {
+  const errors: SeedResult['errors'] = [];
+  const importedTables: Record<string, number> = {};
+  let totalImported = 0, totalFailed = 0;
 
-      // 1. Fetch từ Google Sheet
-      const sheetList =
-        'pos_categories,pos_units,pos_products,pos_product_variants,pos_prices,pos_customers,pos_bill_cycles,pos_bills,pos_bill_details,pos_payments,res_contracts,res_contract_members,pos_receivables,res_residents';
+  try {
+    // ✅ FIXED LOG - không còn duplicate
+    logger.info(`\n Starting import from: ${sheetLink}`);
+    logger.info(`    Strategy: ${strategy} | Dry-run: ${dryRun}`);
+    
+    // Get available sheets first
+    const availableSheets = await googleSheetService.getAvailableSheets(sheetLink);
+    logger.info(`    Sheets found: ${availableSheets.length} (${availableSheets.slice(0,3).join(', ')}${availableSheets.length > 3 ? '...' : ''})\n`);
+    
+    console.log('Available sheets:', availableSheets);
+    
+    // DEBUG: Log all sheet mappings
+    console.log('\n=== SHEET MAPPING DEBUG ===');
+    for (const sheet of availableSheets) {
+      const mappedTable = this.fuzzyMatchSheetToTable(sheet);
+      console.log(`Sheet: "${sheet}" -> Table: ${mappedTable || 'NULL (no match)'}`);
+    }
+    console.log('=== END SHEET MAPPING DEBUG ===\n');
 
       const jsonData = await googleSheetService.getDataDirect({
         googleSheetLink: sheetLink,
-        sheets: sheetList,
-        startFromRow: 1, // Fetcher đã skip metadata
+        sheets: availableSheets.join(','),
+        startFromRow: 1,
       });
 
-      // 2. Thứ tự seeding theo Foreign Key
-      const tablesOrder = [
-        {sheet: 'pos_categories', table: 'categories'},
-        {sheet: 'pos_units', table: 'units'},
-        {sheet: 'pos_products', table: 'products'},
-        {sheet: 'pos_product_variants', table: 'product_variants'},
-        {sheet: 'pos_prices', table: 'prices'},
-        {sheet: 'pos_customers', table: 'customers'},
-        {sheet: 'pos_bill_cycles', table: 'bill_cycles'},
-        {sheet: 'pos_bills', table: 'bills'},
-        {sheet: 'pos_bill_details', table: 'bill_details'},
-        {sheet: 'res_contracts', table: 'contracts'},
-        {sheet: 'res_contract_members', table: 'contract_members'},
-        {sheet: 'pos_receivables', table: 'receivables'},
-        {sheet: 'pos_payments', table: 'payments'},
-        {sheet: 'res_residents', table: 'residents'},
-      ];
-
-      // Xóa dữ liệu cũ nếu overwrite
       if (strategy === 'overwrite') {
-        const reverseOrder = [...tablesOrder].reverse();
-        const db = DatabaseManager.get('mypos');
-        if (db) {
-          logger.info('Strategy is overwrite, clearing existing data...');
-          for (const config of reverseOrder) {
-            try {
-              await db.execute(`DELETE FROM ${config.table}`);
-            } catch (err: any) {
-              logger.warn(`Lỗi khi xoá bảng ${config.table}: ${err.message}`);
+        if (!dryRun) {
+          const db = DatabaseManager.get('mypos');
+          if (db) {
+            logger.info('🗑️ Overwrite mode: Clearing existing data');
+            for (const table of [...this.TABLE_ORDER].reverse()) {
+              await db.execute(`DELETE FROM ${table}`);
+              logger.info(`Cleared table: ${table}`);
             }
           }
-        }
-      }
-
-      // Seeding theo thứ tự
-      for (const config of tablesOrder) {
-        const data = jsonData[config.sheet];
-        if (data && data.length > 0) {
-          const tableResult = await this.seedTable(config.table, data, errors);
-          totalImported += tableResult.success;
-          totalFailed += tableResult.failed;
         } else {
-          logger.warn(`Sheet ${config.sheet} không có dữ liệu để seed.`);
+          logger.info(' [DRY-RUN] Would clear all tables in overwrite mode');
         }
       }
 
-      const summary = `Import hoàn tất: ${totalImported} thành công, ${totalFailed} thất bại${
-        errors.length > 0 ? ` (${errors.length} lỗi, xem chi tiết)` : ''
-      }`;
+      // ✨ NEW: Auto-detect and process all matching sheets
+      const processedTables = new Set<string>();
 
-      logger.info('🎉 ' + summary);
+      for (const sheetName of Object.keys(jsonData)) {
+        const tableName = this.fuzzyMatchSheetToTable(sheetName);
 
-      // Ghi log import (update với stats mới)
-      try {
-        const db = DatabaseManager.get('mypos');
-        if (db) {
-          const insertLogSql = `
-            INSERT INTO import_logs (store_id, source_url, record_count, strategy_used, status, error_message)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `;
-          await db.execute(insertLogSql, [
-            'STORE_1',
-            sheetLink,
-            totalImported,
-            strategy,
-            totalFailed === 0 ? 'success' : 'partial_success',
-            errors.length > 0 ? JSON.stringify(errors.slice(0, 10)) : '',
-          ]);
+        if (!tableName) {
+          logger.warn(` Sheet không khớp database: "${sheetName}" - bỏ qua`);
+          continue;
         }
-      } catch (logErr) {
-        logger.error('Failed to write import log:', logErr);
+
+        if (processedTables.has(tableName)) {
+          logger.info(`  Gộp thêm dữ liệu từ sheet "${sheetName}" vào bảng "${tableName}" đã được import trước đó`);
+        }
+
+        logger.info(` [${sheetName}] → [${tableName}]`);
+        const result = await this.seedTable(tableName, sheetName, jsonData[sheetName], errors, dryRun);
+        importedTables[tableName] = (importedTables[tableName] || 0) + result.success;
+        totalImported += result.success;
+        totalFailed += result.failed;
+        processedTables.add(tableName);
+
+        if (result.tableErrors > 0) {
+          console.log(`    ${tableName}: ${result.tableErrors} errors`);
+        } else if (result.success > 0) {
+          console.log(`   ${tableName}: ${result.success} rows imported`);
+        }
       }
+
+      // ✨ NEW: Check for missing tables that weren't in the sheet
+      const missingTables = this.AVAILABLE_TABLES.filter(t => !processedTables.has(t));
+      if (missingTables.length > 0) {
+        logger.info(`  Tables không có sheet tương ứng: ${missingTables.join(', ')}`);
+      }
+
+      // Log to import_logs
+      const db = DatabaseManager.get('mypos');
+      if (db) {
+        const logId = await this.generateUUID();
+        await db.execute(`
+          INSERT INTO import_logs (id, store_id, source_url, record_count, strategy_used, status, error_message, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [logId, 'STORE_1', sheetLink, totalImported, strategy, totalFailed === 0 ? 'success' : 'failed', JSON.stringify(errors.slice(0, 10)), new Date().toISOString()]);
+      }
+
+      const summary = ` Import hoàn tất: ${totalImported} thành công, ${totalFailed} lỗi.\nTables: ${JSON.stringify(importedTables)}`;
+      logger.info(summary);
 
       return {
         success: totalFailed === 0,
@@ -304,20 +725,17 @@ export class DatabaseSeeder {
         totalFailed,
         errors,
         summary,
+        importedTables
       };
     } catch (error: any) {
+      logger.error(` Import failed: ${error.message}`);
       return {
         success: false,
         totalImported: 0,
         totalFailed: 0,
-        errors: [
-          {
-            table: 'seedRunner',
-            rowId: 'global',
-            message: error.message || 'Unknown error',
-          },
-        ],
-        summary: `Import thất bại: ${error.message || 'Unknown error'}`,
+        errors: [{ table: 'global', rowId: 'N/A', message: error.message }],
+        summary: `Global error: ${error.message}`,
+        importedTables: {}
       };
     }
   }

@@ -133,168 +133,108 @@ class GoogleSheetFetcher {
 
   // Method private: Xử lý dữ liệu từ một sheet (optimized)
   private processSheetData(worksheet: XLSX.WorkSheet, sheetName: string): SheetData[] {
-    try {
-      console.log(`\n=== Processing sheet: ${sheetName} ===`);
+  try {
+    console.log(`\n=== Processing sheet: ${sheetName} ===`);
 
-      // Sử dụng range để tối ưu performance
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-      console.log(`Sheet range: ${XLSX.utils.encode_range(range)}`);
+    // Sử dụng header: 1 để lấy raw array, nhưng sau đó map đúng tên cột
+    const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: null,
+      blankrows: false,
+    });
 
-      // Chuyển worksheet thành mảng 2D với range specific
-      const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: '', // Sử dụng empty string thay vì null để dễ xử lý
-        raw: false,
-        range: range, // Sử dụng range để tối ưu
-      });
+    console.log(`Raw data has ${rawData.length} rows`);
 
-      console.log(`Raw data has ${rawData.length} rows`);
-
-      if (rawData.length === 0) {
-        console.warn(`Sheet ${sheetName} is empty`);
-        return [];
-      }
-
-      // Tìm header row (có thể không phải row đầu tiên)
-      let headerRowIndex = 0;
-      let headers: string[] = [];
-
-      for (let i = 0; i < Math.min(5, rawData.length); i++) {
-        const row = rawData[i];
-        if (!row || row.length === 0) {
-          continue;
-        }
-
-        // Check if this row looks like headers
-        const nonEmptyCount = row.filter(cell => String(cell || '').trim() !== '').length;
-        if (nonEmptyCount >= 2) { // At least 2 non-empty columns
-          headers = this.cleanHeaders(row);
-          headerRowIndex = i;
-          break;
-        }
-      }
-
-      if (headers.length === 0) {
-        console.warn(`Sheet ${sheetName} has no valid headers`);
-        return [];
-      }
-
-      console.log(`Headers found at row ${headerRowIndex}:`, headers.slice(0, 5), '...');
-
-      // Tìm data start index
-      let dataStartIndex = headerRowIndex + 1;
-
-      // Skip meta rows sau headers
-      for (let i = dataStartIndex; i < Math.min(dataStartIndex + 10, rawData.length); i++) {
-        const row = rawData[i];
-        if (!row || row.length === 0) {
-          dataStartIndex = i + 1;
-          continue;
-        }
-
-        const firstValue = String(row[0] || '').trim().toLowerCase();
-        
-        const isMetadataRow = 
-          firstValue.includes('mã định danh') || 
-          firstValue === 'uuid' || 
-          firstValue === 'id' || 
-          firstValue.includes('tự sinh') || 
-          firstValue.includes('khóa chính') ||
-          firstValue.includes('mô tả') ||
-          firstValue.includes('kiểu dữ liệu') ||
-          firstValue.includes('length') ||
-          firstValue.includes('type');
-
-        if (isMetadataRow) {
-          console.log(`Skipping meta row ${i}: ${firstValue}`);
-          dataStartIndex = i + 1;
-          continue;
-        }
-
-        // Nếu row có data thực, dừng việc skip, vì đã qua mốc metadata
-        const hasRealData = row.some((cell) => String(cell || '').trim() !== '');
-        if (hasRealData) {
-          break;
-        }
-
-        dataStartIndex = i + 1;
-      }
-
-      console.log(`Data starts from row ${dataStartIndex + 1}`); // +1 for human readable
-
-      // Process data rows
-      const jsonData: SheetData[] = [];
-      const headerCount = headers.length;
-
-      for (let i = dataStartIndex; i < rawData.length; i++) {
-        const row = rawData[i];
-        if (!row || row.length === 0) {
-          continue;
-        }
-
-        // Check if row has meaningful data
-        const hasData = row.some(cell => {
-          const value = String(cell || '').trim();
-          return value !== '' && value !== '0' && value !== 'null' && value !== 'undefined';
-        });
-
-        if (!hasData) {
-          continue;
-        }
-
-        // Build row object
-        const rowObject: SheetData = {};
-        let hasValidData = false;
-
-        for (let j = 0; j < headerCount; j++) {
-          const header = headers[j];
-          if (!header || header.trim() === '') {
-            continue;
-          }
-
-          const cellValue = j < row.length ? row[j] : '';
-
-          // Process cell value
-          let processedValue: any = cellValue;
-          if (cellValue != null && cellValue !== '') {
-            const stringValue = String(cellValue).trim();
-
-            // Try to convert numbers and booleans
-            if (/^-?\d+$/.test(stringValue)) {
-              processedValue = parseInt(stringValue, 10);
-            } else if (/^-?\d*\.\d+$/.test(stringValue)) {
-              processedValue = parseFloat(stringValue);
-            } else if (stringValue.toLowerCase() === 'true') {
-              processedValue = 1;
-            } else if (stringValue.toLowerCase() === 'false') {
-              processedValue = 0;
-            } else {
-              processedValue = stringValue;
-            }
-
-            if (processedValue !== '') {
-              hasValidData = true;
-            }
-          } else {
-            processedValue = null;
-          }
-
-          rowObject[header] = processedValue;
-        }
-
-        if (hasValidData) {
-          jsonData.push(rowObject);
-        }
-      }
-
-      console.log(`Successfully processed ${jsonData.length} data rows from sheet ${sheetName}`);
-      return jsonData;
-
-    } catch (error) {
-      console.error(`Error processing sheet ${sheetName}:`, error);
+    if (rawData.length < 2) {
+      console.warn(`Sheet ${sheetName} has insufficient rows`);
       return [];
     }
+
+    // Lấy và clean headers từ dòng đầu tiên
+    let headers: string[] = this.cleanHeaders(rawData[0] || []);
+    console.log(`Headers found:`, headers.slice(0, 8), '...');
+
+    if (headers.length === 0) return [];
+
+    // ✅ CẢI TIẾN: Tìm dòng bắt đầu dữ liệu (skip metadata) - LOGIC MỚI
+    let dataStartIndex = 1;
+    const metadataKeywords = [
+      // English (cũ)
+      'mã định danh', 'uuid', 'tự sinh', 'khóa chính',
+      'kiểu dữ liệu', 'varchar', 'mô tả',
+      // ✅ Thêm: tiếng Việt mô tả cột
+      'mã ', 'họ và tên', 'số ', 'tên ',   // prefix mô tả
+      'fk →', 'fk->', 'null =',            // ghi chú FK
+      'integer', 'decimal', 'boolean',     // thêm kiểu dữ liệu
+      'timestamp', 'text', 'primary key',
+    ];
+
+    for (let i = 1; i < Math.min(10, rawData.length); i++) {
+      const firstCell = String(rawData[i][0] || '').trim().toLowerCase();
+      
+      // ✅ Fix: kiểm tra NHIỀU cell trong row, không chỉ cell đầu
+      const rowAsString = rawData[i]
+        .slice(0, 5)
+        .map(c => String(c || '').toLowerCase())
+        .join(' ');
+        
+      const isMetadata = metadataKeywords.some(k => firstCell.includes(k))
+        || /^(mã |họ |số |tên |ngày )/.test(firstCell)  // prefix VN phổ biến
+        || rowAsString.includes('fk →')
+        || rowAsString.includes('fk->')
+        || rowAsString.includes('varchar');
+
+      if (isMetadata) {
+        dataStartIndex = i + 1;
+        console.log(`Skipping metadata row ${i}: "${firstCell.slice(0, 40)}"`);
+      } else if (rawData[i].some(cell => String(cell || '').trim() !== '')) {
+        break;
+      }
+    }
+
+    console.log(`Data starts from row ${dataStartIndex + 1}`);
+
+    // Xử lý thành object với key = header thực tế
+    const jsonData: SheetData[] = [];
+    for (let i = dataStartIndex; i < rawData.length; i++) {
+      const row = rawData[i];
+      if (!row || row.length === 0) continue;
+
+      const rowObject: SheetData = {};
+      let hasValidData = false;
+
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j];
+        if (!header) continue;
+
+        let value: any = j < row.length ? row[j] : null;
+
+        if (value !== null && value !== '') {
+          const strVal = String(value).trim();
+          if (/^-?\d+\.?\d*$/.test(strVal)) {
+            value = strVal.includes('.') ? parseFloat(strVal) : parseInt(strVal, 10);
+          } else if (strVal.toLowerCase() === 'true') value = true;
+          else if (strVal.toLowerCase() === 'false') value = false;
+          else value = strVal;
+
+          hasValidData = true;
+        }
+
+        rowObject[header] = value;
+      }
+
+      if (hasValidData) {
+        jsonData.push(rowObject);
+      }
+    }
+
+    console.log(`Successfully processed ${jsonData.length} data rows from sheet ${sheetName}`);
+    return jsonData;
+  } catch (error) {
+    console.error(`Error processing sheet ${sheetName}:`, error);
+    return [];
   }
+}
 
   // Method public: Fetch specific sheets
   public async fetchSheets(options: FetchOptions, onProgress?: ProgressCallback): Promise<FetchResult> {
