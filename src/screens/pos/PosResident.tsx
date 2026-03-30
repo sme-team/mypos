@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,21 @@ import {
   useWindowDimensions,
   StatusBar,
   Modal,
+  RefreshControl,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useTranslation} from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ResponsivePanel from '../../components/pos/ResponsivePanel';
 import ProductCard from '../../components/pos/ProductCard';
 import RoomCard from '../../components/pos/RoomCard';
 import CartItemRow from '../../components/pos/CartItemRow';
-import {Product, Room, RoomStatus, CartItem, PosCategory} from './types';
-import {useTheme} from '../../hooks/useTheme';
+import { Product, Room, RoomStatus, CartItem, PosCategory } from './types';
+import { useTheme } from '../../hooks/useTheme';
 import BookingScreen from '../booking/BookingScreen';
-import { PosQueryService } from '../../services/PosSevices/PosQueryService';
-import { RoomQueryService } from '../../services/ResidentServices/RoomQueryService';
-import { RoomActionService } from '../../services/ResidentServices/RoomActionService';
+import { PosQueryService } from '@/services/PosServices/PosQueryService';
+import { RoomQueryService } from '@/services/ResidentServices/RoomQueryService';
+import { RoomActionService } from '@/services/ResidentServices/RoomActionService';
 import RoomDetailScreen from '../booking/RoomDetailScreen';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -37,24 +38,70 @@ export default function PosResident({
 }: {
   onOpenMenu: () => void;
 }) {
-  const {t} = useTranslation();
-  const {isDark} = useTheme();
+  const { t } = useTranslation();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const {width: screenWidth} = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
-  const [activeMainCategory, setActiveMainCategory] = useState<string>(''); // Default will be set later
+  const [activeMainCategory, setActiveMainCategory] = useState<string>('par001');
   const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
   const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>('all');
   const [searchText, setSearchText] = useState('');
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [rooms, setRooms] = useState<{ title: string; data: Room[] }[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  React.useEffect(() => {
-    loadData();
+  // Do redux chưa được cài đặt, tạm thời dùng mock storeId. 
+  // Sau này có thể lấy từ Context hoặc Global State thực tế.
+  const activeStoreId = 'store-001';
+
+  const loadData = async () => {
+    if (!activeStoreId) return;
+    setRefreshing(true);
+
+    try {
+      console.log('[PosResident] Loading data for store:', activeStoreId);
+      const [prods, cats, roomsData] = await Promise.all([
+        PosQueryService.getProducts(),
+        PosQueryService.getCategories(),
+        RoomQueryService.getRoomsGroupedByFloor(activeStoreId)
+      ]);
+
+      console.log('[PosResident] Data Counts:', {
+        products: prods.length,
+        categories: cats.length,
+        rooms: roomsData.length
+      });
+
+      setProducts(prods);
+      setCategories(cats);
+      setRooms(roomsData);
+
+      if (cats.length > 0 && !activeMainCategory) {
+        const mainCats = cats.filter(c => c.parent_id === null || c.id === 'par001' || c.id === 'par002');
+        const posCat = mainCats.find(c => c.id === 'par001');
+        const defaultCatId = posCat ? posCat.id : mainCats[0].id;
+        setActiveMainCategory(defaultCatId);
+      }
+    } catch (err) {
+      console.error('[PosResident] Error in loadData:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeStoreId) {
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeStoreId]);
+
+  const onRefresh = useCallback(() => {
+    loadData();
+  }, [activeStoreId]);
 
   const handleRoomPress = (room: Room) => {
     if (room.status === 'available') {
@@ -62,23 +109,6 @@ export default function PosResident({
     } else if (room.status === 'occupied') {
       setSelectedRoom(room);
       setDetailModalVisible(true);
-    }
-  };
-
-  const loadData = async () => {
-    const prods = await PosQueryService.getProducts();
-    const rms = await RoomQueryService.getRooms();
-    const cats = await PosQueryService.getCategories();
-
-    setProducts(prods);
-    setRooms(rms);
-    if (cats.length > 0) {
-      setCategories(cats);
-      // Auto select the first main category if none is selected
-      const mainCats = cats.filter(c => !c.parent_id);
-      if (mainCats.length > 0 && !activeMainCategory) {
-        setActiveMainCategory(mainCats[0].id);
-      }
     }
   };
 
@@ -92,22 +122,24 @@ export default function PosResident({
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
-  const mainCategories = useMemo(() => categories.filter(c => !c.parent_id), [categories]);
+  const mainCategories = useMemo(() => {
+    // Lọc các danh mục chính (không có parent_id hoặc parent_id trỏ về chính nó)
+    return categories.filter(c => !c.parent_id || c.parent_id === c.id || c.id === 'par001' || c.id === 'par002');
+  }, [categories]);
 
   const subCategories = useMemo(() => {
-    if (!activeMainCategory) {return [];}
+    if (!activeMainCategory) { return []; }
     return categories.filter(c => c.parent_id === activeMainCategory);
   }, [categories, activeMainCategory]);
 
-  const activeMainCatObj = useMemo(() => mainCategories.find(c => c.id === activeMainCategory), [mainCategories, activeMainCategory]);
-  const isRoomMode = activeMainCatObj?.category_code?.toLowerCase() === 'room';
+  const isRoomMode = activeMainCategory === 'par002';
 
-  const roomStatuses: {key: RoomStatus | 'all'; label: string}[] = useMemo(
+  const roomStatuses: { key: RoomStatus | 'all'; label: string }[] = useMemo(
     () => [
-      {key: 'all', label: t('pos.status_all')},
-      {key: 'available', label: t('pos.status_empty')},
-      {key: 'occupied', label: t('pos.status_occupied')},
-      {key: 'cleaning', label: t('pos.status_cleaning')},
+      { key: 'all', label: t('pos.status_all') },
+      { key: 'available', label: t('pos.status_empty') },
+      { key: 'occupied', label: t('pos.status_occupied') },
+      { key: 'cleaning', label: t('pos.status_cleaning') },
     ],
     [t],
   );
@@ -117,12 +149,10 @@ export default function PosResident({
   const cardWidth = (screenWidth - 32 - GAP * (numCols - 1)) / numCols;
 
   const filteredProducts = products.filter(p => {
-    // Collect allowed category IDs for this main category
     let allowedCategoryIds: string[] = [];
     if (activeSubCategory !== 'all') {
       allowedCategoryIds = [activeSubCategory];
     } else {
-      // If "Tất cả" is selected, allow the main category itself and all its sub-categories
       allowedCategoryIds = [activeMainCategory, ...subCategories.map(c => c.id)];
     }
 
@@ -131,24 +161,28 @@ export default function PosResident({
     return matchCat && matchSearch;
   });
 
-  const filteredRooms = rooms.filter(r => {
-    const matchStatus =
-      activeRoomStatus === 'all' || r.status === activeRoomStatus;
-    const matchSearch = r.id.toLowerCase().includes(searchText.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  const filteredRooms = useMemo(() => {
+    return rooms.map((group: { title: string; data: Room[] }) => ({
+      ...group,
+      data: group.data.filter((r: Room) => {
+        const matchStatus = activeRoomStatus === 'all' || r.status === activeRoomStatus;
+        const matchSearch = (r.label || '').toLowerCase().includes(searchText.toLowerCase());
+        return matchStatus && matchSearch;
+      })
+    })).filter((group: { title: string; data: Room[] }) => group.data.length > 0);
+  }, [rooms, activeRoomStatus, searchText]);
 
   const handleAdd = (id: string) => {
     const product = products.find(p => p.id === id);
-    if (!product) {return;}
+    if (!product) { return; }
     setCartItems(prev => {
       const existing = prev.find(i => i.product.id === id);
       if (existing) {
         return prev.map(i =>
-          i.product.id === id ? {...i, quantity: i.quantity + 1} : i,
+          i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i,
         );
       }
-      return [...prev, {product, quantity: 1}];
+      return [...prev, { product, quantity: 1 }];
     });
     setCartCount(c => c + 1);
   };
@@ -156,7 +190,7 @@ export default function PosResident({
   const handleIncrease = (id: string) => {
     setCartItems(prev =>
       prev.map(i =>
-        i.product.id === id ? {...i, quantity: i.quantity + 1} : i,
+        i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i,
       ),
     );
     setCartCount(c => c + 1);
@@ -165,10 +199,10 @@ export default function PosResident({
   const handleDecrease = (id: string) => {
     setCartItems(prev => {
       const item = prev.find(i => i.product.id === id);
-      if (!item) {return prev;}
-      if (item.quantity === 1) {return prev.filter(i => i.product.id !== id);}
+      if (!item) { return prev; }
+      if (item.quantity === 1) { return prev.filter(i => i.product.id !== id); }
       return prev.map(i =>
-        i.product.id === id ? {...i, quantity: i.quantity - 1} : i,
+        i.product.id === id ? { ...i, quantity: i.quantity - 1 } : i,
       );
     });
     setCartCount(c => Math.max(0, c - 1));
@@ -194,7 +228,7 @@ export default function PosResident({
   const inputBg = isDark ? '#374151' : '#fff';
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: bgColor}}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* ── Header + Tabs ── */}
@@ -214,8 +248,8 @@ export default function PosResident({
             paddingVertical: 12,
             gap: 10,
           }}>
-          <TouchableOpacity onPress={onOpenMenu} style={{padding: 4}}>
-            <View style={{gap: 4}}>
+          <TouchableOpacity onPress={onOpenMenu} style={{ padding: 4 }}>
+            <View style={{ gap: 4 }}>
               {[0, 1, 2].map(i => (
                 <View
                   key={i}
@@ -230,7 +264,7 @@ export default function PosResident({
             </View>
           </TouchableOpacity>
 
-          <Text style={{fontSize: 20, fontWeight: '700', color: textColor}}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: textColor }}>
             {t('pos.title')}
           </Text>
 
@@ -252,10 +286,9 @@ export default function PosResident({
               placeholderTextColor="#9ca3af"
               value={searchText}
               onChangeText={setSearchText}
-              style={{flex: 1, fontSize: 13, color: textColor, padding: 0}}
+              style={{ flex: 1, fontSize: 13, color: textColor, padding: 0 }}
             />
             <Icon name="search" size={20} color="#9ca3af" />
-            {/* SyncDatabaseButton was removed and migrated to Settings */}
           </View>
         </View>
 
@@ -271,12 +304,11 @@ export default function PosResident({
           {mainCategories.map(cat => {
             const isActive = activeMainCategory === cat.id;
 
-            // Generate icon based on abstract category code
             let iconName = 'category';
             const code = (cat.category_code || '').toLowerCase();
-            if (code.includes('food') || code.includes('drink') || code.includes('cafe')) {iconName = 'restaurant';}
-            else if (code.includes('room') || code.includes('hotel')) {iconName = 'hotel';}
-            else if (code.includes('grocery')) {iconName = 'storefront';}
+            if (code.includes('food') || code.includes('drink') || code.includes('cafe')) { iconName = 'restaurant'; }
+            else if (code.includes('room') || code.includes('hotel')) { iconName = 'hotel'; }
+            else if (code.includes('grocery')) { iconName = 'storefront'; }
 
             return (
               <TouchableOpacity
@@ -326,68 +358,71 @@ export default function PosResident({
             gap: 10,
           }}>
           {!isRoomMode
-            ? [{id: 'all', name: t('pos.category_all')}, ...subCategories].map(cat => {
-                const active = activeSubCategory === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => setActiveSubCategory(cat.id)}
+            ? [{ id: 'all', name: t('pos.category_all') }, ...subCategories].map(cat => {
+              const active = activeSubCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => setActiveSubCategory(cat.id)}
+                  style={{
+                    paddingHorizontal: 16,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: active ? '#3b82f6' : cardBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    elevation: 1,
+                    borderWidth: active ? 0 : 1,
+                    borderColor: borderColor,
+                  }}>
+                  <Text
                     style={{
-                      paddingHorizontal: 16,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: active ? '#3b82f6' : cardBg,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      elevation: 1,
-                      borderWidth: active ? 0 : 1,
-                      borderColor: borderColor,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: active ? '#fff' : subTextColor,
                     }}>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: '600',
-                        color: active ? '#fff' : subTextColor,
-                      }}>
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
             : roomStatuses.map(status => {
-                const active = activeRoomStatus === status.key;
-                return (
-                  <TouchableOpacity
-                    key={status.key}
-                    onPress={() => setActiveRoomStatus(status.key)}
+              const active = activeRoomStatus === status.key;
+              return (
+                <TouchableOpacity
+                  key={status.key}
+                  onPress={() => setActiveRoomStatus(status.key)}
+                  style={{
+                    paddingHorizontal: 16,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: active ? '#3b82f6' : cardBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    elevation: 1,
+                    borderWidth: active ? 0 : 1,
+                    borderColor: borderColor,
+                  }}>
+                  <Text
                     style={{
-                      paddingHorizontal: 16,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: active ? '#3b82f6' : cardBg,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      elevation: 1,
-                      borderWidth: active ? 0 : 1,
-                      borderColor: borderColor,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: active ? '#fff' : subTextColor,
                     }}>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: '600',
-                        color: active ? '#fff' : subTextColor,
-                      }}>
-                      {status.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                    {status.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
         </ScrollView>
       </View>
 
       {/* Grid Content */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: GAP,
@@ -398,10 +433,22 @@ export default function PosResident({
         }}>
         {!isRoomMode ? (
           filteredProducts.length === 0 ? (
-            <View style={{flex: 1, alignItems: 'center', marginTop: 60}}>
-              <Text style={{color: '#9ca3af', fontSize: 14}}>
+            <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
+              <Text style={{ color: '#9ca3af', fontSize: 14 }}>
                 {t('pos.no_products')}
               </Text>
+              <TouchableOpacity 
+                onPress={loadData}
+                style={{
+                  marginTop: 16,
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  backgroundColor: '#3b82f6',
+                  borderRadius: 8
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tải lại</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             filteredProducts.map(item => {
@@ -419,14 +466,33 @@ export default function PosResident({
             })
           )
         ) : filteredRooms.length === 0 ? (
-          <View style={{flex: 1, alignItems: 'center', marginTop: 60}}>
-            <Text style={{color: '#9ca3af', fontSize: 14}}>
-              {t('pos.no_products')}
+          <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
+            <Text style={{ color: '#9ca3af', fontSize: 14 }}>
+              {t('pos.no_rooms')}
             </Text>
+            <TouchableOpacity 
+              onPress={loadData}
+              style={{
+                marginTop: 16,
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+                backgroundColor: '#3b82f6',
+                borderRadius: 8
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tải lại</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          filteredRooms.map(item => (
-            <RoomCard key={item.id} room={item} cardWidth={cardWidth} onPress={() => handleRoomPress(item)} />
+          filteredRooms.map((group: { title: string; data: Room[] }) => (
+            <React.Fragment key={group.title}>
+              <View style={{ width: '100%', paddingVertical: 8, marginTop: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: textColor }}>{group.title}</Text>
+              </View>
+              {group.data.map((item: Room) => (
+                <RoomCard key={item.id} room={item} cardWidth={cardWidth} onPress={() => handleRoomPress(item)} />
+              ))}
+            </React.Fragment>
           ))
         )}
       </ScrollView>
@@ -448,7 +514,7 @@ export default function PosResident({
             shadowColor: '#3b82f6',
             elevation: 6,
           }}>
-          <Text style={{fontSize: 24}}>🛒</Text>
+          <Text style={{ fontSize: 24 }}>🛒</Text>
           {cartCount > 0 && (
             <View
               style={{
@@ -465,7 +531,7 @@ export default function PosResident({
                 borderWidth: 1.5,
                 borderColor: '#fff',
               }}>
-              <Text style={{color: '#fff', fontSize: 10, fontWeight: '800'}}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
                 {cartCount}
               </Text>
             </View>
@@ -477,7 +543,7 @@ export default function PosResident({
       <ResponsivePanel
         visible={panelVisible}
         onClose={() => setPanelVisible(false)}>
-        <View style={{flex: 1}}>
+        <View style={{ flex: 1 }}>
           <View
             style={{
               padding: 16,
@@ -488,11 +554,11 @@ export default function PosResident({
               alignItems: 'center',
               backgroundColor: cardBg,
             }}>
-            <Text style={{fontSize: 20, fontWeight: '600', color: textColor}}>
+            <Text style={{ fontSize: 20, fontWeight: '600', color: textColor }}>
               {t('pos.cart')}
             </Text>
             <TouchableOpacity onPress={handleClearCart}>
-              <Text style={{fontSize: 14, color: '#ef4444', fontWeight: '600'}}>
+              <Text style={{ fontSize: 14, color: '#ef4444', fontWeight: '600' }}>
                 {t('payment.clear')}
               </Text>
             </TouchableOpacity>
@@ -564,11 +630,11 @@ export default function PosResident({
           )}
 
           <ScrollView
-            style={{flex: 1, backgroundColor: cardBg}}
-            contentContainerStyle={{paddingHorizontal: 16, paddingTop: 4}}>
+            style={{ flex: 1, backgroundColor: cardBg }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4 }}>
             {cartItems.length === 0 ? (
-              <View style={{alignItems: 'center', marginTop: 48}}>
-                <Text style={{color: '#9ca3af', fontSize: 14}}>
+              <View style={{ alignItems: 'center', marginTop: 48 }}>
+                <Text style={{ color: '#9ca3af', fontSize: 14 }}>
                   {t('payment.cart_empty')}
                 </Text>
               </View>
@@ -598,10 +664,10 @@ export default function PosResident({
                 justifyContent: 'space-between',
                 marginBottom: 4,
               }}>
-              <Text style={{fontSize: 14, color: subTextColor}}>
+              <Text style={{ fontSize: 14, color: subTextColor }}>
                 {t('pos.subtotal')}
               </Text>
-              <Text style={{fontSize: 14, color: textColor}}>
+              <Text style={{ fontSize: 14, color: textColor }}>
                 {formatPrice(subtotal)}
               </Text>
             </View>
@@ -611,10 +677,10 @@ export default function PosResident({
                 justifyContent: 'space-between',
                 marginBottom: 12,
               }}>
-              <Text style={{fontSize: 14, color: subTextColor}}>
+              <Text style={{ fontSize: 14, color: subTextColor }}>
                 {t('pos.tax')} (0%)
               </Text>
-              <Text style={{fontSize: 14, color: textColor}}>0đ</Text>
+              <Text style={{ fontSize: 14, color: textColor }}>0đ</Text>
             </View>
             <View
               style={{
@@ -622,15 +688,15 @@ export default function PosResident({
                 justifyContent: 'space-between',
                 marginBottom: 16,
               }}>
-              <Text style={{fontSize: 16, fontWeight: '700', color: '#3b82f6'}}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#3b82f6' }}>
                 {t('pos.total')}
               </Text>
-              <Text style={{fontSize: 16, fontWeight: '700', color: '#3b82f6'}}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#3b82f6' }}>
                 {formatPrice(subtotal)}
               </Text>
             </View>
 
-            <View style={{flexDirection: 'row', gap: 12}}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
@@ -658,7 +724,7 @@ export default function PosResident({
                   paddingVertical: 13,
                   alignItems: 'center',
                 }}>
-                <Text style={{fontSize: 14, fontWeight: '600', color: '#fff'}}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>
                   {t('payment.title')}
                 </Text>
               </TouchableOpacity>
@@ -670,7 +736,7 @@ export default function PosResident({
       {/* Booking Modal */}
       {bookingRoom && (
         <BookingScreen
-          room={{ code: bookingRoom.id, floor: '' }}
+          room={{ id: bookingRoom.id, code: bookingRoom.id, floor: '' }}
           onClose={() => {
             setBookingRoom(null);
             loadData();

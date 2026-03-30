@@ -15,14 +15,16 @@ export interface PosCategory {
     parent_id: string | null;
 }
 
-export type RoomStatus = 'available' | 'occupied' | 'cleaning';
+export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
 
 export interface Room {
     id: string;
     status: RoomStatus;
     label: string;
     price: number;
-    metadata?: string; // JSON string from products.metadata (floor, area, etc.)
+    floor: string | number;
+    customer_name?: string;
+    metadata?: string; // Giữ lại JSON nếu cần dùng trong tương lai
     tag?: string;
     tagColor?: string;
     borderColor: string;

@@ -1,5 +1,6 @@
 import { DatabaseSchema } from '@dqcai/sqlite';
-import { DatabaseFactory, DatabaseManager } from '@dqcai/sqlite';
+import DatabaseFactory from './DatabaseFactory';
+import DatabaseManager from './DBManagers';
 
 import { ReactNativeAdapter } from './configs/ReactNativeAdapter';
 import { createModuleLogger, AppModules } from '../logger';
@@ -51,23 +52,6 @@ export const ONE_POS_ROLES = [
   },
 ];
 
-// ─── Map ngành nghề → DB ─────────────────────────────────────────
-export const INDUSTRY_DB_MAP: Record<string, string[]> = {
-  cafe: ['mypos'],
-  restaurant: ['mypos'],
-  bakery: ['mypos'],
-  grocery: ['mypos'],
-  hostel: ['mypos'],
-  hotel: ['mypos'],
-  spa: ['mypos'],
-  clinic: ['mypos'],
-  sport: ['mypos'],
-  karaoke: ['mypos'],
-  coworking: ['mypos'],
-  education: ['mypos'],
-  rental: ['mypos'],
-};
-
 // ─── Khởi tạo database ───────────────────────────────────────────
 /**
  * Khởi tạo database myPOS
@@ -75,15 +59,18 @@ export const INDUSTRY_DB_MAP: Record<string, string[]> = {
  */
 export const initDatabase = async (): Promise<void> => {
   try {
-    logger.info('Initializing myPOS database...');
+    logger.info('Initializing myPOS database via optimized wrappers...');
 
-    // 1. Register adapter
+    // 1. Register global adapter
     DatabaseFactory.registerAdapter(new ReactNativeAdapter());
 
-    // 2. Register schemas
-    DatabaseManager.registerSchemas(onePosEcosystemSchemas);
+    // 2. Initialize manager and register default schemas
+    await DatabaseManager.init();
 
-    // 3. Open database
+    // 3. Register system roles
+    DatabaseManager.registerRoles(ONE_POS_ROLES);
+
+    // 4. Ensure the primary 'mypos' connection
     await DatabaseManager.ensureDatabaseConnection('mypos');
 
     logger.info('myPOS database initialized successfully.');
@@ -93,7 +80,10 @@ export const initDatabase = async (): Promise<void> => {
   }
 };
 
-// ─── Helper lấy DB connection ───────────────────────────────────
+/**
+ * Helper lấy DB connection
+ * Trả về wrapper từ cache hoặc lazily tạo mới
+ */
 export const getMyPosDB = () => DatabaseManager.get('mypos');
 
 // ─── Default export ─────────────────────────────────────────────

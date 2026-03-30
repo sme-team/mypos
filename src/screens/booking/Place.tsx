@@ -31,72 +31,49 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
 
   const loadRooms = async () => {
+    console.log('[PlaceScreen] loadRooms called');
     setLoading(true);
     try {
-      const dbRooms = await RoomQueryService.getRooms();
+      const dbRooms = await RoomQueryService.getRoomsFlatList('store-001');
+      console.log(`[PlaceScreen] Received ${dbRooms.length} rooms from service`);
       setRooms(dbRooms);
     } catch (err) {
-      console.error(err);
+      console.error('[PlaceScreen] loadRooms error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const runDebug = async () => {
-      try {
-        const {getMyPosDB} = require('../../database/index');
-        const db = getMyPosDB();
-
-        const r = await db.execute(
-          `
-        SELECT 
-          v.id,
-          v.name,
-          v.variant_code,
-          v.attributes,
-          p.store_id
-        FROM product_variants v
-        JOIN products p ON p.id = v.product_id
-        WHERE p.product_type = 'room'
-        LIMIT 5
-      `,
-          [],
-        );
-
-        console.log('=== DEBUG PHONG ===');
-        console.log(JSON.stringify(r?.rows, null, 2));
-      } catch (e) {
-        console.log('DEBUG ERROR:', e);
-      }
-    };
-    runDebug();
     loadRooms();
   }, []);
 
-  const formatPrice = (price: number) => {
+  console.log('[PlaceScreen] Render state:', {
+    roomsCount: rooms.length,
+    activeFloor,
+    loading
+  });
+
+  const formatPrice = (price: number | null | undefined) => {
+    if (price == null) return '0đ';
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
-  // Build floor list based on room names (e.g., P.101 -> Floor 1, P.A101 -> Floor 1, or just group by first number)
-  const extractFloor = (roomName: string) => {
-    const match = roomName.match(/\d/);
-    if (match) {
-      return match[0];
-    }
-    return '1';
-  };
-
+  // Build floor list based on room data
   const floors = Array.from(
-    new Set(rooms.map(r => extractFloor(r.name))),
-  ).sort();
+    new Set(rooms.map(r => String(r.floor || '?'))),
+  ).sort((a, b) => {
+    if (a === '?') return 1;
+    if (b === '?') return -1;
+    return a.localeCompare(b, undefined, { numeric: true });
+  });
 
   const filteredRooms = rooms.filter(r =>
-    activeFloor === 'all' ? true : extractFloor(r.name) === activeFloor,
+    activeFloor === 'all' ? true : String(r.floor) === activeFloor,
   );
 
-  const emptyCount = rooms.filter(r => r.contract_status !== 'active').length;
-  const occupiedCount = rooms.length - emptyCount;
+  const emptyCount = rooms.filter(r => r.status === 'available').length;
+  const occupiedCount = rooms.filter(r => r.status === 'occupied').length;
 
   if (selectedRoom) {
     return (
@@ -210,7 +187,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                         />
                       </View>
                       <View style={{marginLeft: 8}}>
-                        <Text style={styles.roomName}>{room.name}</Text>
+                        <Text style={styles.roomName}>{room.label}</Text>
                         {occupied && room.end_date && (
                           <Text style={styles.checkoutText}>
                             Checkout:{' '}
@@ -246,7 +223,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                         </Text>
                       </View>
                       <Text style={styles.tenantName} numberOfLines={1}>
-                        {room.customer_name || 'Chưa cập nhật tên'}
+                        {room.customer_name || 'Đang ở'}
                       </Text>
                     </View>
                   ) : (

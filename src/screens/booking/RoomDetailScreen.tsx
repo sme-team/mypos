@@ -11,15 +11,16 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { RoomQueryService } from '../../services/ResidentServices/RoomQueryService';
+import { RoomQueryService, RoomDetailInfo } from '../../services/ResidentServices/RoomQueryService';
 import { RoomActionService } from '../../services/ResidentServices/RoomActionService';
 import BookingScreen from './BookingScreen';
+import { Room } from '../pos/types';
 
 type ViewState = 'detail' | 'edit' | 'switch';
 
-export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: () => void }) {
+export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack: () => void }) {
   const [view, setView] = useState<ViewState>('detail');
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<RoomDetailInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Edit State
@@ -59,7 +60,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
         setEditData({
           tenant: dbDetails.customer_name || '',
           phone: dbDetails.customer_phone || '',
-          cccd: '', // CCCD logic could be added if queried
+          cccd: dbDetails.cccd || '',
           rentPrice: room.price ? room.price.toString() : '0',
           electricOld: dbDetails.electric_index ? dbDetails.electric_index.toString() : '0',
           electricNew: dbDetails.electric_index ? dbDetails.electric_index.toString() : '0',
@@ -78,7 +79,9 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
 
   const loadAvailableRoomsForSwitch = async () => {
     try {
-      const allRooms = await RoomQueryService.getAvailableRooms(room.id);
+      // FIX: Cần truyền storeId là tham số đầu tiên, roomId là tham số thứ hai (excludeId)
+      const storeId = 'store-001'; 
+      const allRooms = await RoomQueryService.getAvailableRooms(storeId, room.id);
       setAvailableRooms(allRooms);
     } catch (err) {
       console.error(err);
@@ -139,12 +142,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
     setView('detail');
   };
 
-  const isOccupied = room.contract_status === 'active';
+  const isOccupied = room.status === 'occupied' || (room as any).contract_status === 'active';
 
   if (showBooking || !isOccupied) {
     return (
       <BookingScreen
-         room={{ id: room.id, code: room.name, name: room.name, floor: extractFloor(room.name), price: room.price }}
+         room={{ id: room.id, code: room.label, name: room.label, floor: extractFloor(room.label), price: room.price }}
          onClose={() => { setShowBooking(false); onBack(); }}
          onConfirm={async (form) => {
            try {
@@ -194,7 +197,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
                     <Icon name="meeting-room" size={20} color="#1565C0" />
                  </View>
                  <View style={{ marginLeft: 12 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 16 }}>{room.name}</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 16 }}>{room.label}</Text>
                     <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>
                        Khách: {details?.customer_name || 'Không rõ'}
                     </Text>
@@ -275,7 +278,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
                     <Icon name="meeting-room" size={20} color="#1565C0" />
                  </View>
                  <View style={{ marginLeft: 12 }}>
-                    <Text style={{ fontWeight: '700', fontSize: 16 }}>{room.name}</Text>
+                    <Text style={{ fontWeight: '700', fontSize: 16 }}>{room.label}</Text>
                     <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>Trạng thái: Đang thuê</Text>
                  </View>
               </View>
@@ -368,7 +371,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: any; onBack: 
             </View>
             <View style={{ marginLeft: 16 }}>
                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontWeight: '800', fontSize: 20, color: '#1a1a2e', marginRight: 10 }}>{room.name}</Text>
+                  <Text style={{ fontWeight: '800', fontSize: 20, color: '#1a1a2e', marginRight: 10 }}>{room.label}</Text>
                   {renderBadge(true)}
                </View>
                <Text style={{ fontSize: 13, color: '#888', marginTop: 4 }}>

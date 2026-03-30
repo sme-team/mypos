@@ -1,26 +1,26 @@
 {
-  "root": "D:\\cap2\\mypos",
-  "reactNativePath": "D:\\cap2\\mypos\\node_modules\\react-native",
+  "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos",
+  "reactNativePath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native",
   "reactNativeVersion": "0.76",
   "dependencies": {
     "@react-native-async-storage/async-storage": {
-      "root": "D:\\cap2\\mypos\\node_modules\\@react-native-async-storage\\async-storage",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/@react-native-async-storage/async-storage",
       "name": "@react-native-async-storage/async-storage",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\RNCAsyncStorage.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/@react-native-async-storage/async-storage/RNCAsyncStorage.podspec",
           "version": "2.2.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/@react-native-async-storage/async-storage/android",
           "packageImportPath": "import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;",
           "packageInstance": "new AsyncStoragePackage()",
           "buildTypes": [],
           "libraryName": "rnasyncstorage",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -29,23 +29,23 @@
       }
     },
     "react-native-bootsplash": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-bootsplash",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-bootsplash",
       "name": "react-native-bootsplash",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-bootsplash\\RNBootSplash.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-bootsplash/RNBootSplash.podspec",
           "version": "7.1.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-bootsplash\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-bootsplash/android",
           "packageImportPath": "import com.zoontek.rnbootsplash.RNBootSplashPackage;",
           "packageInstance": "new RNBootSplashPackage()",
           "buildTypes": [],
           "libraryName": "RNBootSplashSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-bootsplash/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-bootsplash/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -54,23 +54,23 @@
       }
     },
     "react-native-image-picker": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-image-picker",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-image-picker",
       "name": "react-native-image-picker",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-image-picker\\react-native-image-picker.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-image-picker/react-native-image-picker.podspec",
           "version": "7.1.2",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-image-picker\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-image-picker/android",
           "packageImportPath": "import com.imagepicker.ImagePickerPackage;",
           "packageInstance": "new ImagePickerPackage()",
           "buildTypes": [],
           "libraryName": "RNImagePickerSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -79,22 +79,22 @@
       }
     },
     "react-native-randombytes": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-randombytes",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-randombytes",
       "name": "react-native-randombytes",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-randombytes\\react-native-randombytes.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-randombytes/react-native-randombytes.podspec",
           "version": "3.6.2",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-randombytes\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-randombytes/android",
           "packageImportPath": "import com.bitgo.randombytes.RandomBytesPackage;",
           "packageInstance": "new RandomBytesPackage()",
           "buildTypes": [],
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-randombytes/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-randombytes/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -103,17 +103,17 @@
       }
     },
     "react-native-safe-area-context": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-safe-area-context",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-safe-area-context",
       "name": "react-native-safe-area-context",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-safe-area-context\\react-native-safe-area-context.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-safe-area-context/react-native-safe-area-context.podspec",
           "version": "5.7.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-safe-area-context\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-safe-area-context/android",
           "packageImportPath": "import com.th3rdwave.safeareacontext.SafeAreaContextPackage;",
           "packageInstance": "new SafeAreaContextPackage()",
           "buildTypes": [],
@@ -122,7 +122,7 @@
             "RNCSafeAreaProviderComponentDescriptor",
             "RNCSafeAreaViewComponentDescriptor"
           ],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -131,22 +131,22 @@
       }
     },
     "react-native-sqlite-storage": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-sqlite-storage",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-sqlite-storage",
       "name": "react-native-sqlite-storage",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-sqlite-storage\\react-native-sqlite-storage.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-sqlite-storage/react-native-sqlite-storage.podspec",
           "version": "6.0.1",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-sqlite-storage\\platforms\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-sqlite-storage/platforms/android",
           "packageImportPath": "import org.pgsqlite.SQLitePluginPackage;",
           "packageInstance": "new SQLitePluginPackage()",
           "buildTypes": [],
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-sqlite-storage/platforms/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-sqlite-storage/platforms/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -155,23 +155,23 @@
       }
     },
     "react-native-vector-icons": {
-      "root": "D:\\cap2\\mypos\\node_modules\\react-native-vector-icons",
+      "root": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-vector-icons",
       "name": "react-native-vector-icons",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\cap2\\mypos\\node_modules\\react-native-vector-icons\\RNVectorIcons.podspec",
+          "podspecPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-vector-icons/RNVectorIcons.podspec",
           "version": "10.3.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\cap2\\mypos\\node_modules\\react-native-vector-icons\\android",
+          "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-vector-icons/android",
           "packageImportPath": "import com.oblador.vectoricons.VectorIconsPackage;",
           "packageInstance": "new VectorIconsPackage()",
           "buildTypes": [],
           "libraryName": "RNVectorIconsSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/cap2/mypos/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -337,7 +337,7 @@
         {
           "name": "--path <path>",
           "description": "Path to the React Native project root.",
-          "default": "D:\\cap2\\mypos"
+          "default": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos"
         },
         {
           "name": "--platform <string>",
@@ -388,8 +388,7 @@
         },
         {
           "name": "--terminal <string>",
-          "description": "Launches the Metro Bundler in a new window using the specified terminal path.",
-          "default": "cmd.exe"
+          "description": "Launches the Metro Bundler in a new window using the specified terminal path."
         },
         {
           "name": "--binary-path <string>",
@@ -548,8 +547,7 @@
         },
         {
           "name": "--terminal <string>",
-          "description": "Launches the Metro Bundler in a new window using the specified terminal path.",
-          "default": "cmd.exe"
+          "description": "Launches the Metro Bundler in a new window using the specified terminal path."
         },
         {
           "name": "--appId <string>",
@@ -624,7 +622,7 @@
   "assets": [],
   "project": {
     "ios": {
-      "sourceDir": "D:\\cap2\\mypos\\ios",
+      "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/ios",
       "xcodeProject": {
         "name": "myPos.xcworkspace",
         "path": ".",
@@ -633,7 +631,7 @@
       "assets": []
     },
     "android": {
-      "sourceDir": "D:\\cap2\\mypos\\android",
+      "sourceDir": "/Users/macbook/Documents/Capstone2_Mobifone/Code/mypos/android",
       "appName": "app",
       "packageName": "com.mypos",
       "applicationId": "com.mypos",

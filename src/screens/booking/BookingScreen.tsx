@@ -14,7 +14,9 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
-import { RoomQueryService } from '../../services/ResidentServices/RoomQueryService';
+import { RoomQueryService, RoomDetailInfo } from '../../services/ResidentServices/RoomQueryService';
+import { PosQueryService } from '../../services/PosServices/PosQueryService';
+import { CustomerService } from '../../services/ResidentServices/CustomerService';
 
 
 
@@ -137,32 +139,7 @@ const BookingScreen = ({
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const { getMyPosDB } = require('../../database/index');
-        const db = getMyPosDB();
-        const result = await db.execute(`
-          SELECT 
-            p.id, 
-            p.name, 
-            COALESCE(pr.price, 0) AS unit_price, 
-            COALESCE(u.name, 'cái') AS unit
-          FROM products p
-          LEFT JOIN product_variants v ON v.product_id = p.id
-          LEFT JOIN prices pr ON pr.variant_id = v.id AND pr.status = 'active'
-          LEFT JOIN units u ON u.id = p.unit_id
-          WHERE p.product_type = 'service'
-            AND (p.deleted_at IS NULL OR p.deleted_at = '')
-          GROUP BY p.id
-          ORDER BY p.name
-        `, []);
-
-        const serviceList = (result?.rows || []).map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          unitPrice: item.unit_price || 0,
-          unit: item.unit || 'cái',
-          qty: 1,
-          selected: false,
-        }));
+        const serviceList = await PosQueryService.getServices('store-001');
         setServices(serviceList);
       } catch (error) {
         console.error('Failed to load services:', error);
@@ -176,15 +153,8 @@ const BookingScreen = ({
     const loadCustomers = async () => {
       try {
         setLoading(true);
-        const { getMyPosDB } = require('../../database/index');
-        const db = getMyPosDB();
-        const result = await db.execute(`
-          SELECT id, full_name, phone, id_number
-          FROM customers
-          WHERE (deleted_at IS NULL OR deleted_at = '')
-          ORDER BY full_name
-        `, []);
-        setCustomers(result?.rows || []);
+        const customerList = await CustomerService.getCustomers('store-001');
+        setCustomers(customerList);
       } catch (error) {
         console.error('Failed to load customers:', error);
       } finally {

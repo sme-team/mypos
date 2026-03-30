@@ -24,6 +24,7 @@ const STATUS_DOT: Record<Room['status'], string> = {
     occupied: '#FF4444',    // Đang có khách - Đỏ
     available: '#4CAF50',   // Trống/Sẵn sàng - Xanh lá
     cleaning: '#FFA726',    // Đang dọn dẹp - Cam
+    maintenance: '#9E9E9E', // Bảo trì - Xám
 };
 
 /**
@@ -41,10 +42,9 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
     const tagBg = isDark ? '#374151' : '#FEE2E2';
     const tagBorder = isDark ? '#4B5563' : '#FECACA';
 
-    // Parse floor from metadata JSON
-    const roomMeta = room.metadata ? JSON.parse(room.metadata) : {};
-    const floorNumber = roomMeta.floor || '?';
-    const statusText = room.status === 'available' ? 'Trống' : 'Đang ở';
+    const statusText = room.status === 'available' ? 'Trống' : 
+                      room.status === 'occupied' ? 'Đang ở' : 
+                      room.status === 'cleaning' ? 'Dọn dẹp' : 'Bảo trì';
 
     return (
         <TouchableOpacity
@@ -61,7 +61,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
 
             {/* --- PHẦN TIÊU ĐỀ: SỐ PHÒNG & TAG THỜI GIAN --- */}
             <View style={styles.roomHeader}>
-                <Text style={[styles.roomId, { color: textColor }]}>{room.id}</Text>
+                <Text style={[styles.roomId, { color: textColor }]}>{room.label || room.id}</Text>
                 {room.tag && (
                     <View style={[styles.roomTag, { backgroundColor: tagBg, borderColor: tagBorder, borderWidth: 0.5 }]}>
                         {/* Logic đổi màu chữ tag dựa trên nội dung (Hết hạn hoặc Checkout) */}
@@ -75,7 +75,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
             {/* --- PHẦN TRẠNG THÁI & TẦNG --- */}
             <View style={[styles.roomStatusRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                 <View style={styles.floorBadge}>
-                    <Text style={styles.floorText}>Tầng {floorNumber}</Text>
+                    <Text style={styles.floorText}>Tầng {room.floor}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[room.status] }]} />
