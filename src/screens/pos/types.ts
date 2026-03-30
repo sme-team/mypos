@@ -18,16 +18,18 @@ export interface PosCategory {
 export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
 
 export interface Room {
-    id: string;
+    id: string;             // product_variants.id
     status: RoomStatus;
-    label: string;
+    name: string;           // tên gốc (r.name)
+    label: string;          // tên phòng hiển thị
+    product_name: string;   // tên loại phòng
     price: number;
-    floor: string | number;
+    floor: string;
     customer_name?: string;
-    metadata?: string; // Giữ lại JSON nếu cần dùng trong tương lai
-    tag?: string;
-    tagColor?: string;
+    product_id: string;
+    attributes: Record<string, any>;
     borderColor: string;
+    tag?: string;           // Nhãn hiển thị (Hết hạn, v.v.)
 }
 
 export interface CartItem {

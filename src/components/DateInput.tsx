@@ -56,7 +56,7 @@ const getFirstDayOfMonth = (year: number, month: number) =>
   new Date(year, month, 1).getDay(); // 0 = Sunday
 
 // ─── CalendarModal ─────────────────────────────────────────────────────────────
-interface CalendarModalProps {
+export interface CalendarModalProps {
   visible: boolean;
   selectedDate: Date;
   minDate?: Date;
@@ -66,7 +66,7 @@ interface CalendarModalProps {
   onCancel: () => void;
 }
 
-const CalendarModal: React.FC<CalendarModalProps> = ({
+export const CalendarModal: React.FC<CalendarModalProps> = ({
   visible,
   selectedDate,
   minDate,

@@ -91,6 +91,13 @@ export class DatabaseManager {
   }
 
   /**
+   * Alias for ensureDatabaseConnection to maintain backward compatibility with BaseService.
+   */
+  public static async getLazyLoading(key: string): Promise<SQLiteDAO> {
+    return this.ensureDatabaseConnection(key);
+  }
+
+  /**
    * Ensure a connection is active (delegated)
    */
   public static async ensureDatabaseConnection(key: string): Promise<SQLiteDAO> {
@@ -124,6 +131,17 @@ export class DatabaseManager {
       const dao = this.get(schemaName);
       callback(dao);
     });
+  }
+
+  public static offDatabaseReconnect(
+    schemaName: string,
+    callback: (dao: SQLiteDAO) => void,
+  ): void {
+    // Note: Since we wrap the callback in onDatabaseReconnect, we technically need
+    // to map back to the library's internal callback to truly remove it.
+    // For now, this is a placeholder that delegates to BaseManager assuming
+    // direct cleanup if supported by the library.
+    BaseManager.offDatabaseReconnect(schemaName, callback as any);
   }
 
   /**

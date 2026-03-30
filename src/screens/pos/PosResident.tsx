@@ -104,6 +104,7 @@ export default function PosResident({
   }, [activeStoreId]);
 
   const handleRoomPress = (room: Room) => {
+    console.log('[PosResident] handleRoomPress:', { id: room.id, status: room.status, label: room.label });
     if (room.status === 'available') {
       setBookingRoom(room);
     } else if (room.status === 'occupied') {
@@ -734,24 +735,20 @@ export default function PosResident({
       </ResponsivePanel>
 
       {/* Booking Modal */}
-      {bookingRoom && (
-        <BookingScreen
-          room={{ id: bookingRoom.id, code: bookingRoom.id, floor: '' }}
-          onClose={() => {
-            setBookingRoom(null);
-            loadData();
-          }}
-          onConfirm={async (form) => {
-            try {
-              await RoomActionService.checkIn(bookingRoom.id, form);
+      <Modal visible={!!bookingRoom} animationType="slide">
+        {bookingRoom && (
+          <BookingScreen
+            room={bookingRoom}
+            onClose={() => {
+              setBookingRoom(null);
+            }}
+            onConfirm={() => {
               setBookingRoom(null);
               loadData();
-            } catch (err) {
-              console.error('Check-in failed:', err);
-            }
-          }}
-        />
-      )}
+            }}
+          />
+        )}
+      </Modal>
 
       {/* Room Detail Modal for Occupied Rooms */}
       <Modal visible={detailModalVisible} animationType="slide">

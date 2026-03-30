@@ -16,6 +16,7 @@ import {useTranslation} from 'react-i18next';
 import {RoomQueryService} from '../../services/ResidentServices/RoomQueryService';
 // We'll import RoomDetailScreen once we create it.
 import RoomDetailScreen from './RoomDetailScreen';
+import BookingScreen from './BookingScreen';
 
 const {width} = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
 
   const [activeFloor, setActiveFloor] = useState<string>('all');
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
+  const [bookingRoom, setBookingRoom] = useState<any | null>(null);
 
   const loadRooms = async () => {
     console.log('[PlaceScreen] loadRooms called');
@@ -81,6 +83,22 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
         room={selectedRoom}
         onBack={() => {
           setSelectedRoom(null);
+          loadRooms();
+        }}
+      />
+    );
+  }
+
+  if (bookingRoom) {
+    return (
+      <BookingScreen
+        room={bookingRoom}
+        onClose={() => {
+          setBookingRoom(null);
+          loadRooms();
+        }}
+        onConfirm={() => {
+          setBookingRoom(null);
           loadRooms();
         }}
       />
@@ -165,7 +183,16 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                 <TouchableOpacity
                   key={room.id}
                   activeOpacity={0.8}
-                  onPress={() => setSelectedRoom(room)}
+                  onPress={() => {
+                    console.log('[PlaceScreen] Clicked room:', { id: room.id, name: room.name, status: room.status });
+                    if (room.status === 'occupied') {
+                      setSelectedRoom(room);
+                    } else if (room.status === 'available') {
+                      setBookingRoom(room);
+                    } else {
+                      console.log('[PlaceScreen] Room status is not occupied or available, doing nothing.');
+                    }
+                  }}
                   style={[
                     styles.roomCard,
                     {
@@ -188,13 +215,20 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                       </View>
                       <View style={{marginLeft: 8}}>
                         <Text style={styles.roomName}>{room.label}</Text>
-                        {occupied && room.end_date && (
-                          <Text style={styles.checkoutText}>
-                            Checkout:{' '}
-                            {new Date(room.end_date).toLocaleDateString(
-                              'vi-VN',
+                        <Text style={styles.roomType}>{room.product_name}</Text>
+                        {occupied && (
+                          <View style={{marginTop: 4}}>
+                            {room.start_date && (
+                              <Text style={styles.checkoutText}>
+                                Vào: {new Date(room.start_date).toLocaleDateString('vi-VN')}
+                              </Text>
                             )}
-                          </Text>
+                            {room.end_date && (
+                              <Text style={styles.checkoutText}>
+                                Ra: {new Date(room.end_date).toLocaleDateString('vi-VN')}
+                              </Text>
+                            )}
+                          </View>
                         )}
                       </View>
                     </View>
@@ -356,10 +390,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a1a2e',
   },
+  roomType: {
+    fontSize: 12,
+    color: '#1565C0',
+    fontWeight: '600',
+    marginTop: 1,
+  },
   checkoutText: {
     fontSize: 11,
     color: '#666',
-    marginTop: 2,
+    marginTop: 1,
   },
   badge: {
     paddingVertical: 3,
