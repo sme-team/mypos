@@ -142,4 +142,4 @@ vite.config.ts.timestamp-*
 android/app/build/
 android/build/
 *.apk
-*.aab
+*.aabandroid/.gradle/
