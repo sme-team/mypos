@@ -9,43 +9,45 @@ interface Props {
 }
 
 const VariantItem: React.FC<Props> = ({variant, onEdit}) => (
-  <View className="flex-row items-center py-3 px-4 bg-white rounded-xl mb-2">
-    {/* Ảnh */}
-    <View className="w-14 h-14 rounded-lg bg-amber-50 items-center justify-center mr-4 overflow-hidden">
+  <TouchableOpacity
+    className="flex-row items-center bg-gray-50 rounded-xl px-3 py-3"
+    onPress={onEdit}
+    activeOpacity={0.7}>
+    {/* Thumbnail */}
+    <View
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 10,
+        backgroundColor: '#e8d5b0',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+        overflow: 'hidden',
+      }}>
       {variant.imageUri ? (
         <Image
           source={{uri: variant.imageUri}}
-          className="w-full h-full"
+          style={{width: '100%', height: '100%'}}
           resizeMode="cover"
         />
       ) : (
-        <Text className="text-amber-300 text-xs text-center">
-          No{'\n'}image
-        </Text>
+        <Icon name="receipt-long" size={22} color="#b8975a" />
       )}
     </View>
 
-    {/* Tên */}
-    <Text className="flex-1 text-base font-semibold text-gray-800">
+    {/* Name */}
+    <Text
+      className="flex-1 text-gray-800"
+      style={{fontSize: 14, fontWeight: '500'}}>
       {variant.name}
     </Text>
 
-    {/* Giá + đơn vị */}
-    <Text className="text-blue-500 font-semibold text-base mr-3">
+    {/* Price */}
+    <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '700'}}>
       {variant.price.toLocaleString('vi-VN')}đ
-      <Text className="text-gray-400 font-normal text-sm">
-        {' / '}
-        {variant.unit}
-      </Text>
     </Text>
-
-    {/* Nút edit */}
-    <TouchableOpacity
-      onPress={onEdit}
-      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-      <Icon name="chevron-right" size={22} color="#9CA3AF" />
-    </TouchableOpacity>
-  </View>
+  </TouchableOpacity>
 );
 
 export default VariantItem;

@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, o
     { id: 'dashboard', label: t('sidebar.dashboard', 'Bảng điều khiển'), icon: 'dashboard' },
     { id: 'sales',     label: t('sidebar.sales',     'Bán hàng'),         icon: 'point-of-sale' },
     { id: 'categories',label: t('sidebar.categories','Danh mục'),         icon: 'category' },
-    { id: 'customers', label: t('sidebar.customers', 'Khách hàng'),       icon: 'people' },
+    { id: 'customer', label: t('sidebar.customers', 'Khách hàng'),       icon: 'people' },
     { id: 'report',    label: t('sidebar.report',    'Báo cáo'),          icon: 'assessment' },
     { id: 'setting',   label: t('sidebar.setting',   'Cài đặt'),          icon: 'settings' },
   ];

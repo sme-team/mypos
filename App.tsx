@@ -37,6 +37,7 @@ import Setting from './src/screens/setting/Setting';
 import Report from './src/screens/report/Report';
 import ReportExport from './src/screens/excel-export/ExcelExport';
 import CategoryManagement from './src/screens/category/CategoryManagement';
+import CustomerScreen from './src/screens/customer/CustomerScreen';
 
 import Sidebar from './src/components/Sidebar';
 import {AuthProvider, useAuth} from './src/store/authStore';
@@ -58,6 +59,7 @@ type Screen =
   | 'setting'
   | 'pos_resident'
   | 'place_resident'
+  | 'customer'
   | 'report_export';
 
 // ─── Inner app ────────────────────────────────────────────────────────────────
@@ -271,37 +273,16 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* ── Placeholder for Report & Setting ──────────────────────
-      {(screen === 'report' || screen === 'setting') && (
-        <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-          <View className="flex-row items-center px-4 pt-3 pb-2 border-b border-gray-100">
-            <TouchableOpacity
-              onPress={() => setIsSidebarVisible(true)}
-              className="p-1">
-              <Icon name="menu" size={28} color="#4B5563" />
-            </TouchableOpacity>
-            <Text className="text-lg font-bold ml-4 text-gray-800">
-              {screen === 'report' ? t('sidebar.report') : t('sidebar.setting')}
-            </Text>
-          </View>
-          <View className="flex-1 items-center justify-center">
-            <Icon
-              name={screen === 'report' ? 'assessment' : 'settings'}
-              size={64}
-              color="#CBD5E1"
-            />
-            <Text className="text-gray-400 mt-4 font-medium italic">
-              Coming Soon
-            </Text>
-          </View>
-        </View>
-      )} */}
+      {/* ── Customer ───────────────────────────────────────── */}
+      {screen === 'customer' && (
+        <CustomerScreen onOpenMenu={() => setIsSidebarVisible(true)} />
+      )}
 
       {/* ── Categories (Place - Legacy) ────────────────────────────────── */}
       {screen === 'categories' && (
         <CategoryManagement
           onOpenMenu={() => setIsSidebarVisible(true)}
-          onBack={() => setScreen('categories')}
+          storeId="store-001"
         />
       )}
 
