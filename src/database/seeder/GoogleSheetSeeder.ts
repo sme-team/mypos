@@ -53,10 +53,10 @@ export class DatabaseSeeder {
     units: ['id', 'store_id', 'unit_code', 'name', 'unit_type', 'sort_order', 'status', 'sync_status', 'created_at', 'updated_at'],
     products: [
       'id', 'store_id', 'category_id', 'unit_id', 'product_code', 'barcode',
-      'name', 'short_name', 'description', 'image_url',          // ← thêm image_url
+      'name', 'short_name', 'description', 'image_url',
       'product_type', 'pricing_type', 'is_active_pos',
-      'is_trackable', 'tax_rate', 'sort_order',                 // ← thêm is_trackable, tax_rate
-      'status', 'sync_status', 'created_at', 'updated_at'        // ← thêm created_at, updated_at
+      'is_trackable', 'tax_rate', 'sort_order',
+      'status', 'sync_status', 'created_at', 'updated_at'
     ],
     product_variants: ['id', 'store_id', 'product_id', 'variant_code', 'name', 'attributes', 'image_url', 'is_default', 'sort_order', 'status', 'sync_status'],
     prices: ['id', 'store_id', 'variant_id', 'unit_id', 'price_list_name', 'price', 'cost_price', 'effective_from', 'effective_to', 'sort_order'],
@@ -237,7 +237,7 @@ export class DatabaseSeeder {
     // ─── Defaults ───────────────────────────────────────────────────────────
     const mappedRow: any = {
       id: await this.generateUUID(),
-      store_id: 'store-001',
+      store_id: 'store1',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       status: 'active',
@@ -250,11 +250,19 @@ export class DatabaseSeeder {
     if (tableName === 'products') {
       mappedRow.is_active_pos = 1;
 
-      // product_type đã có sẵn trong sheet, đọc trực tiếp
-      const type = String(rawRow['product_type'] || '').toLowerCase();
-      if (type === 'room') {
+      const rawType = String(rawRow['product_type'] || '').toLowerCase().trim();
+
+      // Danh sách các loại được coi là "room"
+      const roomTypes = ['room', 'room_service'];
+
+      if (roomTypes.includes(rawType)) {
         this.productIsRoomMap.set(mappedRow.id, true);
-        mappedRow.product_type = 'room';
+        mappedRow.product_type = rawType;   // giữ nguyên giá trị từ sheet
+
+        console.log(`[ROOM-TYPE] Product ${mappedRow.id} được nhận diện là room-type: ${rawType}`);
+      }
+      else if (rawType) {
+        mappedRow.product_type = rawType;   // các loại khác vẫn giữ nguyên
       }
     }
 
@@ -284,20 +292,11 @@ export class DatabaseSeeder {
 
     if (tableName === 'categories') {
       mappedRow.status = 'active';
-      const rowId = String(mappedRow.id || '').toLowerCase();
 
-      // ✨ FIX: Tránh self-reference cho các ID gốc (par001, par002)
-      if (rowId === 'par001' || rowId === 'par002') {
-        mappedRow.parent_id = null;
-        console.log(`[SEEDER] Forcing parent_id=null for root category: ${rowId}`);
-      } else {
-        const name = String(rawRow['name'] || rawRow['Tên'] || '').toLowerCase();
-        // par001: POS, par002: Lưu trú - Dựa trên logic danh mục gốc
-        if (name.includes('phòng') || name.includes('room') || name.includes('lưu trú') || mappedRow.parent_id === 'par002') {
-          mappedRow.parent_id = 'par002';
-        } else if (!mappedRow.parent_id || mappedRow.parent_id === 'par001') {
-          mappedRow.parent_id = 'par001';
-        }
+      //  ƯU TIÊN PHÂN LOẠI THEO apply_to TỪ SHEET
+      const rawApplyTo = String(rawRow['apply_to'] || '').toLowerCase().trim();
+      if (rawApplyTo) {
+        mappedRow.apply_to = rawApplyTo;
       }
     }
 
@@ -378,43 +377,64 @@ export class DatabaseSeeder {
 
     return mappedRow;
   }
-
   // ─── Helper: convert giá trị theo tên cột ─────────────────────────────────
   private convertValue(dbCol: string, value: any): any {
+    if (value == null) return null;
+
     const str = String(value).trim();
 
-    // Số tiền / số lượng
+    // ===================================================================
+    // 1. CÁC CỘT CODE / ID / NUMBER → LUÔN GIỮ NGUYÊN KIỂU STRING
+    //    Cập nhật: Loại bỏ số 0 ở đầu nếu giá trị hoàn toàn là số (để 001 thành 1)
+    // ===================================================================
+    if (/^(id|parent_id|category_id|product_id|variant_id|unit_id|customer_id|bill_id|contract_id|cycle_id|receivable_id|category_code|product_code|unit_code|variant_code|customer_code|bill_number|contract_number|cycle_code|receivable_code|barcode)$/i.test(dbCol)) {
+      //  GIỮ NGUYÊN CHUỖI (không xóa số 0 ở đầu cho mã/ID)
+      return str;
+    }
+
+    // ===================================================================
+    // 2. Số tiền / số lượng
+    // ===================================================================
     if (/^(price|amount|rent_amount|deposit_amount|unit_price|quantity|cost_price|electric_rate|water_rate|tax_rate|electric_reading_init|water_reading_init)$/i.test(dbCol)) {
       const num = parseFloat(str.replace(/[^\d.-]/g, ''));
       return isNaN(num) ? 0 : num;
     }
 
-    // Số nguyên
+    // ===================================================================
+    // 3. Số nguyên thông thường (không phải code)
+    // ===================================================================
     if (/^(sort_order|cycle_days|billing_day|loyalty_points)$/i.test(dbCol)) {
       const num = parseInt(str, 10);
       return isNaN(num) ? 0 : num;
     }
 
-    // Boolean
+    // ===================================================================
+    // 4. Boolean
+    // ===================================================================
     if (/^(is_default|is_primary|is_active_pos|is_trackable|auto_generate|is_offline)$/i.test(dbCol)) {
       if (typeof value === 'boolean') return value ? 1 : 0;
       return ['1', 'true', 'yes', 'có'].includes(str.toLowerCase()) ? 1 : 0;
     }
 
-    // Ngày (date only)
+    // ===================================================================
+    // 5. Ngày (date only)
+    // ===================================================================
     if (/^(effective_from|effective_to|start_date|end_date|date_of_birth|signed_date|joined_date|left_date|due_date|billing_date)$/i.test(dbCol)) {
       if (value instanceof Date) return value.toISOString().split('T')[0];
       const parsed = new Date(str);
       return isNaN(parsed.getTime()) ? str : parsed.toISOString().split('T')[0];
     }
 
-    // Timestamp
+    // ===================================================================
+    // 6. Timestamp
+    // ===================================================================
     if (/^(created_at|updated_at|paid_at|issued_at|due_at)$/i.test(dbCol)) {
       if (value instanceof Date) return value.toISOString();
       const parsed = new Date(str);
       return isNaN(parsed.getTime()) ? str : parsed.toISOString();
     }
 
+    // Mặc định trả về string
     return str;
   }
 
@@ -505,7 +525,7 @@ export class DatabaseSeeder {
 
     // Table-specific validation rules
     const requiredFields: Record<string, string[]> = {
-      categories: ['name'], // Gỡ category_code vì par001/par002 không có và schema ko bắt buộc
+      categories: ['name'], // Gỡ category_code vì par1/par2 không có và schema ko bắt buộc
 
       products: ['name', 'product_code'],
       customers: ['full_name', 'customer_code'],
@@ -568,7 +588,6 @@ export class DatabaseSeeder {
 
     console.log(`[IMPORT] ${tableName}: Starting import of ${cleanedData.length} rows`);
 
-    // ✅ CODE MỚI - batch transaction, mỗi batch 50 rows
     const BATCH_SIZE = 50;
 
     for (let batchStart = 0; batchStart < cleanedData.length; batchStart += BATCH_SIZE) {
@@ -621,7 +640,6 @@ export class DatabaseSeeder {
               console.log(`[SUCCESS] ${tableName}[${row.id || globalIndex + 1}]: Inserted (${success}/${cleanedData.length})`);
             }
           } catch (err: any) {
-            // ✅ Lỗi 1 row chỉ skip row đó, không ảnh hưởng cả batch
             failed++;
             tableErrCount++;
             const rowId = row.id || `row_${globalIndex + 1}`;
@@ -648,9 +666,6 @@ export class DatabaseSeeder {
     }
     return { success, failed, tableErrors: tableErrCount };
   }
-  /**
-   * Validate row data before database insertion
-   */
   private validateRowData(tableName: string, row: any, columns: string[]): { valid: boolean; error?: string; skippedColumns?: string[] } {
     // Check for required fields
     const requiredFields: Record<string, string[]> = {
@@ -763,7 +778,7 @@ export class DatabaseSeeder {
     this.rejectedRowIds.clear();
 
     try {
-      // ✅ FIXED LOG - không còn duplicate
+      //  FIXED LOG - không còn duplicate
       logger.info(`\n Starting import from: ${sheetLink}`);
       logger.info(`    Strategy: ${strategy} | Dry-run: ${dryRun}`);
 

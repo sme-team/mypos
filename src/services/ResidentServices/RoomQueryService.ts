@@ -59,6 +59,7 @@ export interface RoomDetailInfo {
   // services từ bill_details
   bill_items?: BillDetailItem[];
   total_amount?: number;
+  metadata?: string; // contracts.metadata
 }
 
 export interface BillDetailItem {
@@ -77,6 +78,7 @@ export interface AvailableRoomItem {
   name: string;
   floor: string | number;
   price: number;
+  product_id: string;
   attributes: Record<string, any>;
 }
 
@@ -332,6 +334,7 @@ class RoomQueryServiceClass {
       current_bill_status: currentBill?.bill_status,
       bill_items: billItems,
       total_amount: currentBill?.total_amount,
+      metadata: contract?.metadata,
     };
   }
 
@@ -354,6 +357,7 @@ class RoomQueryServiceClass {
         .select([
           'product_variants.id',
           'product_variants.name',
+          'product_variants.product_id',
           'product_variants.attributes',
           'prices.price'
         ])
@@ -382,6 +386,7 @@ class RoomQueryServiceClass {
           name: attr.room ?? r.name,
           floor,
           price: r.price || 0,
+          product_id: r.product_id,
           attributes: attr,
         });
       }

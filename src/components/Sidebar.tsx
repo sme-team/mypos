@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Import này
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+  StyleSheet,
+} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context'; // ✅ Import này
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '../hooks/useTheme';
+import {useTranslation} from 'react-i18next';
+import {useTheme} from '../hooks/useTheme';
 
 interface SidebarProps {
   activeScreen: string;
@@ -12,21 +19,39 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.8;
 
-const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, onClose }) => {
-  const { t } = useTranslation();
-  const { isDark } = useTheme();
+const Sidebar: React.FC<SidebarProps> = ({
+  activeScreen,
+  onNavigate,
+  onLogout,
+  onClose,
+}) => {
+  const {t} = useTranslation();
+  const {isDark} = useTheme();
   const insets = useSafeAreaInsets(); // ✅ Lấy insets chính xác từng thiết bị
 
   const menuItems = [
-    { id: 'dashboard', label: t('sidebar.dashboard', 'Bảng điều khiển'), icon: 'dashboard' },
-    { id: 'sales',     label: t('sidebar.sales',     'Bán hàng'),         icon: 'point-of-sale' },
-    { id: 'categories',label: t('sidebar.categories','Danh mục'),         icon: 'category' },
-    { id: 'customer', label: t('sidebar.customers', 'Khách hàng'),       icon: 'people' },
-    { id: 'report',    label: t('sidebar.report',    'Báo cáo'),          icon: 'assessment' },
-    { id: 'setting',   label: t('sidebar.setting',   'Cài đặt'),          icon: 'settings' },
+    {
+      id: 'dashboard',
+      label: t('sidebar.dashboard', 'Bảng điều khiển'),
+      icon: 'dashboard',
+    },
+
+    {id: 'sales', label: t('sidebar.sales', 'Bán hàng'), icon: 'point-of-sale'},
+    {
+      id: 'categories',
+      label: t('sidebar.categories', 'Danh mục'),
+      icon: 'category',
+    },
+    {
+      id: 'customers',
+      label: t('sidebar.customers', 'Khách hàng'),
+      icon: 'people',
+    },
+    {id: 'report', label: t('sidebar.report', 'Báo cáo'), icon: 'assessment'},
+    {id: 'setting', label: t('sidebar.setting', 'Cài đặt'), icon: 'settings'},
   ];
 
   const bgColor = isDark ? '#111827' : '#ffffff';
@@ -36,47 +61,69 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, o
   const itemHoverColor = isDark ? '#1f2937' : '#f8fafc';
 
   return (
-    <View style={[styles.container, { width: SIDEBAR_WIDTH, height: SCREEN_HEIGHT, backgroundColor: bgColor }]}>
-
+    <View
+      style={[
+        styles.container,
+        {width: SIDEBAR_WIDTH, height: SCREEN_HEIGHT, backgroundColor: bgColor},
+      ]}>
       {/* Header — paddingTop động theo insets.top */}
-      <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: borderColor }]}>
-        {/*                         ✅ insets.top thay cho số cứng 60 */}
+      <View
+        style={[
+          styles.header,
+          {paddingTop: insets.top + 16, borderBottomColor: borderColor},
+        ]}>
+        {/*                          insets.top thay cho số cứng 60 */}
         <View style={styles.logoBox}>
           <Icon name="storefront" size={24} color="#fff" />
         </View>
-        <Text style={[styles.logoText, { color: textColor }]}>MyPOS</Text>
+        <Text style={[styles.logoText, {color: textColor}]}>MyPOS</Text>
       </View>
 
       {/* Menu */}
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      >
-        {menuItems.map((item) => {
+        contentContainerStyle={{paddingBottom: 20}}>
+        {menuItems.map(item => {
           const isActive = activeScreen === item.id;
           return (
             <TouchableOpacity
               key={item.id}
-              onPress={() => { onNavigate(item.id === 'sales' ? 'pos_resident' : item.id); onClose?.(); }}
+              onPress={() => {
+                onNavigate(item.id === 'sales' ? 'pos_resident' : item.id);
+                onClose?.();
+              }}
               activeOpacity={0.7}
               style={[
                 styles.menuItem,
-                isActive ? (isDark ? { backgroundColor: '#1e3a8a' } : styles.menuItemActive) : {},
-              ]}
-            >
-              <View style={[
-                styles.iconWrapper,
-                { backgroundColor: itemHoverColor },
-                isActive && (isDark ? { backgroundColor: '#2563eb' } : styles.iconWrapperActive),
+                isActive
+                  ? isDark
+                    ? {backgroundColor: '#1e3a8a'}
+                    : styles.menuItemActive
+                  : {},
               ]}>
-                <Icon name={item.icon} size={22} color={isActive ? (isDark ? '#fff' : '#2563eb') : '#94a3b8'} />
+              <View
+                style={[
+                  styles.iconWrapper,
+                  {backgroundColor: itemHoverColor},
+                  isActive &&
+                    (isDark
+                      ? {backgroundColor: '#2563eb'}
+                      : styles.iconWrapperActive),
+                ]}>
+                <Icon
+                  name={item.icon}
+                  size={22}
+                  color={isActive ? (isDark ? '#fff' : '#2563eb') : '#94a3b8'}
+                />
               </View>
-              <Text style={[
-                styles.menuLabel,
-                { color: subTextColor },
-                isActive && (isDark ? { color: '#fff' } : styles.menuLabelActive),
-              ]}>
+              <Text
+                style={[
+                  styles.menuLabel,
+                  {color: subTextColor},
+                  isActive &&
+                    (isDark ? {color: '#fff'} : styles.menuLabelActive),
+                ]}>
                 {item.label}
               </Text>
               {isActive && <View style={styles.activeDot} />}
@@ -86,17 +133,27 @@ const Sidebar: React.FC<SidebarProps> = ({ activeScreen, onNavigate, onLogout, o
       </ScrollView>
 
       {/* Footer — paddingBottom động theo insets.bottom */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: borderColor }]}>
+      <View
+        style={[
+          styles.footer,
+          {paddingBottom: insets.bottom + 16, borderTopColor: borderColor},
+        ]}>
         {/*                          ✅ insets.bottom thay cho số cứng */}
         <View style={styles.footerProfile}>
-          <View style={[styles.avatarBox, { backgroundColor: itemHoverColor }]}>
+          <View style={[styles.avatarBox, {backgroundColor: itemHoverColor}]}>
             <Icon name="person" size={20} color="#2563eb" />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.footerName, { color: textColor }]}>Admin</Text>
-            <Text style={[styles.footerRole, { color: subTextColor }]}>Quản trị viên</Text>
+          <View style={{flex: 1}}>
+            <Text style={[styles.footerName, {color: textColor}]}>Admin</Text>
+            <Text style={[styles.footerRole, {color: subTextColor}]}>
+              Quản trị viên
+            </Text>
           </View>
-          <TouchableOpacity onPress={() => { onClose?.(); onLogout(); }}>
+          <TouchableOpacity
+            onPress={() => {
+              onClose?.();
+              onLogout();
+            }}>
             <Icon name="logout" size={20} color="#94a3b8" />
           </TouchableOpacity>
         </View>
@@ -110,7 +167,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#ffffff',
     shadowColor: '#000',
-    shadowOffset: { width: 4, height: 0 },
+    shadowOffset: {width: 4, height: 0},
     shadowOpacity: 0.12,
     shadowRadius: 20,
     elevation: 10,

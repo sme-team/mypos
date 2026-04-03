@@ -10,6 +10,9 @@ import {
   StatusBar,
   Modal,
   RefreshControl,
+  FlatList,
+  SectionList,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +47,8 @@ export default function PosResident({
   const { width: screenWidth } = useWindowDimensions();
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
-  const [activeMainCategory, setActiveMainCategory] = useState<string>('par001');
+  const [activeSection, setActiveSection] = useState<'pos' | 'stay'>('pos');
+  const [activeMainCategory, setActiveMainCategory] = useState<string>('');
   const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
   const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>('all');
   const [searchText, setSearchText] = useState('');
@@ -80,10 +84,24 @@ export default function PosResident({
       setRooms(roomsData);
 
       if (cats.length > 0 && !activeMainCategory) {
-        const mainCats = cats.filter(c => c.parent_id === null || c.id === 'par001' || c.id === 'par002');
-        const posCat = mainCats.find(c => c.id === 'par001');
-        const defaultCatId = posCat ? posCat.id : mainCats[0].id;
-        setActiveMainCategory(defaultCatId);
+        // Tìm danh mục gốc đầu tiên
+        const rootCats = cats.filter(c => !c.parent_id || c.parent_id === c.id);
+        if (rootCats.length > 0) {
+          //Ưu tiên pos trước
+          const posRoot = rootCats.find(c => c.apply_to === 'pos');
+          if (posRoot) {
+            setActiveSection('pos');
+            setActiveMainCategory(posRoot.id);
+          } else {
+            const stayRoot = rootCats.find(c => c.apply_to === 'accommodation' || c.apply_to === 'hostel' || c.apply_to === 'hotel');
+            if (stayRoot) {
+              setActiveSection('stay');
+              setActiveMainCategory(stayRoot.id);
+            } else {
+              setActiveMainCategory(rootCats[0].id);
+            }
+          }
+        }
       }
     } catch (err) {
       console.error('[PosResident] Error in loadData:', err);
@@ -103,7 +121,7 @@ export default function PosResident({
     loadData();
   }, [activeStoreId]);
 
-  const handleRoomPress = (room: Room) => {
+  const handleRoomPress = useCallback((room: Room) => {
     console.log('[PosResident] handleRoomPress:', { id: room.id, status: room.status, label: room.label });
     if (room.status === 'available') {
       setBookingRoom(room);
@@ -111,7 +129,7 @@ export default function PosResident({
       setSelectedRoom(room);
       setDetailModalVisible(true);
     }
-  };
+  }, []);
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState(0);
@@ -123,17 +141,44 @@ export default function PosResident({
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
+  const availableSections = useMemo(() => {
+    const rawTypes = Array.from(new Set(categories.map(c => c.apply_to).filter(Boolean)));
+    // Sắp xếp: POS luôn đứng đầu
+    const sortedTypes = rawTypes.sort((a, b) => {
+      if (a === 'pos') return -1;
+      if (b === 'pos') return 1;
+      return String(a).localeCompare(String(b));
+    });
+
+    return sortedTypes.map(rawValue => {
+      const type = String(rawValue);
+      return {
+        key: type,
+        label: type === 'pos' ? 'POS' : 
+               type === 'accommodation' ? t('pos.accommodation') || 'Lưu trú' :
+               type === 'hotel' ? 'Khách sạn' :
+               type === 'hostel' ? 'Nhà trọ' : type.charAt(0).toUpperCase() + type.slice(1),
+        icon: type === 'pos' ? 'shopping-basket' : 'hotel'
+      };
+    });
+  }, [categories, t]);
+
   const mainCategories = useMemo(() => {
-    // Lọc các danh mục chính (không có parent_id hoặc parent_id trỏ về chính nó)
-    return categories.filter(c => !c.parent_id || c.parent_id === c.id || c.id === 'par001' || c.id === 'par002');
-  }, [categories]);
+    // Lọc các danh mục chính theo section đang chọn
+    return categories.filter(c => (!c.parent_id || c.parent_id === c.id) && c.apply_to === activeSection);
+  }, [categories, activeSection]);
+
+  const activeCategoryObj = useMemo(() => 
+    categories.find(c => c.id === activeMainCategory), 
+    [categories, activeMainCategory]
+  );
+
+  const isRoomMode = activeSection !== 'pos';
 
   const subCategories = useMemo(() => {
     if (!activeMainCategory) { return []; }
-    return categories.filter(c => c.parent_id === activeMainCategory);
+    return categories.filter(c => c.parent_id === activeMainCategory && c.id !== c.parent_id);
   }, [categories, activeMainCategory]);
-
-  const isRoomMode = activeMainCategory === 'par002';
 
   const roomStatuses: { key: RoomStatus | 'all'; label: string }[] = useMemo(
     () => [
@@ -173,7 +218,7 @@ export default function PosResident({
     })).filter((group: { title: string; data: Room[] }) => group.data.length > 0);
   }, [rooms, activeRoomStatus, searchText]);
 
-  const handleAdd = (id: string) => {
+  const handleAdd = useCallback((id: string) => {
     const product = products.find(p => p.id === id);
     if (!product) { return; }
     setCartItems(prev => {
@@ -186,18 +231,18 @@ export default function PosResident({
       return [...prev, { product, quantity: 1 }];
     });
     setCartCount(c => c + 1);
-  };
+  }, [products]);
 
-  const handleIncrease = (id: string) => {
+  const handleIncrease = useCallback((id: string) => {
     setCartItems(prev =>
       prev.map(i =>
         i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i,
       ),
     );
     setCartCount(c => c + 1);
-  };
+  }, []);
 
-  const handleDecrease = (id: string) => {
+  const handleDecrease = useCallback((id: string) => {
     setCartItems(prev => {
       const item = prev.find(i => i.product.id === id);
       if (!item) { return prev; }
@@ -207,7 +252,7 @@ export default function PosResident({
       );
     });
     setCartCount(c => Math.max(0, c - 1));
-  };
+  }, []);
 
   const handleClearCart = () => {
     setCartItems([]);
@@ -293,61 +338,159 @@ export default function PosResident({
           </View>
         </View>
 
-        {/* Main Categories Menu */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingBottom: 10,
-            gap: 12,
-          }}>
-          {mainCategories.map(cat => {
-            const isActive = activeMainCategory === cat.id;
-
-            let iconName = 'category';
-            const code = (cat.category_code || '').toLowerCase();
-            if (code.includes('food') || code.includes('drink') || code.includes('cafe')) { iconName = 'restaurant'; }
-            else if (code.includes('room') || code.includes('hotel')) { iconName = 'hotel'; }
-            else if (code.includes('grocery')) { iconName = 'storefront'; }
-
+        {/* Section Tabs (Adaptive) */}
+        {availableSections.length > 0 && (() => {
+          const count = availableSections.length;
+          
+          // Helper to render a tab item
+          const renderTab = (section: any) => {
+            const isActive = activeSection === section.key;
             return (
               <TouchableOpacity
-                key={cat.id}
+                key={section.key}
                 onPress={() => {
-                  setActiveMainCategory(cat.id);
+                  setActiveSection(section.key as any);
+                  const firstInSec = categories.find(c => 
+                    (!c.parent_id || c.parent_id === c.id) && c.apply_to === section.key
+                  );
+                  if (firstInSec) {
+                    setActiveMainCategory(firstInSec.id);
+                  }
                   setActiveSubCategory('all');
                 }}
                 style={{
+                  flex: count === 2 ? 1 : undefined,
                   flexDirection: 'row',
-                  height: 40,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  backgroundColor: isActive ? '#3b82f6' : cardBg,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  paddingVertical: 10,
+                  paddingHorizontal: count === 2 ? 0 : 20,
+                  borderRadius: 12,
+                  backgroundColor: isActive ? (isDark ? '#3b82f6' : '#fff') : 'transparent',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: isActive ? 0.1 : 0,
+                  shadowRadius: 4,
+                  elevation: isActive ? 4 : 0,
                   gap: 8,
-                  elevation: isActive ? 4 : 1,
-                  borderWidth: isActive ? 0 : 1,
-                  borderColor: borderColor,
                 }}>
-                <Icon
-                  name={iconName}
-                  size={18}
-                  color={isActive ? '#fff' : '#3b82f6'}
+                <Icon 
+                  name={section.icon} 
+                  size={18} 
+                  color={isActive ? (isDark ? '#fff' : '#3b82f6') : (isDark ? '#9ca3af' : '#6b7280')} 
                 />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: isActive ? '#fff' : subTextColor,
+                <Text 
+                  style={{ 
+                    fontSize: 14, 
+                    fontWeight: '700', 
+                    color: isActive ? (isDark ? '#fff' : '#1e3a8a') : (isDark ? '#9ca3af' : '#6b7280') 
                   }}>
-                  {cat.name}
+                  {section.label}
                 </Text>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          };
+
+          if (count >= 3) {
+            return (
+              <View style={{ paddingBottom: 16 }}>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    backgroundColor: isDark ? '#1f2937' : '#f3f4f6', 
+                    borderRadius: 16, 
+                    padding: 4 
+                  }}>
+                    {availableSections.map(renderTab)}
+                  </View>
+                </ScrollView>
+              </View>
+            );
+          }
+
+          return (
+            <View style={{ 
+              paddingHorizontal: 16, 
+              paddingBottom: 16, 
+              alignItems: count === 1 ? 'center' : 'stretch' 
+            }}>
+              <View 
+                style={{ 
+                  flexDirection: 'row', 
+                  backgroundColor: isDark ? '#1f2937' : '#f3f4f6', 
+                  borderRadius: 16, 
+                  padding: 4,
+                  width: count === 2 ? '100%' : undefined,
+                }}>
+                {availableSections.map(renderTab)}
+              </View>
+            </View>
+          );
+        })()}
+
+        {/* Categories Menu - Only show for POS as Stay categories contain services */}
+        {!isRoomMode && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+              gap: 12,
+            }}>
+            {mainCategories.map(cat => {
+              const isActive = activeMainCategory === cat.id;
+
+              let iconName = 'category';
+              const code = (cat.category_code || '').toLowerCase();
+              const applyTo = (cat.apply_to || '').toLowerCase();
+
+              if (code.includes('food') || code.includes('drink') || code.includes('cafe')) { iconName = 'restaurant'; }
+              else if (code.includes('room') || code.includes('hotel') || applyTo === 'accommodation' || applyTo === 'hotel' || applyTo === 'hostel') { iconName = 'hotel'; }
+              else if (code.includes('grocery')) { iconName = 'storefront'; }
+              else if (applyTo === 'pos') { iconName = 'shopping-basket'; }
+
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => {
+                    setActiveMainCategory(cat.id);
+                    setActiveSubCategory('all');
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    height: 40,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    backgroundColor: isActive ? '#3b82f6' : cardBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    elevation: isActive ? 4 : 1,
+                    borderWidth: isActive ? 0 : 1,
+                    borderColor: borderColor,
+                  }}>
+                  <Icon
+                    name={iconName}
+                    size={18}
+                    color={isActive ? '#fff' : '#3b82f6'}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isActive ? '#fff' : subTextColor,
+                    }}>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Filters */}
         <ScrollView
@@ -366,15 +509,19 @@ export default function PosResident({
                   key={cat.id}
                   onPress={() => setActiveSubCategory(cat.id)}
                   style={{
-                    paddingHorizontal: 16,
-                    height: 36,
-                    borderRadius: 18,
+                    paddingHorizontal: 18,
+                    height: 38,
+                    borderRadius: 19,
                     backgroundColor: active ? '#3b82f6' : cardBg,
                     alignItems: 'center',
                     justifyContent: 'center',
                     elevation: 1,
                     borderWidth: active ? 0 : 1,
                     borderColor: borderColor,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
                   }}>
                   <Text
                     style={{
@@ -394,15 +541,19 @@ export default function PosResident({
                   key={status.key}
                   onPress={() => setActiveRoomStatus(status.key)}
                   style={{
-                    paddingHorizontal: 16,
-                    height: 36,
-                    borderRadius: 18,
+                    paddingHorizontal: 18,
+                    height: 38,
+                    borderRadius: 19,
                     backgroundColor: active ? '#3b82f6' : cardBg,
                     alignItems: 'center',
                     justifyContent: 'center',
                     elevation: 1,
                     borderWidth: active ? 0 : 1,
                     borderColor: borderColor,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 2,
                   }}>
                   <Text
                     style={{
@@ -418,85 +569,86 @@ export default function PosResident({
         </ScrollView>
       </View>
 
-      {/* Grid Content */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: GAP,
-          paddingBottom: insets.bottom + 100,
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: GAP,
-        }}>
-        {!isRoomMode ? (
-          filteredProducts.length === 0 ? (
-            <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-                {t('pos.no_products')}
-              </Text>
-              <TouchableOpacity 
-                onPress={loadData}
-                style={{
-                  marginTop: 16,
-                  paddingHorizontal: 20,
-                  paddingVertical: 10,
-                  backgroundColor: '#3b82f6',
-                  borderRadius: 8
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tải lại</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            filteredProducts.map(item => {
-              const cartItem = cartItems.find(i => i.product.id === item.id);
-              return (
+      {/* Main Grid Content - Refactored to SectionList/FlatList for performance */}
+      {!isRoomMode ? (
+        <FlatList
+          data={filteredProducts}
+          keyExtractor={item => item.id}
+          numColumns={numCols}
+          key={`products-grid-${numCols}`} // Force re-render when column count changes
+          renderItem={({ item }) => {
+            const cartItem = cartItems.find(i => i.product.id === item.id);
+            return (
+              <View style={{ margin: GAP / 2 }}>
                 <ProductCard
-                  key={item.id}
                   product={item}
                   onAdd={handleAdd}
                   onDecrease={handleDecrease}
                   cardWidth={cardWidth}
                   quantity={cartItem ? cartItem.quantity : 0}
                 />
-              );
-            })
-          )
-        ) : filteredRooms.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
-            <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-              {t('pos.no_rooms')}
-            </Text>
-            <TouchableOpacity 
-              onPress={loadData}
-              style={{
-                marginTop: 16,
-                paddingHorizontal: 20,
-                paddingVertical: 10,
-                backgroundColor: '#3b82f6',
-                borderRadius: 8
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tải lại</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          filteredRooms.map((group: { title: string; data: Room[] }) => (
-            <React.Fragment key={group.title}>
-              <View style={{ width: '100%', paddingVertical: 8, marginTop: 4 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: textColor }}>{group.title}</Text>
               </View>
-              {group.data.map((item: Room) => (
-                <RoomCard key={item.id} room={item} cardWidth={cardWidth} onPress={() => handleRoomPress(item)} />
-              ))}
-            </React.Fragment>
-          ))
-        )}
-      </ScrollView>
+            );
+          }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{
+            paddingHorizontal: 16 - GAP / 2,
+            paddingTop: GAP,
+            paddingBottom: insets.bottom + 100,
+          }}
+          ListEmptyComponent={
+            <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
+              <Text style={{ color: '#9ca3af', fontSize: 14 }}>{t('pos.no_products')}</Text>
+              <TouchableOpacity onPress={loadData} style={styles.reloadBtn}>
+                <Text style={styles.reloadBtnText}>Tải lại</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      ) : (
+        <SectionList
+          sections={filteredRooms}
+          keyExtractor={item => item.id}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section: { title } }) => (
+            <View style={{ paddingHorizontal: 16, paddingVertical: 8, marginTop: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: textColor }}>{title}</Text>
+            </View>
+          )}
+          renderItem={({ item, index, section }) => {
+            // Because SectionList doesn't support numColumns, we handle the grid manually
+            // by only rendering the start of each row.
+            if (index % numCols !== 0) return null;
+
+            const rowItems = section.data.slice(index, index + numCols);
+
+            return (
+              <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: GAP, marginBottom: 0 }}>
+                {rowItems.map(room => (
+                  <RoomCard
+                    key={room.id}
+                    room={room}
+                    cardWidth={cardWidth}
+                    onPress={() => handleRoomPress(room)}
+                  />
+                ))}
+              </View>
+            );
+          }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 100,
+          }}
+          ListEmptyComponent={
+            <View style={{ flex: 1, alignItems: 'center', marginTop: 60, width: '100%' }}>
+              <Text style={{ color: '#9ca3af', fontSize: 14 }}>{t('pos.no_rooms')}</Text>
+              <TouchableOpacity onPress={loadData} style={styles.reloadBtn}>
+                <Text style={styles.reloadBtnText}>Tải lại</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      )}
 
       {/* FAB */}
       {!isRoomMode && (
@@ -765,3 +917,17 @@ export default function PosResident({
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  reloadBtn: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8
+  },
+  reloadBtnText: {
+    color: '#fff',
+    fontWeight: 'bold'
+  },
+});

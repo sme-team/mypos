@@ -1,4 +1,4 @@
-import { defaultAxios, handleAxiosError} from '../ServicesConfig/axiosConfig';
+import { defaultAxios, handleAxiosError } from '../ServicesConfig/axiosConfig';
 import * as XLSX from 'xlsx';
 
 // Interface cho input params
@@ -34,7 +34,7 @@ class GoogleSheetFetcher {
   private readonly defaultTimeout: number = 30000; // 30s
   private readonly defaultRetries: number = 3;
 
-  constructor() {}
+  constructor() { }
 
   // Method private: Trích xuất Sheet ID từ URL (pure function)
   private extractSheetId(url: string): string {
@@ -133,108 +133,109 @@ class GoogleSheetFetcher {
 
   // Method private: Xử lý dữ liệu từ một sheet (optimized)
   private processSheetData(worksheet: XLSX.WorkSheet, sheetName: string): SheetData[] {
-  try {
-    console.log(`\n=== Processing sheet: ${sheetName} ===`);
+    try {
+      console.log(`\n=== Processing sheet: ${sheetName} ===`);
 
-    // Sử dụng header: 1 để lấy raw array, nhưng sau đó map đúng tên cột
-    const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: null,
-      blankrows: false,
-    });
+      // Sử dụng header: 1 để lấy raw array, nhưng sau đó map đúng tên cột
+      const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: null,
+        blankrows: false,
+      });
 
-    console.log(`Raw data has ${rawData.length} rows`);
+      console.log(`Raw data has ${rawData.length} rows`);
 
-    if (rawData.length < 2) {
-      console.warn(`Sheet ${sheetName} has insufficient rows`);
-      return [];
-    }
-
-    // Lấy và clean headers từ dòng đầu tiên
-    let headers: string[] = this.cleanHeaders(rawData[0] || []);
-    console.log(`Headers found:`, headers.slice(0, 8), '...');
-
-    if (headers.length === 0) return [];
-
-    // ✅ CẢI TIẾN: Tìm dòng bắt đầu dữ liệu (skip metadata) - LOGIC MỚI
-    let dataStartIndex = 1;
-    const metadataKeywords = [
-      // English (cũ)
-      'mã định danh', 'uuid', 'tự sinh', 'khóa chính',
-      'kiểu dữ liệu', 'varchar', 'mô tả',
-      // ✅ Thêm: tiếng Việt mô tả cột
-      'mã ', 'họ và tên', 'số ', 'tên ',   // prefix mô tả
-      'fk →', 'fk->', 'null =',            // ghi chú FK
-      'integer', 'decimal', 'boolean',     // thêm kiểu dữ liệu
-      'timestamp', 'text', 'primary key',
-    ];
-
-    for (let i = 1; i < Math.min(10, rawData.length); i++) {
-      const firstCell = String(rawData[i][0] || '').trim().toLowerCase();
-      
-      // ✅ Fix: kiểm tra NHIỀU cell trong row, không chỉ cell đầu
-      const rowAsString = rawData[i]
-        .slice(0, 5)
-        .map(c => String(c || '').toLowerCase())
-        .join(' ');
-        
-      const isMetadata = metadataKeywords.some(k => firstCell.includes(k))
-        || /^(mã |họ |số |tên |ngày )/.test(firstCell)  // prefix VN phổ biến
-        || rowAsString.includes('fk →')
-        || rowAsString.includes('fk->')
-        || rowAsString.includes('varchar');
-
-      if (isMetadata) {
-        dataStartIndex = i + 1;
-        console.log(`Skipping metadata row ${i}: "${firstCell.slice(0, 40)}"`);
-      } else if (rawData[i].some(cell => String(cell || '').trim() !== '')) {
-        break;
+      if (rawData.length < 2) {
+        console.warn(`Sheet ${sheetName} has insufficient rows`);
+        return [];
       }
-    }
 
-    console.log(`Data starts from row ${dataStartIndex + 1}`);
+      // Lấy và clean headers từ dòng đầu tiên
+      let headers: string[] = this.cleanHeaders(rawData[0] || []);
+      console.log(`Headers found:`, headers.slice(0, 8), '...');
 
-    // Xử lý thành object với key = header thực tế
-    const jsonData: SheetData[] = [];
-    for (let i = dataStartIndex; i < rawData.length; i++) {
-      const row = rawData[i];
-      if (!row || row.length === 0) continue;
+      if (headers.length === 0) return [];
 
-      const rowObject: SheetData = {};
-      let hasValidData = false;
+      // ✅ CẢI TIẾN: Tìm dòng bắt đầu dữ liệu (skip metadata) - LOGIC MỚI
+      let dataStartIndex = 1;
+      const metadataKeywords = [
+        // English (cũ)
+        'mã định danh', 'uuid', 'tự sinh', 'khóa chính',
+        'kiểu dữ liệu', 'varchar', 'mô tả',
+        // ✅ Thêm: tiếng Việt mô tả cột
+        'mã ', 'họ và tên', 'số ', 'tên ',   // prefix mô tả
+        'fk →', 'fk->', 'null =',            // ghi chú FK
+        'integer', 'decimal', 'boolean',     // thêm kiểu dữ liệu
+        'timestamp', 'text', 'primary key',
+      ];
 
-      for (let j = 0; j < headers.length; j++) {
-        const header = headers[j];
-        if (!header) continue;
+      for (let i = 1; i < Math.min(10, rawData.length); i++) {
+        const firstCell = String(rawData[i][0] || '').trim().toLowerCase();
 
-        let value: any = j < row.length ? row[j] : null;
+        // ✅ Fix: kiểm tra NHIỀU cell trong row, không chỉ cell đầu
+        const rowAsString = rawData[i]
+          .slice(0, 5)
+          .map(c => String(c || '').toLowerCase())
+          .join(' ');
 
-        if (value !== null && value !== '') {
-          const strVal = String(value).trim();
-          if (/^-?\d+\.?\d*$/.test(strVal)) {
-            value = strVal.includes('.') ? parseFloat(strVal) : parseInt(strVal, 10);
-          } else if (strVal.toLowerCase() === 'true') value = true;
-          else if (strVal.toLowerCase() === 'false') value = false;
-          else value = strVal;
+        const isMetadata = metadataKeywords.some(k => firstCell.includes(k))
+          || /^(mã |họ |số |tên |ngày )/.test(firstCell)  // prefix VN phổ biến
+          || rowAsString.includes('fk →')
+          || rowAsString.includes('fk->')
+          || rowAsString.includes('varchar');
 
-          hasValidData = true;
+        if (isMetadata) {
+          dataStartIndex = i + 1;
+          console.log(`Skipping metadata row ${i}: "${firstCell.slice(0, 40)}"`);
+        } else if (rawData[i].some(cell => String(cell || '').trim() !== '')) {
+          break;
+        }
+      }
+
+      console.log(`Data starts from row ${dataStartIndex + 1}`);
+
+      // Xử lý thành object với key = header thực tế
+      const jsonData: SheetData[] = [];
+      for (let i = dataStartIndex; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || row.length === 0) continue;
+
+        const rowObject: SheetData = {};
+        let hasValidData = false;
+
+        for (let j = 0; j < headers.length; j++) {
+          const header = headers[j];
+          if (!header) continue;
+
+          let value: any = j < row.length ? row[j] : null;
+
+          if (value !== null && value !== '') {
+            const strVal = String(value).trim();
+
+            // Giữ nguyên boolean vì seeder cần biết true/false
+            if (strVal.toLowerCase() === 'true') value = true;
+            else if (strVal.toLowerCase() === 'false') value = false;
+            // Tất cả còn lại giữ nguyên string — seeder tự xử lý
+            else value = strVal;
+
+            hasValidData = true;
+          }
+
+          rowObject[header] = value;
         }
 
-        rowObject[header] = value;
+        if (hasValidData) {
+          jsonData.push(rowObject);
+        }
       }
 
-      if (hasValidData) {
-        jsonData.push(rowObject);
-      }
+      console.log(`Successfully processed ${jsonData.length} data rows from sheet ${sheetName}`);
+      return jsonData;
+    } catch (error) {
+      console.error(`Error processing sheet ${sheetName}:`, error);
+      return [];
     }
-
-    console.log(`Successfully processed ${jsonData.length} data rows from sheet ${sheetName}`);
-    return jsonData;
-  } catch (error) {
-    console.error(`Error processing sheet ${sheetName}:`, error);
-    return [];
   }
-}
 
   // Method public: Fetch specific sheets
   public async fetchSheets(options: FetchOptions, onProgress?: ProgressCallback): Promise<FetchResult> {
