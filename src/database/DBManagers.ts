@@ -154,6 +154,9 @@ export class DatabaseManager {
     this.appStateListener = AppState.addEventListener(
       'change',
       async (nextAppState: AppStateStatus) => {
+        // Tạm thời vô hiệu hoá tính năng tự động đóng/mở kết nối SQLite khi app rơi vào background
+        // SQLite trong React Native vốn dĩ được OS tự động quản lý vòng đời. Đóng bằng code thường gây đứt gãy query đang dở dang hoặc lỗi khi reopen.
+        /*
         if (nextAppState === 'background' || nextAppState === 'inactive') {
           await BaseManager.closeAll();
           this.connections = {}; // Flush wrappers
@@ -161,6 +164,7 @@ export class DatabaseManager {
           await BaseManager.reopenConnections();
           this.syncLocalWrappers();
         }
+        */
       },
     );
   }

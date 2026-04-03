@@ -99,7 +99,8 @@
     "member": "Member",
     "subtotal": "Subtotal",
     "tax": "Tax",
-    "total": "Total"
+    "total": "Total",
+    "filter": "Filter"
   },
   "payment": {
     "title": "Payment",
