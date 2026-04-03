@@ -57,6 +57,11 @@ export default function PosResident({
   const [rooms, setRooms] = useState<{ title: string; data: Room[] }[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [activeRoomType, setActiveRoomType] = useState<string>('all');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
   // Do redux chưa được cài đặt, tạm thời dùng mock storeId. 
   // Sau này có thể lấy từ Context hoặc Global State thực tế.
   const activeStoreId = 'store-001';
@@ -208,15 +213,30 @@ export default function PosResident({
   });
 
   const filteredRooms = useMemo(() => {
+    const minP = minPrice ? parseInt(minPrice.replace(/\D/g, '')) || 0 : 0;
+    const maxP = maxPrice ? parseInt(maxPrice.replace(/\D/g, '')) || Infinity : Infinity;
+
     return rooms.map((group: { title: string; data: Room[] }) => ({
       ...group,
       data: group.data.filter((r: Room) => {
         const matchStatus = activeRoomStatus === 'all' || r.status === activeRoomStatus;
         const matchSearch = (r.label || '').toLowerCase().includes(searchText.toLowerCase());
-        return matchStatus && matchSearch;
+        const matchType = activeRoomType === 'all' || r.product_name === activeRoomType;
+        const price = r.price || 0;
+        const matchPrice = price >= minP && price <= maxP;
+        
+        return matchStatus && matchSearch && matchType && matchPrice;
       })
     })).filter((group: { title: string; data: Room[] }) => group.data.length > 0);
-  }, [rooms, activeRoomStatus, searchText]);
+  }, [rooms, activeRoomStatus, searchText, activeRoomType, minPrice, maxPrice]);
+
+  const roomTypes = useMemo(() => {
+    const types = new Set<string>();
+    rooms.forEach(g => g.data.forEach(r => {
+      if (r.product_name) types.add(r.product_name);
+    }));
+    return Array.from(types).sort();
+  }, [rooms]);
 
   const handleAdd = useCallback((id: string) => {
     const product = products.find(p => p.id === id);
@@ -502,7 +522,7 @@ export default function PosResident({
             gap: 10,
           }}>
           {!isRoomMode
-            ? [{ id: 'all', name: t('pos.category_all') }, ...subCategories].map(cat => {
+            ? subCategories.map(cat => {
               const active = activeSubCategory === cat.id;
               return (
                 <TouchableOpacity
@@ -567,6 +587,31 @@ export default function PosResident({
               );
             })}
         </ScrollView>
+
+        {/* Nút mở Modal Bộ lọc */}
+        {isRoomMode && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+            <TouchableOpacity
+              onPress={() => setFilterModalVisible(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: cardBg,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: borderColor,
+                alignSelf: 'flex-start',
+                gap: 6
+              }}>
+              <Icon name="filter-list" size={18} color={subTextColor} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: subTextColor }}>
+                Bộ lọc {(activeRoomType !== 'all' || minPrice || maxPrice) ? '(Đang bật)' : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Main Grid Content - Refactored to SectionList/FlatList for performance */}
@@ -885,6 +930,95 @@ export default function PosResident({
           </View>
         </View>
       </ResponsivePanel>
+
+      {/* Room Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: bgColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: textColor }}>{t('pos.filter') || 'Bộ lọc phòng'}</Text>
+              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                <Icon name="close" size={24} color={subTextColor} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: textColor, marginBottom: 8 }}>Loại phòng</Text>
+            <View style={{ maxHeight: 200, marginBottom: 16, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: cardBg }}>
+              <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
+                {['all', ...roomTypes].map(type => {
+                  const active = activeRoomType === type;
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => setActiveRoomType(type)}
+                      style={{
+                        paddingVertical: 12,
+                        borderBottomWidth: type === roomTypes[roomTypes.length - 1] ? 0 : 1,
+                        borderBottomColor: borderColor,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                      <Text style={{ fontSize: 14, color: active ? '#3b82f6' : textColor, fontWeight: active ? '600' : '400' }}>
+                        {type === 'all' ? 'Tất cả hạng phòng' : type}
+                      </Text>
+                      {active && <Icon name="check" size={18} color="#3b82f6" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <Text style={{ fontSize: 14, fontWeight: '600', color: textColor, marginBottom: 8 }}>Khoảng giá (VNĐ)</Text>
+            <View style={{ gap: 12, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 12 }}>
+                <Text style={{ color: subTextColor, width: 60, fontSize: 13 }}>Giá từ</Text>
+                <TextInput
+                  style={{ flex: 1, height: 40, fontSize: 14, color: textColor }}
+                  placeholder="0"
+                  placeholderTextColor={subTextColor}
+                  keyboardType="numeric"
+                  value={minPrice}
+                  onChangeText={setMinPrice}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 12 }}>
+                <Text style={{ color: subTextColor, width: 60, fontSize: 13 }}>Đến</Text>
+                <TextInput
+                  style={{ flex: 1, height: 40, fontSize: 14, color: textColor }}
+                  placeholder="Không giới hạn"
+                  placeholderTextColor={subTextColor}
+                  keyboardType="numeric"
+                  value={maxPrice}
+                  onChangeText={setMaxPrice}
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveRoomType('all');
+                  setMinPrice('');
+                  setMaxPrice('');
+                }}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: textColor }}>Xoá lọc</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#3b82f6', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>Áp dụng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Booking Modal */}
       <Modal visible={!!bookingRoom} animationType="slide">

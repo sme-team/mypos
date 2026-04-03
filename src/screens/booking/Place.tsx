@@ -9,6 +9,7 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useTranslation} from 'react-i18next';
@@ -29,6 +30,11 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const [loading, setLoading] = useState(true);
 
   const [activeFloor, setActiveFloor] = useState<string>('all');
+  const [activeStatus, setActiveStatus] = useState<string>('all');
+  const [activeRoomType, setActiveRoomType] = useState<string>('all');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [bookingRoom, setBookingRoom] = useState<any | null>(null);
 
@@ -61,7 +67,6 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
-  // Build floor list based on room data
   const floors = Array.from(
     new Set(rooms.map(r => String(r.floor || '?'))),
   ).sort((a, b) => {
@@ -70,9 +75,26 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     return a.localeCompare(b, undefined, { numeric: true });
   });
 
-  const filteredRooms = rooms.filter(r =>
-    activeFloor === 'all' ? true : String(r.floor) === activeFloor,
-  );
+  const roomTypes = Array.from(new Set(rooms.map(r => r.product_name).filter(Boolean))).sort();
+  const roomStatuses = [
+    { key: 'all', label: 'Tất cả' },
+    { key: 'available', label: 'Phòng trống' },
+    { key: 'occupied', label: 'Đang ở' },
+    { key: 'cleaning', label: 'Đang dọn' },
+  ];
+
+  const filteredRooms = rooms.filter(r => {
+    const matchFloor = activeFloor === 'all' ? true : String(r.floor) === activeFloor;
+    const matchStatus = activeStatus === 'all' ? true : r.status === activeStatus;
+    const matchType = activeRoomType === 'all' ? true : (r.product_name || '') === activeRoomType;
+    
+    const price = r.price || 0;
+    const minP = minPrice ? parseInt(minPrice.replace(/\D/g, '')) || 0 : 0;
+    const maxP = maxPrice ? parseInt(maxPrice.replace(/\D/g, '')) || Infinity : Infinity;
+    const matchPrice = price >= minP && price <= maxP;
+
+    return matchFloor && matchStatus && matchType && matchPrice;
+  });
 
   const emptyCount = rooms.filter(r => r.status === 'available').length;
   const occupiedCount = rooms.filter(r => r.status === 'occupied').length;
@@ -152,12 +174,69 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                 style={[styles.tab, isActive && styles.tabActive]}>
                 <Text
                   style={[styles.tabText, isActive && styles.tabTextActive]}>
-                  {f === 'all' ? 'Tất cả' : `Tầng ${f}`}
+                  {f === 'all' ? 'Tất cả tầng' : `Tầng ${f}`}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
+      </View>
+
+      {/* Advanced Filters */}
+      <View style={styles.filtersWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {roomStatuses.map(status => {
+            const isActive = activeStatus === status.key;
+            return (
+              <TouchableOpacity
+                key={status.key}
+                onPress={() => setActiveStatus(status.key)}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}>
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {status.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {roomTypes.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {['all', ...roomTypes].map(type => {
+              const isActive = activeRoomType === type;
+              return (
+                <TouchableOpacity
+                  key={type as string}
+                  onPress={() => setActiveRoomType(type as string)}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}>
+                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                    {type === 'all' ? 'Tất cả loại phòng' : type as string}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.priceFilterRow}>
+          <TextInput
+            style={styles.priceInput}
+            placeholder="Giá từ"
+            keyboardType="numeric"
+            value={minPrice}
+            onChangeText={setMinPrice}
+            placeholderTextColor="#999"
+          />
+          <Text style={styles.priceDash}>-</Text>
+          <TextInput
+            style={styles.priceInput}
+            placeholder="Đến"
+            keyboardType="numeric"
+            value={maxPrice}
+            onChangeText={setMaxPrice}
+            placeholderTextColor="#999"
+          />
+        </View>
       </View>
 
       {/* Room Grid */}
@@ -348,6 +427,54 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#fff',
+  },
+  filtersWrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  filterScroll: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  filterChipActive: {
+    backgroundColor: '#1565C0',
+    borderColor: '#1565C0',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#555',
+  },
+  filterChipTextActive: {
+    color: '#fff',
+  },
+  priceFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priceInput: {
+    flex: 1,
+    height: 36,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#333',
+  },
+  priceDash: {
+    color: '#555',
+    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: 16,
