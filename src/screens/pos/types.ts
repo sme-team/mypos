@@ -13,6 +13,7 @@ export interface PosCategory {
     name: string;
     category_code: string;
     parent_id: string | null;
+    apply_to?: string;
 }
 
 export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';

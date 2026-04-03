@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useTranslation} from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SettingsHeader from '../../components/setting/SettingsHeader';
 import SettingsSection from '../../components/setting/SettingsSection';
@@ -23,14 +23,14 @@ interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
 }
-export default function Setting({onOpenMenu, onBack: _onBack}: SettingProps) {
-  const {t, i18n} = useTranslation();
+export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
+  const { t, i18n } = useTranslation();
   const [sheetLink, setSheetLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(SHEET_LINK_KEY).then(saved => {
-      if (saved) {setSheetLink(saved);}
+      if (saved) { setSheetLink(saved); }
     });
   }, []);
 

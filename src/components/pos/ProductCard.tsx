@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Product } from '../../screens/pos/types';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -28,17 +28,15 @@ interface ProductCardProps {
   quantity: number;           // Số lượng hiện tại của sản phẩm trong giỏ hàng
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCard: React.FC<ProductCardProps> = React.memo(({
   product,
   onAdd,
   onDecrease,
   cardWidth,
   quantity,
 }) => {
-  // Lấy trạng thái giao diện hiện tại
   const { isDark } = useTheme();
 
-  // Thiết lập bảng màu động dựa trên chế độ Dark Mode
   const cardBg = isDark ? '#1f2937' : '#fff';
   const textColor = isDark ? '#f9fafb' : '#1a1a1a';
   const borderColor = isDark ? '#374151' : '#bfdbfe';
@@ -48,90 +46,110 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <View
-      style={{
-        width: cardWidth,
-        backgroundColor: cardBg,
-        borderRadius: 16,
-        marginBottom: 14,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        elevation: 3, // Tạo bóng đổ cho Android
-      }}>
+      style={[
+        styles.card,
+        {
+          width: cardWidth,
+          backgroundColor: cardBg,
+        }
+      ]}>
 
-      {/* --- PHẦN HÌNH ẢNH SẢN PHẨM --- */}
-      <View style={{ position: 'relative' }}>
+      <View style={styles.imageContainer}>
         <Image
           source={{ uri: product.image }}
-          style={{ width: '100%', height: 130 }}
+          style={styles.image}
           resizeMode="cover"
         />
       </View>
 
-      {/* --- PHẦN THÔNG TIN CHI TIẾT --- */}
-      <View style={{ padding: 10 }}>
-        {/* Tên sản phẩm - giới hạn 1 dòng */}
+      <View style={styles.content}>
         <Text
-          style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: textColor,
-            marginBottom: 4,
-          }}
+          style={[styles.title, { color: textColor }]}
           numberOfLines={1}>
           {product.name}
         </Text>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-          {/* Giá sản phẩm */}
-          <View>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#f97316' }}>
-              {formatPrice(product.price)}
-            </Text>
-          </View>
+        <View style={styles.footer}>
+          <Text style={styles.price}>
+            {formatPrice(product.price)}
+          </Text>
 
-          {/* --- NÚT TƯƠNG TÁC --- */}
-          {/* Nếu chưa có trong giỏ hàng (quantity = 0) -> Hiển thị nút (+) */}
           {quantity === 0 ? (
             <TouchableOpacity
               onPress={() => onAdd(product.id)}
-              style={{
-                width: 34,
-                height: 34,
-                backgroundColor: addBtnBg,
-                borderRadius: 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: borderColor,
-              }}>
-              <Text style={{ fontSize: 20, color: '#3b82f6' }}>+</Text>
+              style={[styles.addBtn, { backgroundColor: addBtnBg, borderColor: borderColor }]}>
+              <Text style={styles.addBtnText}>+</Text>
             </TouchableOpacity>
           ) : (
-            /* Nếu đã có trong giỏ hàng -> Hiển thị nút (-) để bớt món */
             <TouchableOpacity
               onPress={() => onDecrease(product.id)}
-              style={{
-                width: 34,
-                height: 34,
-                backgroundColor: decBtnBg,
-                borderRadius: 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: decBtnBorder,
-              }}>
-              <Text style={{ fontSize: 20, color: '#ef4444' }}>−</Text>
+              style={[styles.decBtn, { backgroundColor: decBtnBg, borderColor: decBtnBorder }]}>
+              <Text style={styles.decBtnText}>−</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
     </View>
   );
-};
+});
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    marginBottom: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    elevation: 3,
+  },
+  imageContainer: {
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: 130,
+  },
+  content: {
+    padding: 10,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#f97316',
+  },
+  addBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  addBtnText: {
+    fontSize: 20,
+    color: '#3b82f6',
+  },
+  decBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  decBtnText: {
+    fontSize: 20,
+    color: '#ef4444',
+  },
+});
 
 export default ProductCard;

@@ -10,6 +10,7 @@ export interface Category {
   name: string;
   category_code: string;
   parent_id: string | null;
+  apply_to: string;
 }
 
 export const PosQueryService = {
@@ -72,7 +73,7 @@ export const PosQueryService = {
       if (!db) return [];
 
       const rows = await QueryBuilder.table('categories', db.getInternalDAO())
-        .select(['id', 'name', 'category_code', 'parent_id'])
+        .select(['id', 'name', 'category_code', 'parent_id', 'apply_to'])
         .where('status', 'active')
         .orderBy('sort_order', 'ASC')
         .orderBy('name', 'ASC')
@@ -83,6 +84,7 @@ export const PosQueryService = {
         name: r.name,
         category_code: r.category_code,
         parent_id: r.parent_id,
+        apply_to: r.apply_to,
       }));
     } catch (err) {
       logger.error('[PosQueryService] getCategories error:', err);
@@ -92,6 +94,7 @@ export const PosQueryService = {
 
   /**
    * Lấy danh sách dịch vụ (để đặt phòng)
+   * Lọc theo product_type = 'room_service'
    */
   async getServices(storeId: string = 'store-001'): Promise<any[]> {
     try {
@@ -102,23 +105,34 @@ export const PosQueryService = {
         .select([
           'products.id',
           'products.name',
+          'products.short_name',
+          'products.pricing_type',
+          'products.category_id',
+          'product_variants.id as variant_id',
           'prices.price as unit_price',
-          'units.name as unit'
+          'units.name as unit',
+          'units.id as unit_id'
         ])
         .leftJoin('product_variants', 'products.id = product_variants.product_id')
         .leftJoin('prices', 'product_variants.id = prices.variant_id')
         .leftJoin('units', 'products.unit_id = units.id')
-        .where('products.product_type', 'service')
+        .where('products.product_type', 'room_service')
         .where('products.store_id', storeId)
         .where('products.status', 'active')
-        .where('prices.status', 'active')
+        .where('product_variants.is_default', 1)
+        .where('prices.price_list_name', 'default')
         .get();
 
       return rows.map(r => ({
         id: r.id,
+        variantId: r.variant_id,
         name: r.name,
+        shortName: r.short_name,
+        pricingType: r.pricing_type,
+        categoryId: r.category_id,
         unitPrice: r.unit_price || 0,
-        unit: r.unit || 'cái',
+        unit: r.unit || 'dịch vụ',
+        unitId: r.unit_id,
         qty: 1,
         selected: false,
       }));

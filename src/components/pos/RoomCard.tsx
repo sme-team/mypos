@@ -32,10 +32,9 @@ const STATUS_DOT: Record<Room['status'], string> = {
  */
 const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
 
-const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
+const RoomCard: React.FC<RoomCardProps> = React.memo(({ room, cardWidth, onPress }) => {
     const { isDark } = useTheme();
 
-    // Thiết lập màu sắc linh hoạt theo giao diện Sáng/Tối
     const cardBg = isDark ? '#1f2937' : '#fff';
     const textColor = isDark ? '#F9FAFB' : '#1A1A2E';
     const subTextColor = isDark ? '#9CA3AF' : '#666';
@@ -54,17 +53,15 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
                 styles.roomCard,
                 {
                     width: cardWidth,
-                    borderLeftColor: room.borderColor, // Vạch màu bên trái thẻ
+                    borderLeftColor: room.borderColor,
                     backgroundColor: cardBg,
                 },
             ]}>
 
-            {/* --- PHẦN TIÊU ĐỀ: SỐ PHÒNG & TAG THỜI GIAN --- */}
             <View style={styles.roomHeader}>
                 <Text style={[styles.roomId, { color: textColor }]}>{room.label || room.id}</Text>
                 {room.tag && (
                     <View style={[styles.roomTag, { backgroundColor: tagBg, borderColor: tagBorder, borderWidth: 0.5 }]}>
-                        {/* Logic đổi màu chữ tag dựa trên nội dung (Hết hạn hoặc Checkout) */}
                         <Text style={[styles.roomTagText, { color: room.id.includes('101') || room.id.includes('103') ? '#EF4444' : '#3B82F6' }]}>
                             {room.tag}
                         </Text>
@@ -72,35 +69,33 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, cardWidth, onPress }) => {
                 )}
             </View>
 
-            {/* --- PHẦN TRẠNG THÁI & TẦNG --- */}
-            <View style={[styles.roomStatusRow, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+            <View style={styles.roomStatusRow}>
                 <View style={styles.floorBadge}>
                     <Text style={styles.floorText}>Tầng {room.floor}</Text>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={styles.statusInfo}>
                     <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[room.status] }]} />
                     <Text style={[styles.roomStatusLabel, { color: subTextColor }]}>{statusText}</Text>
                 </View>
             </View>
 
-            {/* --- PHẦN GIÁ TIỀN --- */}
             <Text style={[styles.roomPrice, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
                 {formatPrice(room.price)}
             </Text>
         </TouchableOpacity>
     );
-};
+});
 
 const styles = StyleSheet.create({
     roomCard: {
         borderRadius: 16,
         padding: 12,
-        borderLeftWidth: 4, // Độ dày của vạch màu bên trái
+        borderLeftWidth: 4,
         shadowColor: '#000',
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
-        marginBottom: 12, // Khoảng cách dưới giữa các thẻ
+        marginBottom: 12,
     },
     roomHeader: {
         flexDirection: 'row',
@@ -124,8 +119,13 @@ const styles = StyleSheet.create({
     roomStatusRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'space-between',
         marginBottom: 8,
+    },
+    statusInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     floorBadge: {
         backgroundColor: '#E5E7EB',

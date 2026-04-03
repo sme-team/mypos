@@ -58,6 +58,7 @@ export interface LongTermCheckInInput {
   extraServices?: Array<{
     productId: string;
     variantId?: string;
+    unitId?: string;
     name: string;
     quantity: number;
     unitPrice: number;
@@ -91,6 +92,7 @@ export interface ShortTermCheckInInput {
   extraServices?: Array<{
     productId: string;
     variantId?: string;
+    unitId?: string;
     name: string;
     quantity: number;
     unitPrice: number;
@@ -123,6 +125,9 @@ export interface CollectMonthlyPaymentInput {
   variantId: string;
   electricNew: number;
   waterNew: number;
+  notes?: string;
+  adults?: number;
+  children?: number;
   extraServices?: Array<{
     productId?: string;
     name: string;
@@ -170,26 +175,31 @@ class RoomActionServiceClass {
     storeId: string,
     services: LongTermCheckInInput['extraServices'],
     startOrder = 10,
-  ): Promise<void> {
-    if (!services || services.length === 0) return;
+  ): Promise<number> {
+    if (!services || services.length === 0) return 0;
+    let totalSvcAmount = 0;
     for (let i = 0; i < services.length; i++) {
       const svc = services[i];
+      const amount = svc.quantity * svc.unitPrice;
+      totalSvcAmount += amount;
       await this.billDetailSvc.create({
         id: generateUID('BDT'),
         store_id: storeId,
         bill_id: billId,
         product_id: svc.productId,
         variant_id: svc.variantId ?? null,
+        unit_id: svc.unitId ?? null,
         line_description: svc.name,
         quantity: svc.quantity,
         unit_price: svc.unitPrice,
-        amount: svc.quantity * svc.unitPrice,
+        amount: amount,
         sort_order: startOrder + i,
         sync_status: 'local',
         created_at: this.now(),
         updated_at: this.now(),
       });
     }
+    return totalSvcAmount;
   }
 
   // ── Màn hình 2A: Check-in dài hạn ───────────
@@ -245,14 +255,14 @@ class RoomActionServiceClass {
         updated_at: now,
       });
 
-      // 3. Bill đặt cọc
+      // 3. Bill đầu kỳ (Cọc + Thu trước)
       const depositAmount = input.depositAmount ?? 0;
       await this.billSvc.create({
         id: billId,
         store_id: input.storeId,
         customer_id: input.customerId,
-        bill_number: `HD-DEP-${Date.now()}`,
-        bill_type: 'deposit',
+        bill_number: `HD-RENT-${Date.now()}`,
+        bill_type: 'rent',
         ref_id: contractId,
         ref_type: 'contract',
         subtotal: depositAmount,
@@ -281,8 +291,49 @@ class RoomActionServiceClass {
         updated_at: now,
       });
 
-      // 5. Dịch vụ thêm → bill_details
-      await this.insertExtraServices(billId, input.storeId, input.extraServices);
+      // 5. Bill Tiền nhà (RENT BILL) - Theo yêu cầu người dùng
+      const rentBillId = generateUID('BILL');
+      // Tính tổng dịch vụ
+      const svcAmount = (input.extraServices ?? []).reduce((s, sv) => s + sv.quantity * sv.unitPrice, 0);
+      const totalRentBill = input.rentAmount + svcAmount;
+
+      await this.billSvc.create({
+        id: rentBillId,
+        store_id: input.storeId,
+        customer_id: input.customerId,
+        bill_number: `HD-RENT-${Date.now()}`,
+        bill_type: 'rent',
+        ref_id: contractId,
+        ref_type: 'contract',
+        subtotal: totalRentBill,
+        total_amount: totalRentBill,
+        paid_amount: 0,
+        remaining_amount: totalRentBill,
+        bill_status: 'issued',
+        issued_at: now,
+        sync_status: 'local',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // 6. bill_details cho bill tiền nhà
+      // - Dòng tiền phòng
+      await this.billDetailSvc.create({
+        id: generateUID('BDT'),
+        store_id: input.storeId,
+        bill_id: rentBillId,
+        line_description: 'Tiền thuê phòng (tháng đầu)',
+        quantity: 1,
+        unit_price: input.rentAmount,
+        amount: input.rentAmount,
+        sort_order: 1,
+        sync_status: 'local',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // - Dòng dịch vụ thêm
+      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10);
 
       // 6. Thanh toán tiền cọc ngay (nếu có)
       if (input.payDepositNow && depositAmount > 0) {
@@ -391,15 +442,15 @@ class RoomActionServiceClass {
         updated_at: now,
       });
 
-      // 5. Bill (cycle = lưu trú ngắn hạn)
+      // 5. Bill (đặt cọc đầu kỳ cho ngắn hạn)
       const depositAmount = input.depositAmount ?? 0;
       const totalAmount = rentAmount + depositAmount;
       await this.billSvc.create({
         id: billId,
         store_id: input.storeId,
         customer_id: customerId,
-        bill_number: `HD-SHT-${Date.now()}`,
-        bill_type: 'cycle',
+        bill_number: `HD-DEP-${Date.now()}`,
+        bill_type: 'deposit',
         ref_id: contractId,
         ref_type: 'contract',
         cycle_period_from: input.checkinDate,
@@ -415,12 +466,36 @@ class RoomActionServiceClass {
         updated_at: now,
       });
 
-      // 6. bill_details — tiền phòng
+      // 7. Bill Tiền nhà & Dịch vụ ngắn hạn (RENT BILL)
+      const rentBillId = generateUID('BILL');
+      const svcAmount = (input.extraServices ?? []).reduce((s, sv) => s + sv.quantity * sv.unitPrice, 0);
+      const totalRentBill = rentAmount + svcAmount;
+
+      await this.billSvc.create({
+        id: rentBillId,
+        store_id: input.storeId,
+        customer_id: customerId,
+        bill_number: `HD-RENT-${Date.now()}`,
+        bill_type: 'rent',
+        ref_id: contractId,
+        ref_type: 'contract',
+        subtotal: totalRentBill,
+        total_amount: totalRentBill,
+        paid_amount: 0,
+        remaining_amount: totalRentBill,
+        bill_status: 'issued',
+        issued_at: now,
+        sync_status: 'local',
+        created_at: now,
+        updated_at: now,
+      });
+
+      // 8. bill_details (Tiền phòng)
       await this.billDetailSvc.create({
         id: generateUID('BDT'),
         store_id: input.storeId,
-        bill_id: billId,
-        line_description: `Tiền phòng (${nights} đêm × ${input.rentPerNight.toLocaleString()}đ)`,
+        bill_id: rentBillId,
+        line_description: `Tiền thuê phòng ngắn hạn (${nights} đêm)`,
         quantity: nights,
         unit_price: input.rentPerNight,
         amount: rentAmount,
@@ -430,8 +505,8 @@ class RoomActionServiceClass {
         updated_at: now,
       });
 
-      // 7. Dịch vụ thêm
-      await this.insertExtraServices(billId, input.storeId, input.extraServices, 10);
+      // 9. Dịch vụ thêm
+      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10);
 
       // 8. Thanh toán cọc ngay
       if (input.payDepositNow && depositAmount > 0) {
@@ -661,6 +736,17 @@ class RoomActionServiceClass {
       const now = this.now();
       const billId = generateUID('BILL');
 
+      // 0. Update Contract Metadata (optional but recommended for persistence)
+      const newMeta = JSON.stringify({
+        adults: input.adults ?? 1,
+        children: input.children ?? 0,
+        notes: input.notes ?? '',
+      });
+      await this.contractSvc.update(contract.id, {
+        metadata: newMeta,
+        updated_at: now,
+      });
+
       // 1. Tạo bill
       await this.billSvc.create({
         id: billId,
@@ -676,6 +762,7 @@ class RoomActionServiceClass {
         remaining_amount: total,
         bill_status: 'issued',
         issued_at: now,
+        notes: input.notes, // Save user notes to bill
         sync_status: 'local',
         created_at: now,
         updated_at: now,
