@@ -55,6 +55,7 @@ type Screen =
   | 'pos'
   | 'dashboard'
   | 'categories'
+  | 'customers'
   | 'report'
   | 'setting'
   | 'pos_resident'
@@ -274,7 +275,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* ── Customer ───────────────────────────────────────── */}
-      {screen === 'customer' && (
+      {screen === 'customers' && (
         <CustomerScreen onOpenMenu={() => setIsSidebarVisible(true)} />
       )}
 
@@ -284,6 +285,11 @@ const AppContent: React.FC = () => {
           onOpenMenu={() => setIsSidebarVisible(true)}
           storeId="store-001"
         />
+      )}
+
+      {/* ── Customer ───────────────────────────────────────── */}
+      {screen === 'customer' && (
+        <CustomerScreen onOpenMenu={() => setIsSidebarVisible(true)} />
       )}
 
       {/* ── Report ─────────────────────────────────────────────── */}

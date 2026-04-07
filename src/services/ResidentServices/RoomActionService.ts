@@ -77,6 +77,10 @@ export interface ShortTermCheckInInput {
   fullName: string;
   phone: string;
   idNumber?: string;
+  // Trường ẩn từ QR CCCD (chỉ lưu DB, không hiện UI)
+  dateOfBirth?: string;    // Ngày sinh (DD/MM/YYYY)
+  gender?: string;         // Giới tính ('Nam' | 'Nữ')
+  address?: string;        // Địa chỉ thường trú
   idCardFrontUrl?: string;
   idCardBackUrl?: string;
   // Thông tin đặt phòng
@@ -86,7 +90,7 @@ export interface ShortTermCheckInInput {
   checkoutTime?: string;
   adults?: number;
   children?: number;
-  rentPerNight: number;         // UI tính: rentAmount = rentPerNight × số ngày
+  rentPerNight: number;
   depositAmount?: number;
   notes?: string;
   extraServices?: Array<{
@@ -384,13 +388,16 @@ class RoomActionServiceClass {
         checkout_time: input.checkoutTime ?? '12:00',
       });
 
-      // 1. customers (khách mới)
+      // 1. customers (khách mới) — lưu đầy đủ cả dữ liệu ẩn từ CCCD
       await this.customerSvc.create({
         id: customerId,
         store_id: input.storeId,
         full_name: input.fullName,
         phone: input.phone,
         id_number: input.idNumber ?? '',
+        date_of_birth: input.dateOfBirth ?? null,
+        gender: input.gender ? (input.gender === 'Nam' ? 'male' : input.gender === 'Nữ' ? 'female' : 'other') : null,
+        address: input.address ?? null,
         customer_code: `C-${customerId}`,
         status: 'active',
         sync_status: 'local',

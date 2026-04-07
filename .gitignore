@@ -146,3 +146,11 @@ android/.gradle/
 # build output
 *.apk
 *.aab
+node_modules/
+ios/Pods/
+ios/build/
+android/app/build/
+android/.gradle/
+*.jks
+*.p12
+*.key

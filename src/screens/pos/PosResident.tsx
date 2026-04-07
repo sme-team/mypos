@@ -190,7 +190,6 @@ export default function PosResident({
       { key: 'all', label: t('pos.status_all') },
       { key: 'available', label: t('pos.status_empty') },
       { key: 'occupied', label: t('pos.status_occupied') },
-      { key: 'cleaning', label: t('pos.status_cleaning') },
     ],
     [t],
   );
@@ -330,32 +329,34 @@ export default function PosResident({
             </View>
           </TouchableOpacity>
 
-          <Text style={{ fontSize: 20, fontWeight: '700', color: textColor }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: textColor, flex: isRoomMode ? 1 : 0 }}>
             {t('pos.title')}
           </Text>
 
-          <View
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: inputBg,
-              borderRadius: 12,
-              paddingHorizontal: 10,
-              paddingVertical: 7,
-              elevation: isDark ? 0 : 2,
-              borderWidth: isDark ? 1 : 0,
-              borderColor: '#4b5563',
-            }}>
-            <TextInput
-              placeholder={t('pos.search_placeholder')}
-              placeholderTextColor="#9ca3af"
-              value={searchText}
-              onChangeText={setSearchText}
-              style={{ flex: 1, fontSize: 13, color: textColor, padding: 0 }}
-            />
-            <Icon name="search" size={20} color="#9ca3af" />
-          </View>
+          {!isRoomMode && (
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: inputBg,
+                borderRadius: 12,
+                paddingHorizontal: 10,
+                paddingVertical: 7,
+                elevation: isDark ? 0 : 2,
+                borderWidth: isDark ? 1 : 0,
+                borderColor: '#4b5563',
+              }}>
+              <TextInput
+                placeholder={t('pos.search_placeholder')}
+                placeholderTextColor="#9ca3af"
+                value={searchText}
+                onChangeText={setSearchText}
+                style={{ flex: 1, fontSize: 13, color: textColor, padding: 0 }}
+              />
+              <Icon name="search" size={20} color="#9ca3af" />
+            </View>
+          )}
         </View>
 
         {/* Section Tabs (Adaptive) */}
@@ -413,7 +414,7 @@ export default function PosResident({
 
           if (count >= 3) {
             return (
-              <View style={{ paddingBottom: 16 }}>
+              <View style={{ paddingBottom: 10 }}>
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
@@ -434,7 +435,7 @@ export default function PosResident({
           return (
             <View style={{ 
               paddingHorizontal: 16, 
-              paddingBottom: 16, 
+              paddingBottom: 10, 
               alignItems: count === 1 ? 'center' : 'stretch' 
             }}>
               <View 
@@ -512,17 +513,17 @@ export default function PosResident({
           </ScrollView>
         )}
 
-        {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingBottom: 10,
-            gap: 10,
-          }}>
-          {!isRoomMode
-            ? subCategories.map(cat => {
+        {/* Sub-categories (Chỉ hiện cho POS) */}
+        {!isRoomMode && subCategories.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+              gap: 10,
+            }}>
+            {subCategories.map(cat => {
               const active = activeSubCategory === cat.id;
               return (
                 <TouchableOpacity
@@ -553,44 +554,37 @@ export default function PosResident({
                   </Text>
                 </TouchableOpacity>
               );
-            })
-            : roomStatuses.map(status => {
-              const active = activeRoomStatus === status.key;
-              return (
-                <TouchableOpacity
-                  key={status.key}
-                  onPress={() => setActiveRoomStatus(status.key)}
-                  style={{
-                    paddingHorizontal: 18,
-                    height: 38,
-                    borderRadius: 19,
-                    backgroundColor: active ? '#3b82f6' : cardBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    elevation: 1,
-                    borderWidth: active ? 0 : 1,
-                    borderColor: borderColor,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 2,
-                  }}>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: '600',
-                      color: active ? '#fff' : subTextColor,
-                    }}>
-                    {status.label}
-                  </Text>
-                </TouchableOpacity>
-              );
             })}
-        </ScrollView>
+          </ScrollView>
+        )}
 
         {/* Nút mở Modal Bộ lọc */}
         {isRoomMode && (
-          <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+          <View style={{ paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            {/* Thanh tìm kiếm dời xuống đây */}
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: inputBg,
+                borderRadius: 10,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderWidth: isDark ? 1 : 1,
+                borderColor: borderColor,
+              }}>
+              <Icon name="search" size={18} color="#9ca3af" style={{ marginRight: 6 }} />
+              <TextInput
+                placeholder={t('pos.search_placeholder')}
+                placeholderTextColor="#9ca3af"
+                value={searchText}
+                onChangeText={setSearchText}
+                style={{ flex: 1, fontSize: 13, color: textColor, padding: 0 }}
+              />
+            </View>
+
+            {/* Nút Bộ lọc */}
             <TouchableOpacity
               onPress={() => setFilterModalVisible(true)}
               style={{
@@ -602,12 +596,11 @@ export default function PosResident({
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: borderColor,
-                alignSelf: 'flex-start',
                 gap: 6
               }}>
               <Icon name="filter-list" size={18} color={subTextColor} />
               <Text style={{ fontSize: 13, fontWeight: '600', color: subTextColor }}>
-                Bộ lọc {(activeRoomType !== 'all' || minPrice || maxPrice) ? '(Đang bật)' : ''}
+                {t('pos.filter') || 'Bộ lọc'} {(activeRoomType !== 'all' || minPrice || maxPrice) ? '(on)' : ''}
               </Text>
             </TouchableOpacity>
           </View>
@@ -938,8 +931,16 @@ export default function PosResident({
         transparent={true}
         onRequestClose={() => setFilterModalVisible(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: bgColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, maxHeight: '80%' }}>
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => setFilterModalVisible(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={(e) => e.stopPropagation()} 
+            style={{ backgroundColor: bgColor, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, maxHeight: '85%' }}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 18, fontWeight: '700', color: textColor }}>{t('pos.filter') || 'Bộ lọc phòng'}</Text>
               <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
@@ -947,8 +948,9 @@ export default function PosResident({
               </TouchableOpacity>
             </View>
 
+            {/* Loại phòng Section */}
             <Text style={{ fontSize: 14, fontWeight: '600', color: textColor, marginBottom: 8 }}>Loại phòng</Text>
-            <View style={{ maxHeight: 200, marginBottom: 16, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: cardBg }}>
+            <View style={{ maxHeight: 180, marginBottom: 16, borderWidth: 1, borderColor, borderRadius: 8, backgroundColor: cardBg }}>
               <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
                 {['all', ...roomTypes].map(type => {
                   const active = activeRoomType === type;
@@ -974,6 +976,34 @@ export default function PosResident({
               </ScrollView>
             </View>
 
+            {/* Trạng thái phòng Section - Dời vào trong đây */}
+            <Text style={{ fontSize: 14, fontWeight: '600', color: textColor, marginBottom: 8 }}>Trạng thái phòng</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+              {roomStatuses.map(status => {
+                const active = activeRoomStatus === status.key;
+                return (
+                  <TouchableOpacity
+                    key={status.key}
+                    onPress={() => setActiveRoomStatus(status.key)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor: active ? '#3b82f6' : cardBg,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: active ? '#3b82f6' : borderColor,
+                    }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#fff' : subTextColor }}>
+                      {status.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Khoảng giá Section */}
             <Text style={{ fontSize: 14, fontWeight: '600', color: textColor, marginBottom: 8 }}>Khoảng giá (VNĐ)</Text>
             <View style={{ gap: 12, marginBottom: 20 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 12 }}>
@@ -1004,6 +1034,7 @@ export default function PosResident({
               <TouchableOpacity
                 onPress={() => {
                   setActiveRoomType('all');
+                  setActiveRoomStatus('all');
                   setMinPrice('');
                   setMaxPrice('');
                 }}
@@ -1016,8 +1047,8 @@ export default function PosResident({
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>Áp dụng</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* Booking Modal */}

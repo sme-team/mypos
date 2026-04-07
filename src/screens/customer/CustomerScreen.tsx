@@ -194,7 +194,18 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
         onBack={() => setSelectedCustomer(null)}
         onUpdateCustomer={updatedCustomer => {
           setCustomers(prev =>
-            prev.map(c => (c.id === updatedCustomer.id ? updatedCustomer : c)),
+            prev.map(c =>
+              c.id === updatedCustomer.id
+                ? {
+                    ...c,
+                    name: updatedCustomer.full_name,
+                    phone: updatedCustomer.phone,
+                    type: updatedCustomer.type,
+                    hasKey: updatedCustomer.hasKey,
+                    imageUri: updatedCustomer.imageUri,
+                  }
+                : c,
+            ),
           );
         }}
       />
