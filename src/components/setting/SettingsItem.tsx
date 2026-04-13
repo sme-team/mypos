@@ -8,13 +8,16 @@ interface Props {
   title: string;
   desc: string;
   isDark?: boolean;
+  onPress?: () => void;
 }
 
-const SettingsItem = ({icon, title, desc, isDark = false}: Props) => {
+const SettingsItem = ({icon, title, desc, isDark = false, onPress}: Props) => {
   const {t} = useTranslation();
 
   return (
     <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
       className={`flex-row items-center justify-between py-4 border-b last:border-b-0 ${
         isDark ? 'border-gray-700' : 'border-gray-200'
       }`}>

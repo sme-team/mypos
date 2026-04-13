@@ -16,8 +16,9 @@ import SettingsItem from '../../components/setting/SettingsItem';
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
+  onNavigateProfile: () => void;
 }
-export default function Setting({onOpenMenu, onBack}: SettingProps) {
+export default function Setting({onOpenMenu, onBack, onNavigateProfile}: SettingProps) {
   const {t, i18n} = useTranslation();
   const {isDark} = useTheme();
   const [langOpen, setLangOpen] = useState(false);
@@ -40,6 +41,7 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
       icon: 'person-outline',
       title: 'settings.profile',
       desc: 'settings.profileDesc',
+      onPress: onNavigateProfile,
     },
     {
       icon: 'wallet-outline',
@@ -122,6 +124,7 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
               icon={item.icon}
               title={item.title}
               desc={item.desc}
+              onPress={item.onPress}
             />
           ))}
         </SettingsSection>
@@ -184,6 +187,7 @@ export default function Setting({onOpenMenu, onBack}: SettingProps) {
               icon={item.icon}
               title={item.title}
               desc={item.desc}
+              onPress={item.onPress}
             />
           ))}
         </SettingsSection>

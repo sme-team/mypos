@@ -1,4 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * src/screens/login/UILogin.tsx
+ *
+ * Màn hình đăng nhập:
+ *   1. Username / Password  → loginCredentials()
+ *   2. Google Sign-In       → lấy idToken từ @react-native-google-signin/google-signin
+ *                             → loginWithGoogleToken(idToken, 'login')
+ *
+ * Sau khi đăng nhập thành công, gọi onLoginSuccess() để navigator
+ * đọc user.businessTypes và điều hướng đến đúng giao diện bán hàng.
+ */
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,16 +21,30 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Linking,
   Animated,
+  StyleSheet,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useAuth } from '../../store/authStore';
 import { createModuleLogger, AppModules } from '../../logger';
 
+
 const logger = createModuleLogger(AppModules.LOGIN_SCREEN);
-const DEEP_LINK_SCHEME = 'mypos://auth/callback';
+
+// ─── Google Sign-In config ───────────────────────────────────────────────────
+// Thay GOOGLE_WEB_CLIENT_ID bằng client ID từ Google Cloud Console của bạn.
+// Đây là WEB client ID (không phải Android/iOS), dùng để verify idToken trên BE.
+GoogleSignin.configure({
+  webClientId: '909913295236-8gcgqh2bp0fogl5th6c1vkt4sqsfgitb.apps.googleusercontent.com',
+  offlineAccess: false,
+});
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   isDark: boolean;
@@ -27,317 +52,355 @@ interface Props {
   onBack: () => void;
 }
 
-type GoogleStep = 'idle' | 'fetching_url' | 'waiting_code' | 'processing';
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
   const { t } = useTranslation();
-  const {
-    loginCredentials,
-    loginWithCode,
-    state: authState,
-    clearError,
-  } = useAuth();
+  const { loginCredentials, loginWithGoogleToken, state: authState, clearError } = useAuth();
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [googleStep, setGoogleStep] = useState<GoogleStep>('idle');
-  const [oauthCode, setOauthCode] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // ── Animations ─────────────────────────────────────────────────────────────
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Handlers (Defined first to be used in effects) ─────────────────────────
-  const processGoogleCode = useCallback(async (codeOverride?: string) => {
-    const finalCode = (codeOverride ?? oauthCode).trim();
-    if (!finalCode) return;
-    setGoogleStep('processing');
-    const success = await loginWithCode(finalCode);
-    if (success) {
-      setOauthCode('');
-      onLoginSuccess();
-    } else {
-      setGoogleStep('waiting_code');
+  // Hiệu ứng rung khi có lỗi
+  useEffect(() => {
+    if (authState.error) {
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
     }
-  }, [oauthCode, loginWithCode, onLoginSuccess]);
+  }, [authState.error, shakeAnim]);
 
+  // ── Đăng nhập username/password ──────────────────────────────────────────
   const handleLogin = async () => {
-    setIsLoading(true);
-    const success = await loginCredentials(email, password);
-    setIsLoading(false);
-    if (success) onLoginSuccess();
-  };
-
-  const handleGetAuthUrl = useCallback(async () => {
-    clearError();
-    onLoginSuccess(); // Mock Google Login too for simplicity
-  }, [clearError, onLoginSuccess]);
-
-  // ── Effects ────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (googleStep === 'waiting_code') {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      fadeAnim.setValue(0);
+    if (!username.trim() || !password.trim()) {
+      return;
     }
-  }, [googleStep, fadeAnim]);
-
-  useEffect(() => {
-    const handleUrl = ({ url }: { url: string }) => {
-      logger.info('[UILogin] Deep link received:', url);
-      if (!url.startsWith(DEEP_LINK_SCHEME)) return;
-
-      let receivedCode = '';
-      if (url.includes('code=')) {
-        receivedCode = url.split('code=')[1].split('&')[0];
+    clearError();
+    setIsLoading(true);
+    try {
+      const success = await loginCredentials(username.trim(), password);
+      if (success) {
+        onLoginSuccess();
       }
-      receivedCode = decodeURIComponent(receivedCode);
-
-      if (receivedCode) {
-        setOauthCode(receivedCode);
-        setGoogleStep('waiting_code');
-        setTimeout(() => processGoogleCode(receivedCode), 500);
-      }
-    };
-
-    const subscription = Linking.addListener('url', handleUrl);
-    Linking.getInitialURL().then(url => {
-      if (url) handleUrl({ url });
-    });
-    return () => subscription.remove();
-  }, [processGoogleCode]);
-
-  const C = {
-    screen: isDark ? 'bg-gray-900' : 'bg-slate-50',
-    text: isDark ? 'text-white' : 'text-gray-900',
-    subText: isDark ? 'text-gray-400' : 'text-gray-600',
-    inputBg: isDark ? 'bg-gray-800' : 'bg-gray-50',
-    inputBorder: isDark ? 'border-gray-700' : 'border-gray-300',
-    cardBg: isDark ? 'bg-gray-800' : 'bg-white',
-    divider: isDark ? 'bg-gray-700' : 'bg-gray-200',
-    googleBtnBg: isDark ? 'bg-gray-800' : 'bg-white',
-    googleBtnBorder: isDark ? 'border-gray-700' : 'border-gray-300',
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // ── Đăng nhập Google ──────────────────────────────────────────────────────
+  const handleGoogleLogin = async () => {
+    clearError();
+    setIsGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+
+      // Lấy idToken để gửi về BE
+      const tokens = await GoogleSignin.getTokens();
+      const idToken = tokens.idToken;
+
+      if (!idToken) {
+        logger.error('[UILogin] Không lấy được idToken từ Google');
+        return;
+      }
+
+      logger.info('[UILogin] 🔑 Đã nhận Google idToken, gửi lên BE...');
+
+      // Gửi idToken lên BE → BE verify → trả access_token có businessTypes
+      const success = await loginWithGoogleToken(idToken, 'login');
+      if (success) {
+        onLoginSuccess();
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        logger.info('[UILogin] Google Sign-In bị hủy bởi người dùng');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        logger.warn('[UILogin] Google Sign-In đang xử lý');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        logger.error('[UILogin] Google Play Services không khả dụng');
+      } else {
+        logger.error('[UILogin] Lỗi Google Sign-In:', error.message);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  // ── Theme ────────────────────────────────────────────────────────────────
+  const bg = isDark ? '#1a1a2e' : '#f0f4ff';
+  const card = isDark ? '#16213e' : '#ffffff';
+  const text = isDark ? '#e0e0e0' : '#1a1a2e';
+  const subText = isDark ? '#9e9e9e' : '#6b7280';
+  const inputBg = isDark ? '#0f3460' : '#f9fafb';
+  const inputBorder = isDark ? '#1e4d8c' : '#e5e7eb';
+  const accent = '#4f8ef7';
+  const danger = '#ef4444';
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView className={`flex-1 ${C.screen}`}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1">
+        style={styles.flex}>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-          className="px-6">
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
 
-          {/* Header & Back Button */}
-          <View className="flex-row items-center mt-4">
-            <TouchableOpacity
-              onPress={onBack}
-              className={`p-2 w-10 h-10 items-center justify-center rounded-lg shadow-sm mr-4 ${C.googleBtnBg}`}>
-              <Text className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-700'}`}>←</Text>
-            </TouchableOpacity>
-            <Text className={`text-lg font-bold ${C.text}`}>
+          {/* Back button */}
+          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+            <Icon name="arrow-back-ios" size={20} color={text} />
+          </TouchableOpacity>
+
+          {/* Card */}
+          <Animated.View
+            style={[
+              styles.card,
+              { backgroundColor: card, transform: [{ translateX: shakeAnim }] },
+            ]}>
+
+            {/* Logo */}
+            <View style={styles.logoWrap}>
+              <Image
+                source={require('../../assets/logo-mypos.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={[styles.title, { color: text }]}>Đăng nhập</Text>
+            <Text style={[styles.subtitle, { color: subText }]}>
+              Chào mừng trở lại!
             </Text>
-          </View>
 
-          <View className="flex-1 justify-center py-8">
-            <View className="w-full max-w-sm self-center">
-              <View className="items-center mb-8">
-                <View className={`${isDark ? 'bg-blue-900' : 'bg-blue-100'} rounded-3xl p-4 mb-4`}>
-                  <Image
-                    source={require('../../assets/logo/logoMypos.png')}
-                    style={{ width: 60, height: 60, borderRadius: 10 }}
-                    resizeMode="contain"
-                  />
-                </View>
-                {/* Logo myPOS */}
-                <View className="items-center mb-6">
-                  <Text className={`text-3xl font-bold mb-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>myPOS</Text>
-                  <View className={`h-1 w-12 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`} />
-                </View>
-
-                <Text className={`text-2xl font-bold text-center mb-2 ${C.text}`}>
-                  {t('landing.welcome_back', 'Chào mừng quay trở lại')}
-                </Text>
-                <Text className={`text-sm text-center ${C.subText}`}>
-                  {t('landing.welcome_login', 'Vui lòng đăng nhập để tiếp tục')}
+            {/* Error banner */}
+            {authState.error ? (
+              <View style={styles.errorBanner}>
+                <Icon name="error-outline" size={16} color={danger} />
+                <Text style={[styles.errorText, { color: danger }]}>
+                  {authState.error}
                 </Text>
               </View>
+            ) : null}
 
-              {/* Error Display */}
-              {authState.error && (
-                <View className={`border flex-row items-center p-3 rounded-xl mb-4 ${isDark ? 'bg-red-900/20 border-red-900/30' : 'bg-red-50 border-red-200'}`}>
-                  <Icon name="error-outline" size={18} color="#dc2626" />
-                  <Text className="text-red-600 text-sm ml-2">{authState.error}</Text>
-                </View>
-              )}
+            {/* Username */}
+            <View style={styles.fieldWrap}>
+              <Text style={[styles.label, { color: subText }]}>Tên đăng nhập</Text>
+              <View
+                style={[
+                  styles.inputRow,
+                  { backgroundColor: inputBg, borderColor: inputBorder },
+                ]}>
+                <Icon name="person-outline" size={20} color={subText} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: text }]}
+                  placeholder="Nhập username"
+                  placeholderTextColor={subText}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                />
+              </View>
+            </View>
 
-              {/* Google Code Verification Step */}
-              {googleStep === 'waiting_code' || googleStep === 'processing' ? (
-                <Animated.View style={{ opacity: fadeAnim }} className="mb-6">
-                  <View className={`border flex-row items-center p-4 rounded-xl mb-4 ${isDark ? 'bg-blue-900/20 border-blue-900/30' : 'bg-blue-50 border-blue-200'}`}>
-                    <Icon name="vpn-key" size={18} color={isDark ? '#93c5fd' : '#2563eb'} />
-                    <View className="ml-3">
-                      <Text className={`${isDark ? 'text-blue-300' : 'text-blue-700'} font-bold mb-1`}>{t('auth.google_verify_title', 'Hoàn tất xác thực')}</Text>
-                      <Text className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-xs`}>{t('auth.google_verify_desc', 'Sau khi đăng nhập Google, hãy dán code vào đây.')}</Text>
-                    </View>
-                  </View>
-                  <TextInput
-                    placeholder="Dán code ở đây…"
-                    placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
-                    value={oauthCode}
-                    onChangeText={setOauthCode}
-                    multiline
-                    numberOfLines={2}
-                    className={`w-full px-4 py-3 rounded-xl border ${C.inputBg} ${C.inputBorder} ${C.text}`}
-                    style={{ minHeight: 60 }}
+            {/* Password */}
+            <View style={styles.fieldWrap}>
+              <Text style={[styles.label, { color: subText }]}>Mật khẩu</Text>
+              <View
+                style={[
+                  styles.inputRow,
+                  { backgroundColor: inputBg, borderColor: inputBorder },
+                ]}>
+                <Icon name="lock-outline" size={20} color={subText} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: text }]}
+                  placeholder="Nhập mật khẩu"
+                  placeholderTextColor={subText}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(p => !p)}>
+                  <Icon
+                    name={showPassword ? 'visibility' : 'visibility-off'}
+                    size={20}
+                    color={subText}
                   />
-                  <TouchableOpacity
-                    onPress={() => processGoogleCode()}
-                    disabled={googleStep === 'processing'}
-                    className="w-full bg-blue-600 py-3 rounded-xl mt-4 items-center">
-                    {googleStep === 'processing' ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold">Xác nhận code</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setGoogleStep('idle')} className="mt-2 self-center">
-                    <Text className="text-gray-400 text-sm">Huỷ, thử lại</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              ) : null}
-
-              {/* Credentials Login Form */}
-              {googleStep === 'idle' || googleStep === 'fetching_url' ? (
-                <View className="space-y-4">
-                  <View>
-                    <Text className={`text-sm font-semibold mb-2 ${C.text}`}>
-                      {t('auth.placeholderEmail', 'Tên đăng nhập / Email')}
-                    </Text>
-                    <TextInput
-                      placeholder={t('auth.placeholderloginEmail', 'Nhập email hoặc tên đăng nhập')}
-                      placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
-                      value={email}
-                      onChangeText={setEmail}
-                      className={`w-full px-4 py-3 rounded-xl border ${C.inputBg} ${C.inputBorder} ${C.text}`}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                    />
-                  </View>
-
-                  <View className="mt-4">
-                    <Text className={`text-sm font-semibold mb-2 ${C.text}`}>
-                      {t('auth.placeholderPassword', 'Mật khẩu')}
-                    </Text>
-                    <View className="relative">
-                      <TextInput
-                        placeholder={t('auth.placeholderloginPassword', 'Nhập mật khẩu')}
-                        placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        className={`w-full px-4 py-3 rounded-xl border ${C.inputBg} ${C.inputBorder} ${C.text}`}
-                      />
-                      <TouchableOpacity
-                        onPress={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-3">
-                        <Icon
-                          name={showPassword ? "visibility-off" : "visibility"}
-                          size={20}
-                          color={isDark ? '#4B5563' : '#9CA3AF'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View className="flex-row items-center justify-between mt-2">
-                    <TouchableOpacity
-                      onPress={() => setRememberMe(!rememberMe)}
-                      className="flex-row items-center">
-                      <View className={`w-5 h-5 border rounded-md mr-2 items-center justify-center ${rememberMe ? 'bg-blue-600 border-blue-600' : isDark ? 'border-gray-600' : 'border-gray-300'}`}>
-                        {rememberMe && <Icon name="check" size={12} color="white" />}
-                      </View>
-                      <Text className={`text-sm ${C.subText}`}>{t('auth.rememberMe', 'Ghi nhớ đăng nhập')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity>
-                      <Text className={`text-sm font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                        {t('auth.forgotPassword', 'Quên mật khẩu?')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={handleLogin}
-                    className={`w-full bg-blue-600 py-4 rounded-xl mt-6 items-center ${isLoading ? 'opacity-70' : ''}`}>
-                    {isLoading ? (
-                      <ActivityIndicator color="white" />
-                    ) : (
-                      <Text className="text-white font-semibold text-base">
-                        {t('auth.btnSignIn', 'Đăng nhập')}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-
-              {/* Google Login Button */}
-              {googleStep === 'idle' || googleStep === 'fetching_url' ? (
-                <>
-                  <View className="flex-row items-center my-6">
-                    <View className={`flex-1 h-[1px] ${C.divider}`} />
-                    <Text className="mx-4 text-xs font-semibold text-gray-400 uppercase">
-                      Hoặc
-                    </Text>
-                    <View className={`flex-1 h-[1px] ${C.divider}`} />
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={handleGetAuthUrl}
-                    disabled={googleStep === 'fetching_url'}
-                    activeOpacity={0.85}
-                    className={`w-full flex-row items-center justify-center py-4 px-5 border rounded-xl shadow-sm ${C.googleBtnBg} ${C.googleBtnBorder}`}
-                  >
-                    {googleStep === 'fetching_url' ? (
-                      <ActivityIndicator color="#4285F4" size="small" />
-                    ) : (
-                      <>
-                        <View className={`w-8 h-8 rounded-full mr-3 items-center justify-center border shadow-sm ${C.googleBtnBg} ${C.googleBtnBorder}`}>
-                          <Text
-                            style={{
-                              color: '#4285F4',
-                              fontWeight: '900',
-                              fontSize: 18,
-                            }}
-                          >
-                            G
-                          </Text>
-                        </View>
-
-                        <Text className={`font-semibold text-base ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                          Google
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </>
-              ) : null}
-
-              <View className="flex-row justify-center mt-8">
-                <Text className={C.subText}>{t('landing.no_account', 'Chưa có tài khoản?')} </Text>
-                <TouchableOpacity>
-                  <Text className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {t('landing.register', 'Đăng ký ngay')}
-                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+
+            {/* Nút đăng nhập */}
+            <TouchableOpacity
+              style={[
+                styles.loginBtn,
+                { backgroundColor: accent },
+                (isLoading || !username || !password) && styles.disabled,
+              ]}
+              onPress={handleLogin}
+              disabled={isLoading || !username.trim() || !password.trim()}>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginBtnText}>Đăng nhập</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: inputBorder }]} />
+              <Text style={[styles.dividerText, { color: subText }]}>hoặc</Text>
+              <View style={[styles.dividerLine, { backgroundColor: inputBorder }]} />
+            </View>
+
+            {/* Nút đăng nhập Google */}
+            <TouchableOpacity
+              style={[
+                styles.googleBtn,
+                { borderColor: inputBorder, backgroundColor: card },
+                isGoogleLoading && styles.disabled,
+              ]}
+              onPress={handleGoogleLogin}
+              disabled={isGoogleLoading}>
+              {isGoogleLoading ? (
+                <ActivityIndicator color={accent} />
+              ) : (
+                <>
+                  {/* Icon Google SVG inline */}
+                  <View style={styles.googleIconWrap}>
+                    <Text style={styles.googleIconText}>G</Text>
+                  </View>
+                  <Text style={[styles.googleBtnText, { color: text }]}>
+                    Đăng nhập bằng Google
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  flex: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  backBtn: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    padding: 8,
+  },
+  card: {
+    borderRadius: 20,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    marginTop: 48,
+  },
+  logoWrap: { alignItems: 'center', marginBottom: 20 },
+  logo: { width: 120, height: 48 },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: { fontSize: 13, flex: 1 },
+  fieldWrap: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: 6 },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, fontSize: 15 },
+  loginBtn: {
+    height: 50,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  loginBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  disabled: { opacity: 0.6 },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    gap: 10,
+  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13 },
+  googleBtn: {
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  googleIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#4285F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleIconText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  googleBtnText: { fontSize: 15, fontWeight: '600' },
+});

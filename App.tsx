@@ -2,17 +2,27 @@
  * App.tsx – Entry point
  *
  * Kiến trúc:
- *   <AuthProvider>          ← Khởi tạo tokenManager + auto-login + quản lý phiên
- *     <AppContent>          ← Đọc authState, quyết định màn hình
+ *   <SafeAreaProvider>
+ *     <ThemeProvider>
+ *       <AuthProvider>          ← tokenManager + phiên đăng nhập
+ *         <AppContent>          ← đọc authState, điều hướng màn hình
  *
  * Luồng điều hướng:
- *   landing  →  login  →  pos   (đăng nhập thành công – credentials hoặc Google)
- *   landing  →  demo          (dùng thử)
- *   pos      →  landing       (đăng xuất)
+ *   landing → login → BusinessTypeNavigator → pos_resident | booking | setup
+ *   (sidebar) → dashboard | categories | report | setting | report_export
+ *                        → profile → edit_profile
+ *   logout → landing
+ *
+ * BusinessType routing (từ JWT businessTypes):
+ *   []                         → 'setup'       (chưa thiết lập shop)
+ *   ['sale']                   → 'pos_resident' (chỉ hiện menu POS)
+ *   ['accommodation']          → 'booking'      (chỉ hiện menu Lưu trú)
+ *   ['sale','accommodation']   → 'selector'     → chọn rồi vào
  */
+
 import './src/i18n/index';
-import {useTranslation} from 'react-i18next';
-import React, {useEffect, useState, useCallback} from 'react';
+import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   StatusBar,
@@ -22,13 +32,14 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  BackHandler,
 } from 'react-native';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
 
 import PreLogin from './src/screens/login/PreLogin';
-import {UILogin} from './src/screens/login/UILogin';
+import { UILogin } from './src/screens/login/UILogin';
 import DashBoard from './src/screens/dashboard/Dashboard';
 import PosResident from './src/screens/pos/PosResident';
 import PlaceScreen from './src/screens/booking/Place';
@@ -36,100 +47,174 @@ import Setting from './src/screens/setting/Setting';
 import Report from './src/screens/report/Report';
 import ReportExport from './src/screens/excel-export/ExcelExport';
 import CategoryManagement from './src/screens/category/CategoryManagement';
+import ProfileScreen from './src/screens/profile/ProfileScreen';
+import EditProfileScreen from './src/screens/profile/EditProfileScreen';
 
+import { BusinessTypeNavigator } from './src/navigation/BusinessTypeNavigator';
 import Sidebar from './src/components/Sidebar';
-import {AuthProvider, useAuth} from './src/store/authStore';
-import {ThemeProvider, useTheme} from './src/hooks/useTheme';
-import {createModuleLogger, AppModules} from './src/logger';
-import {initDatabase} from './src/database';
+import { AuthProvider, useAuth } from './src/store/authStore';
+import { ThemeProvider, useTheme } from './src/hooks/useTheme';
+import { createModuleLogger, AppModules } from './src/logger';
+import { initDatabase } from './src/database';
+import { WEB_LANDING_URL as ENV_WEB_LANDING_URL } from '@env';
+
+const REGISTER_URL = ENV_WEB_LANDING_URL ?? 'https://mypos.vn/register';
 
 const logger = createModuleLogger(AppModules.APP);
 logger.trace('App started…');
 
+// ─── Screen type ──────────────────────────────────────────────────────────────
+
 type Screen =
   | 'landing'
   | 'login'
-  | 'webLogin'
-  | 'pos'
+  | 'main'           // BusinessTypeNavigator xử lý (selector / pos / booking / setup)
   | 'dashboard'
+  | 'pos_resident'
+  | 'booking'
   | 'categories'
   | 'report'
+  | 'report_export'
   | 'setting'
-  | 'pos_resident'
-  | 'place_resident'
-  | 'report_export';
+  | 'profile'        // ← MÀN HÌNH HỒ SƠ CÁ NHÂN
+  | 'edit_profile';  // ← MÀN HÌNH CHỈNH SỬA HỒ SƠ
 
-// ─── Inner app ────────────────────────────────────────────────────────────────
+type BusinessType = 'sale' | 'accommodation';
+
+// ─── AppContent ───────────────────────────────────────────────────────────────
+
 const AppContent: React.FC = () => {
-  const {state: auth, logout} = useAuth();
-  const {isDark} = useTheme();
-  const {t} = useTranslation();
+  const { state: auth, logout } = useAuth();
+  const { isDark } = useTheme();
+  const { t } = useTranslation();
+
   const [screen, setScreen] = useState<Screen>('landing');
   const [dbReady, setDbReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const [posMode, setPosMode] = useState<'food' | 'accommodation'>('food');
 
+  // Lưu businessType đang active để truyền xuống Sidebar
+  // Khi user có ['sale','accommodation'] và chọn 1 loại từ selector, lưu lại ở đây
+  const [activeBusinessType, setActiveBusinessType] = useState<BusinessType | undefined>(
+    undefined,
+  );
+
+  // Lưu màn hình trước đó khi vào profile để quay lại đúng chỗ
+  const [screenBeforeProfile, setScreenBeforeProfile] = useState<Screen>('setting');
+
+  // ── Khởi động database ────────────────────────────────────────────────────
   useEffect(() => {
-    const startApp = async () => {
+    (async () => {
       try {
         await initDatabase();
         setDbReady(true);
       } catch (err) {
-        logger.error('[App] Database initialization failed:', err);
-        Alert.alert(
-          'Lỗi',
-          'Không thể khởi tạo cơ sở dữ liệu. Vui lòng thử lại sau.',
-        );
+        logger.error('[App] Database init failed:', err);
+        Alert.alert('Lỗi', 'Không thể khởi tạo cơ sở dữ liệu. Vui lòng thử lại.');
       }
-    };
-    startApp();
+    })();
   }, []);
 
+  // ── Auto-restore session (hydrate) ────────────────────────────────────────
   useEffect(() => {
     if (!auth.isLoading && auth.isAuthenticated) {
-      logger.info('[App] Session restored → navigating to Dashboard');
-      setScreen('dashboard');
+      logger.info('[App] Session restored → main', {
+        businessTypes: auth.user?.businessTypes,
+        shopSetupDone: auth.user?.shopSetupDone,
+      });
+
+      // Tự động set activeBusinessType từ token khi chỉ có 1 loại
+      const types = auth.user?.businessTypes ?? [];
+      if (types.length === 1) {
+        setActiveBusinessType(types[0] as BusinessType);
+      }
+
+      setScreen('main');
     }
   }, [auth.isLoading, auth.isAuthenticated]);
 
+  // ── Back button Android: đóng sidebar trước, rồi xử lý profile ───────────
+  useEffect(() => {
+    const handler = () => {
+      if (isSidebarVisible) {
+        setIsSidebarVisible(false);
+        return true;
+      }
+      // Nếu đang ở profile / edit_profile → quay lại
+      if (screen === 'edit_profile') {
+        setScreen('profile');
+        return true;
+      }
+      if (screen === 'profile') {
+        setScreen(screenBeforeProfile);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', handler);
+    return () => sub.remove();
+  }, [isSidebarVisible, screen, screenBeforeProfile]);
+
+  // ── Callbacks ─────────────────────────────────────────────────────────────
+
   const handleLoginSuccess = useCallback(() => {
-    logger.info('[App] Login success → dashboard');
-    setScreen('dashboard');
-  }, []);
+    const types = auth.user?.businessTypes ?? [];
+    logger.info('[App] Login success → main', { businessTypes: types });
+    if (types.length === 1) {
+      setActiveBusinessType(types[0] as BusinessType);
+    }
+    setScreen('main');
+  }, [auth.user?.businessTypes]);
 
   const handleLogout = useCallback(() => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-      {text: 'Huỷ', style: 'cancel'},
+      { text: 'Huỷ', style: 'cancel' },
       {
         text: 'Đăng xuất',
         style: 'destructive',
         onPress: async () => {
           await logout();
+          setActiveBusinessType(undefined);
           setScreen('landing');
         },
       },
     ]);
   }, [logout]);
 
-  // ── Splash Screen (hydrate từ storage + database init) ───────────────────
+  const handleNavigate = useCallback((target: string) => {
+    setScreen(target as Screen);
+    setIsSidebarVisible(false);
+  }, []);
+
+  // Khi user chọn loại từ BusinessSelectorScreen, lưu lại để Sidebar biết mode
+  const handleBusinessTypeSelected = useCallback((type: BusinessType) => {
+    setActiveBusinessType(type);
+  }, []);
+
+  // Mở màn hình Profile, lưu lại màn hình hiện tại để quay lại
+  const handleNavigateProfile = useCallback(() => {
+    setScreenBeforeProfile(screen as Screen);
+    setIsSidebarVisible(false);
+    setScreen('profile');
+  }, [screen]);
+
+  // ── Splash ────────────────────────────────────────────────────────────────
   if (auth.isLoading || !dbReady) {
     return (
-      <View
-        className={`flex-1 items-center justify-center ${
-          isDark ? 'bg-gray-900' : 'bg-white'
-        }`}>
+      <View style={[styles.splash, { backgroundColor: isDark ? '#111827' : '#ffffff' }]}>
         <Image
           source={require('./src/assets/logo-mypos.png')}
-          style={{width: 120, height: 120, marginBottom: 24}}
+          style={styles.splashLogo}
           resizeMode="contain"
         />
-        <ActivityIndicator
-          size="small"
-          color={isDark ? '#ffffff' : '#0000ff'}
-        />
+        <ActivityIndicator size="small" color={isDark ? '#ffffff' : '#2563eb'} />
       </View>
     );
   }
+
+  // Sidebar chỉ hiện trên các màn hình đã đăng nhập (không hiện trên profile)
+  const showSidebar =
+    isSidebarVisible &&
+    !['landing', 'login', 'profile', 'edit_profile'].includes(screen);
 
   return (
     <>
@@ -138,10 +223,12 @@ const AppContent: React.FC = () => {
         backgroundColor={isDark ? '#111827' : '#ffffff'}
       />
 
-      {/* ── Landing ─────────────────────────────────────────── */}
-      {screen === 'landing' && <PreLogin onLogin={() => setScreen('login')} />}
+      {/* ── Landing ──────────────────────────────────────────── */}
+      {screen === 'landing' && (
+        <PreLogin onLogin={() => setScreen('login')} />
+      )}
 
-      {/* ── Login ───────────────────────────────────────────── */}
+      {/* ── Login ────────────────────────────────────────────── */}
       {screen === 'login' && (
         <UILogin
           isDark={isDark}
@@ -150,139 +237,60 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* ── POS (Legacy/Optional) ───────────────────────────────── */}
-      {screen === 'pos' && (
-        <View
-          className={`flex-1 items-center justify-center px-6 ${
-            isDark ? 'bg-gray-900' : 'bg-blue-50'
-          }`}>
-          {/* Avatar placeholder */}
-          <View className="w-20 h-20 rounded-full bg-blue-600 items-center justify-center mb-4 shadow-lg">
-            <Text className="text-white text-3xl font-bold">
-              {auth.user?.full_name?.[0] ?? auth.user?.username?.[0] ?? '?'}
-            </Text>
-          </View>
-
-          <Text
-            className={`text-2xl font-bold mb-1 ${
-              isDark ? 'text-white' : 'text-blue-900'
-            }`}>
-            Xin chào, {auth.user?.full_name ?? auth.user?.username}!
-          </Text>
-
-          <Text
-            className={`mb-1 ${isDark ? 'text-gray-400' : 'text-blue-700'}`}>
-            {auth.user?.email}
-          </Text>
-
-          <Text
-            className={`text-sm mb-2 ${
-              isDark ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-            Vai trò: {auth.user?.role}
-          </Text>
-
-          {/* Badge phương thức đăng nhập */}
-          <View
-            className={`px-3 py-1 rounded-full mb-8 ${
-              auth.authMethod === 'google'
-                ? isDark
-                  ? 'bg-blue-900'
-                  : 'bg-blue-100'
-                : isDark
-                ? 'bg-green-900'
-                : 'bg-green-100'
-            }`}>
-            <Text
-              className={`text-xs font-medium ${
-                auth.authMethod === 'google'
-                  ? isDark
-                    ? 'text-blue-300'
-                    : 'text-blue-700'
-                  : isDark
-                  ? 'text-green-300'
-                  : 'text-green-700'
-              }`}>
-              {auth.authMethod === 'google' ? '🔵 Google' : '🟢 Credentials'}
-            </Text>
-          </View>
-
-          {/* Logout */}
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="px-8 py-3 rounded-xl bg-red-500 shadow mb-4">
-            <Text className="text-white font-semibold">Đăng xuất</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setScreen('dashboard')}
-            className="px-8 py-3 rounded-xl bg-blue-500 shadow">
-            <Text className="text-white font-semibold">Tới Dashboard</Text>
-          </TouchableOpacity>
-        </View>
+      {/* ── Main (BusinessTypeNavigator) ─────────────────────── */}
+      {screen === 'main' && (
+        <BusinessTypeNavigator
+          isDark={isDark}
+          onBusinessTypeSelected={handleBusinessTypeSelected}
+          SaleScreen={() => (
+            <PosResident onOpenMenu={() => setIsSidebarVisible(true)} />
+          )}
+          AccommodationScreen={() => (
+            <PlaceScreen
+              onOpenMenu={() => setIsSidebarVisible(true)}
+              onBack={() => setScreen('dashboard')}
+            />
+          )}
+          registerUrl={REGISTER_URL}
+        />
       )}
 
-      {/* ── Dashboard (Chính) ─────────────────────────────────── */}
+      {/* ── Dashboard ────────────────────────────────────────── */}
       {screen === 'dashboard' && (
         <DashBoard
           onOpenMenu={() => setIsSidebarVisible(true)}
-          onNavigate={(target: any) =>
-            setScreen(target === 'sales' ? 'pos_resident' : target)
-          }
+          onNavigate={(target: string) => {
+            if (target === 'sales') {
+              setScreen('main');
+            } else {
+              setScreen(target as Screen);
+            }
+          }}
         />
       )}
 
-      {/* ── POS Resident ───────────────────────────────────────── */}
+      {/* ── POS Resident (sale) ───────────────────────────────── */}
       {screen === 'pos_resident' && (
-        <PosResident
-          onOpenMenu={() => setIsSidebarVisible(true)}
-          initialMode={posMode}
-        />
+        <PosResident onOpenMenu={() => setIsSidebarVisible(true)} />
       )}
 
-      {/* ── Place Resident ───────────────────────────────────────── */}
-      {screen === 'place_resident' && (
+      {/* ── Booking / Place (accommodation) ──────────────────── */}
+      {screen === 'booking' && (
         <PlaceScreen
           onOpenMenu={() => setIsSidebarVisible(true)}
           onBack={() => setScreen('dashboard')}
         />
       )}
 
-      {/* ── Placeholder for Report & Setting ──────────────────────
-      {(screen === 'report' || screen === 'setting') && (
-        <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-          <View className="flex-row items-center px-4 pt-3 pb-2 border-b border-gray-100">
-            <TouchableOpacity
-              onPress={() => setIsSidebarVisible(true)}
-              className="p-1">
-              <Icon name="menu" size={28} color="#4B5563" />
-            </TouchableOpacity>
-            <Text className="text-lg font-bold ml-4 text-gray-800">
-              {screen === 'report' ? t('sidebar.report') : t('sidebar.setting')}
-            </Text>
-          </View>
-          <View className="flex-1 items-center justify-center">
-            <Icon
-              name={screen === 'report' ? 'assessment' : 'settings'}
-              size={64}
-              color="#CBD5E1"
-            />
-            <Text className="text-gray-400 mt-4 font-medium italic">
-              Coming Soon
-            </Text>
-          </View>
-        </View>
-      )} */}
-
-      {/* ── Categories (Place - Legacy) ────────────────────────────────── */}
+      {/* ── Category Management ───────────────────────────────── */}
       {screen === 'categories' && (
         <CategoryManagement
           onOpenMenu={() => setIsSidebarVisible(true)}
-          onBack={() => setScreen('categories')}
+          onBack={() => setScreen('dashboard')}
         />
       )}
 
-      {/* ── Report ─────────────────────────────────────────────── */}
+      {/* ── Report ────────────────────────────────────────────── */}
       {screen === 'report' && (
         <Report
           onOpenMenu={() => setIsSidebarVisible(true)}
@@ -290,7 +298,7 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* ── Report Export ───────────────────────────────────────── */}
+      {/* ── Report Export ─────────────────────────────────────── */}
       {screen === 'report_export' && (
         <ReportExport
           onOpenMenu={() => setIsSidebarVisible(true)}
@@ -298,29 +306,62 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* ── Setting ─────────────────────────────────────────────── */}
+      {/* ── Settings ──────────────────────────────────────────── */}
       {screen === 'setting' && (
         <Setting
           onOpenMenu={() => setIsSidebarVisible(true)}
           onBack={() => setScreen('dashboard')}
+          onNavigateProfile={handleNavigateProfile}
+        />
+      )}
+
+      {/* ── Profile ───────────────────────────────────────────── */}
+      {screen === 'profile' && (
+        <ProfileScreen
+          onBack={() => setScreen(screenBeforeProfile)}
+          onEdit={() => setScreen('edit_profile')}
+          onLogout={async () => {
+            await logout();
+            setActiveBusinessType(undefined);
+            setScreen('landing');
+          }}
+        />
+      )}
+
+      {/* ── Edit Profile ──────────────────────────────────────── */}
+      {screen === 'edit_profile' && (
+        <EditProfileScreen
+          onBack={() => setScreen('profile')}
+          onSaved={() => setScreen('profile')}
+          onChangePassword={() => {
+            // TODO: setScreen('change_password') khi có màn hình đổi mật khẩu
+            Alert.alert(
+              'Đổi mật khẩu',
+              'Tính năng này sẽ gửi OTP về email để xác nhận.',
+              [{ text: 'OK' }],
+            );
+          }}
         />
       )}
 
       {/* ── Sidebar Overlay ───────────────────────────────────── */}
-      {isSidebarVisible && (
-        <View
-          style={[StyleSheet.absoluteFill, {zIndex: 50, flexDirection: 'row'}]}>
-          {/* Sidebar tự quản lý width = 80% bên trong component */}
+      {showSidebar && (
+        <View style={[StyleSheet.absoluteFill, styles.sidebarOverlay]}>
           <Sidebar
             activeScreen={screen}
-            onNavigate={(newScreen: any) => setScreen(newScreen)}
+            onNavigate={handleNavigate}
             onLogout={handleLogout}
             onClose={() => setIsSidebarVisible(false)}
+            activeBusinessType={activeBusinessType}
+            onSwitchBusinessType={() => {
+              // Tab bar luôn hiển thị – chỉ cần reset activeBusinessType
+              setActiveBusinessType(undefined);
+            }}
+            onNavigateProfile={handleNavigateProfile}
           />
-
-          {/* Overlay phần còn lại */}
+          {/* Vùng mờ bên phải – bấm để đóng */}
           <TouchableOpacity
-            style={{flex: 1}}
+            style={styles.sidebarDismiss}
             activeOpacity={1}
             onPress={() => setIsSidebarVisible(false)}
           />
@@ -330,17 +371,54 @@ const AppContent: React.FC = () => {
   );
 };
 
-// ─── Root App ─────────────────────────────────────────────────────────────────
-const App: React.FC = () => {
-  return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
-  );
-};
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashLogo: {
+    width: 120,
+    height: 120,
+    marginBottom: 24,
+  },
+  sidebarOverlay: {
+    zIndex: 50,
+    flexDirection: 'row',
+  },
+  sidebarDismiss: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  placeholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  placeholderText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  placeholderSub: {
+    fontSize: 13,
+    color: '#cbd5e1',
+  },
+});
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
+const App: React.FC = () => (
+  <SafeAreaProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
+  </SafeAreaProvider>
+);
 
 export default App;
