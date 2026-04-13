@@ -17,6 +17,10 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
   const [isCalOpen, setIsCalOpen] = useState(false);
   const [isDurationOpen, setIsDurationOpen] = useState(false);
 
+  // Get today's date at midnight for minDate constraint
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   // Danh sách các tùy chọn thời hạn hợp đồng phổ biến
   const durationOptions = [
     { label: '3 tháng', value: '3' },
@@ -103,6 +107,7 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
       <CalendarModal
         visible={isCalOpen}
         selectedDate={new Date(form.contractStart)}
+        minDate={today}
         onConfirm={(d) => { setIsCalOpen(false); updateForm({ contractStart: d.toISOString().split('T')[0] }); }}
         onCancel={() => setIsCalOpen(false)}
         title={t('booking.form.selectStartDate')}
@@ -134,7 +139,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 0.5,
     marginTop: 4,
-    overflow: 'hidden',
   },
   durationItem: {
     paddingVertical: 12,

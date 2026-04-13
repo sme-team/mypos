@@ -39,11 +39,13 @@ export interface BookingForm {
   fullName: string;
   phone: string;
   idCard: string;
-  // Thông tin ẩn từ QR CCCD (chỉ lưu DB, không hiện trên form)
-  dateOfBirth?: string;
-  gender?: string;
-  address?: string;
-  issuedDate?: string;
+  // Thông tin ẩn từ QR CCCD hoặc nhập mới
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  placeOfOrigin?: string;  // Quê quán - thêm mới
+  email: string;
+  nationality: string;
   oldIdNumber?: string;
   // Thông tin đặt phòng
   checkinDate: string;

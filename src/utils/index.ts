@@ -8,3 +8,11 @@ export const generateUID = (prefix: string = ''): string => {
   const randomStr = Math.random().toString(36).substring(2, 5);
   return `${prefix ? prefix + '-' : ''}${timestamp}-${randomStr}`.toUpperCase();
 };
+
+// Export code generators
+export {
+  generateCustomerCode,
+  generateContractCode,
+  generateBillNumber,
+  generateReceivableCode,
+} from './codeGenerator';

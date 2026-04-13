@@ -121,6 +121,7 @@ dependencies {
     implementation project(':react-native-vision-camera')
     implementation project(':@react-native-ml-kit_text-recognition')
     implementation project(':react-native-sqlite-storage')
+    implementation project(':react-native-worklets-core')
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

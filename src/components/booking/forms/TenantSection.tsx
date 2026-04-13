@@ -16,6 +16,7 @@ export const TenantSection = React.memo(({
   form, updateForm, isCustomerDropdownOpen, setIsCustomerDropdownOpen,
   filteredCustomers, selectedCustomer, setSelectedCustomer,
   setScannerVisible, // Prop mới để điều khiển Modal quét
+  errors = {}, clearError,
   t, themedColors
 }: any) => (
   <View>
@@ -73,7 +74,11 @@ export const TenantSection = React.memo(({
         {/* Danh sách kết quả tìm kiếm khách hàng */}
         {isCustomerDropdownOpen && (
           <View style={[styles.dropdownWindow, { backgroundColor: themedColors.surface, borderColor: themedColors.border }]}>
-            <ScrollView nestedScrollEnabled>
+            <ScrollView 
+              nestedScrollEnabled
+              removeClippedSubviews={true}
+              scrollEventThrottle={16}
+              automaticallyAdjustContentInsets={false}>
               {filteredCustomers.length === 0 ? (
                 <Text style={[styles.emptyText, { color: themedColors.textHint }]}>{t('booking.form.notFound')}</Text>
               ) : (
@@ -122,9 +127,14 @@ export const TenantSection = React.memo(({
         >
           <Text style={[styles.scanBtnText, { color: themedColors.primary }]}>{t('booking.form.scanning')}</Text>
         </TouchableOpacity>
-        <FieldInput fieldKey="fullName" value={form.fullName} onChangeText={(v: any) => updateForm({ fullName: v })} placeholder={t('booking.form.fullName')} themedColors={themedColors} />
-        <FieldInput fieldKey="phone" value={form.phone} onChangeText={(v: any) => updateForm({ phone: v })} placeholder={t('booking.form.phone')} keyboardType="phone-pad" themedColors={themedColors} />
-        <FieldInput fieldKey="idCard" value={form.idCard} onChangeText={(v: any) => updateForm({ idCard: v })} placeholder={t('booking.form.idCard')} themedColors={themedColors} />
+        <FieldInput fieldKey="fullName" error={errors.fullName} value={form.fullName} onChangeText={(v: any) => { updateForm({ fullName: v }); clearError && clearError('fullName'); }} placeholder={t('booking.form.fullName')} themedColors={themedColors} />
+        <FieldInput fieldKey="phone" error={errors.phone} value={form.phone} onChangeText={(v: any) => { updateForm({ phone: v }); clearError && clearError('phone'); }} placeholder={t('booking.form.phone')} keyboardType="phone-pad" themedColors={themedColors} />
+        <FieldInput fieldKey="idCard" error={errors.idCard} value={form.idCard} onChangeText={(v: any) => { updateForm({ idCard: v }); clearError && clearError('idCard'); }} placeholder={t('booking.form.idCard')} themedColors={themedColors} />
+        <FieldInput fieldKey="dateOfBirth" error={errors.dateOfBirth} value={form.dateOfBirth} onChangeText={(v: any) => { updateForm({ dateOfBirth: v }); clearError && clearError('dateOfBirth'); }} placeholder={t('booking.form.dateOfBirth')} themedColors={themedColors} />
+        <FieldInput fieldKey="gender" error={errors.gender} value={form.gender} onChangeText={(v: any) => { updateForm({ gender: v }); clearError && clearError('gender'); }} placeholder={t('booking.form.gender')} themedColors={themedColors} />
+        <FieldInput fieldKey="email" error={errors.email} value={form.email} onChangeText={(v: any) => { updateForm({ email: v }); clearError && clearError('email'); }} placeholder={t('booking.form.email')} keyboardType="email-address" themedColors={themedColors} />
+        <FieldInput fieldKey="address" error={errors.address} value={form.address} onChangeText={(v: any) => { updateForm({ address: v }); clearError && clearError('address'); }} placeholder={t('booking.form.address')} themedColors={themedColors} />
+        <FieldInput fieldKey="nationality" error={errors.nationality} value={form.nationality} onChangeText={(v: any) => { updateForm({ nationality: v }); clearError && clearError('nationality'); }} placeholder={t('booking.form.nationality')} themedColors={themedColors} />
       </View>
     )}
   </View>
@@ -157,13 +167,14 @@ const styles = StyleSheet.create({
     top: 80,
     left: 0,
     right: 0,
-    zIndex: 999,
-    elevation: 5,
+    zIndex: 1000,
+    elevation: 8,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     maxHeight: 220,
-    overflow: 'hidden',
+    minWidth: '100%',
   },
   customerItem: {
     flexDirection: 'row',

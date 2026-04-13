@@ -22,7 +22,7 @@ export type {
 
 // Registry of schemas for the ecosystem
 export const onePosEcosystemSchemas: Record<string, DatabaseSchema> = {
-  mypos: MyPOS,
+  pos: MyPOS,
 };
 
 export type DatabaseConnections = {

@@ -15,7 +15,7 @@ export { posSchema as MyPOS } from './configs/MyPOS';
 
 // ─── Registry schemas ────────────────────────────────────────────
 export const onePosEcosystemSchemas: Record<string, DatabaseSchema> = {
-  mypos: MyPOS,
+  pos: MyPOS,
 };
 
 // ─── Roles trong hệ thống ───────────────────────────────────────
@@ -23,31 +23,31 @@ export const ONE_POS_ROLES = [
   {
     roleName: 'super_admin',
     description: 'Quản trị toàn hệ thống',
-    requiredDatabases: ['mypos'],
+    requiredDatabases: ['pos'],
     priority: 1,
   },
   {
     roleName: 'admin',
     description: 'Quản trị cửa hàng',
-    requiredDatabases: ['mypos'],
+    requiredDatabases: ['pos'],
     priority: 2,
   },
   {
     roleName: 'manager',
     description: 'Quản lý cửa hàng',
-    requiredDatabases: ['mypos'],
+    requiredDatabases: ['pos'],
     priority: 3,
   },
   {
     roleName: 'staff',
     description: 'Nhân viên',
-    requiredDatabases: ['mypos'],
+    requiredDatabases: ['pos'],
     priority: 4,
   },
   {
     roleName: 'viewer',
     description: 'Chỉ xem báo cáo',
-    requiredDatabases: ['mypos'],
+    requiredDatabases: ['pos'],
     priority: 5,
   },
 ];
@@ -70,10 +70,10 @@ export const initDatabase = async (): Promise<void> => {
     // 3. Register system roles
     DatabaseManager.registerRoles(ONE_POS_ROLES);
 
-    // 4. Ensure the primary 'mypos' connection
-    await DatabaseManager.ensureDatabaseConnection('mypos');
+    // 4. Ensure the primary 'pos' connection
+    await DatabaseManager.ensureDatabaseConnection('pos');
 
-    logger.info('myPOS database initialized successfully.');
+    logger.info('POS database initialized successfully.');
   } catch (error) {
     logger.error('Failed to initialize myPOS database:', error);
     throw error;
@@ -84,7 +84,7 @@ export const initDatabase = async (): Promise<void> => {
  * Helper lấy DB connection
  * Trả về wrapper từ cache hoặc lazily tạo mới
  */
-export const getMyPosDB = () => DatabaseManager.get('mypos');
+export const getPosDB = () => DatabaseManager.get('pos');
 
 // ─── Default export ─────────────────────────────────────────────
 export default onePosEcosystemSchemas;

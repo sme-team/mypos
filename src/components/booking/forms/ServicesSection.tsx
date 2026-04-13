@@ -22,7 +22,11 @@ export const ServiceSelectionModal = React.memo(({ visible, onClose, availableSe
             <Icon name="close" size={24} color={themedColors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView style={{ maxHeight: 400 }}>
+        <ScrollView 
+          style={{ maxHeight: 400 }}
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          automaticallyAdjustContentInsets={false}>
           {availableServices.length === 0 ? (
             <Text style={[styles.emptyText, { color: themedColors.textHint }]}>{t('booking.form.noAvailableServices')}</Text>
           ) : (

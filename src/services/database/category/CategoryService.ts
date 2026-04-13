@@ -56,7 +56,7 @@ export interface CategoryFindOptions extends FindOptions {
 /**
  * CategoryService – ORM-style service cho bảng `categories`.
  *
- * Kế thừa BaseService (schemaName = 'mypos', tableName = 'categories').
+ * Kế thừa BaseService (schemaName = 'pos', tableName = 'categories').
  * Toàn bộ truy vấn sử dụng các method ORM của BaseService, không dùng raw SQL.
  *
  * @example
@@ -67,7 +67,7 @@ export class CategoryService extends BaseService {
   private static instance: CategoryService | null = null;
 
   constructor() {
-    super('mypos', 'categories');
+    super('pos', 'categories');
   }
 
   // ─── Singleton ─────────────────────────────────────────────────────────────

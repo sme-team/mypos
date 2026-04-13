@@ -33,18 +33,29 @@ export const FieldLabel = React.memo(({ text }: { text: string }) => (
  * @param multiline: Cho phép nhập nhiều dòng
  * @param themedColors: Bảng màu theo theme
  */
-export const FieldInput = React.memo(({ value, onChangeText, placeholder, keyboardType, multiline, themedColors, fieldKey }: any) => (
-  <TextInput
-    key={fieldKey}
-    style={[styles.fieldInput, { color: themedColors.text, borderColor: themedColors.border, backgroundColor: themedColors.surface }, multiline && styles.fieldInputMulti]}
-    value={value}
-    onChangeText={onChangeText}
-    placeholder={placeholder}
-    placeholderTextColor={themedColors.textHint}
-    keyboardType={keyboardType || 'default'}
-    multiline={multiline}
-    numberOfLines={multiline ? 3 : 1}
-  />
+export const FieldInput = React.memo(({ value, onChangeText, placeholder, keyboardType, multiline, themedColors, fieldKey, error }: any) => (
+  <View>
+    <TextInput
+      key={fieldKey}
+      style={[
+        styles.fieldInput,
+        { 
+          color: themedColors.text, 
+          borderColor: error ? themedColors.danger : themedColors.border, 
+          backgroundColor: themedColors.surface 
+        },
+        multiline && styles.fieldInputMulti
+      ]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={themedColors.textHint}
+      keyboardType={keyboardType || 'default'}
+      multiline={multiline}
+      numberOfLines={multiline ? 3 : 1}
+    />
+    {error ? <Text style={{ color: themedColors.danger, fontSize: 11, marginTop: 4, marginLeft: 4 }}>{error}</Text> : null}
+  </View>
 ));
 
 /**
@@ -98,20 +109,75 @@ export const Stepper = React.memo(({ value, onDecrement, onIncrement, min = 0, t
  * Bộ chọn thời trang (Giờ:Phút) chuyên biệt cho check-in/out
  */
 export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) => {
-  const handlePress = (delta: number) => {
+  const [inputValue, setInputValue] = React.useState(value);
+
+  React.useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const handlePress = (deltaMinutes: number) => {
     const parts = value.split(':');
     const h = parseInt(parts[0], 10) || 0;
-    const m = parts[1] || '00';
-    const newH = (h + delta + 24) % 24;
-    onChange(`${String(newH).padStart(2, '0')}:${m}`);
+    const m = parseInt(parts[1], 10) || 0;
+    let totalMins = h * 60 + m + deltaMinutes;
+    if (totalMins < 0) totalMins += 24 * 60;
+    
+    const newH = Math.floor(totalMins / 60) % 24;
+    const newM = totalMins % 60;
+    const formatted = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+    setInputValue(formatted);
+    onChange(formatted);
   };
+
+  const handleBlur = () => {
+    let formatted = value; 
+    const clean = inputValue.replace(/[^\d:]/g, ''); 
+    if (clean.includes(':')) {
+      const parts = clean.split(':');
+      let h = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10);
+      if (!isNaN(h) && !isNaN(m)) {
+        h = Math.max(0, Math.min(23, h));
+        m = Math.max(0, Math.min(59, m));
+        formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    } else if (clean.length > 0) {
+      if (clean.length <= 2) {
+        let h = parseInt(clean, 10);
+        if (!isNaN(h)) {
+          h = Math.max(0, Math.min(23, h));
+          formatted = `${String(h).padStart(2, '0')}:00`;
+        }
+      } else {
+        const hStr = clean.slice(0, clean.length - 2);
+        const mStr = clean.slice(clean.length - 2);
+        let h = parseInt(hStr, 10);
+        let m = parseInt(mStr, 10);
+        if (!isNaN(h) && !isNaN(m)) {
+          h = Math.max(0, Math.min(23, h));
+          m = Math.max(0, Math.min(59, m));
+          formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+      }
+    }
+    setInputValue(formatted);
+    onChange(formatted);
+  };
+
   return (
     <View style={styles.stepperWrap}>
-      <TouchableOpacity style={[styles.stepBtn, { borderColor: themedColors.border }]} onPress={() => handlePress(-1)}>
+      <TouchableOpacity style={[styles.stepBtn, { borderColor: themedColors.border }]} onPress={() => handlePress(-15)}>
         <Icon name="remove" size={18} color={themedColors.text} />
       </TouchableOpacity>
-      <Text style={[styles.stepVal, { color: themedColors.text }]}>{value}</Text>
-      <TouchableOpacity style={[styles.stepBtn, styles.stepBtnPlus, { backgroundColor: themedColors.primary, borderColor: themedColors.primary }]} onPress={() => handlePress(1)}>
+      <TextInput
+        style={[styles.stepVal, { color: themedColors.text, padding: 0, minWidth: 46 }]}
+        value={inputValue}
+        onChangeText={setInputValue}
+        onBlur={handleBlur}
+        keyboardType="numeric"
+        maxLength={5}
+      />
+      <TouchableOpacity style={[styles.stepBtn, styles.stepBtnPlus, { backgroundColor: themedColors.primary, borderColor: themedColors.primary }]} onPress={() => handlePress(15)}>
         <Icon name="add" size={18} color="#fff" />
       </TouchableOpacity>
     </View>

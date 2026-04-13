@@ -24,7 +24,8 @@ export interface Room {
     name: string;           // tên gốc (r.name)
     label: string;          // tên phòng hiển thị
     product_name: string;   // tên loại phòng
-    price: number;
+    monthly_price?: number; // Giá theo tháng (unit-019), chỉ có ở phòng dài hạn
+    displayPriceText?: string; // Giá hiển thị theo độ ưu tiên (Tháng > Ngày > Đêm > Giờ)
     floor: string;
     customer_name?: string;
     product_id: string;

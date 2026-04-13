@@ -1,36 +1,67 @@
 /**
  * @file: ShortTermSummary.tsx
- * @description: Màn hình xác nhận cuối cùng cho quy trình đặt phòng NGẮN HẠN (theo đêm).
+ * @description: Màn hình xác nhận cuối cùng cho quy trình đặt phòng NGẮN HẠN (theo giờ/ngày/đêm).
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { ShortTermPriceService, ShortTermPriceResult } from '../../../services/ResidentServices/ShortTermPriceService';
 
 // Ảnh minh họa mặc định
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 
 /**
  * Component hiển thị tóm tắt thông tin đặt phòng ngắn hạn.
- * Tính toán số đêm dựa trên ngày nhận/trả phòng và hiển thị tổng tiền thanh toán ngay.
+ * Tính giá theo giờ/ngày/đêm dựa trên thời gian nhận/trả phòng.
  */
 export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEdit, onConfirm, formatVND, confirming, themedColors, t }: any) => {
-  
+  const [priceResult, setPriceResult] = useState<ShortTermPriceResult | null>(null);
+  const [loadingPrice, setLoadingPrice] = useState(true);
+
+  // Tính giá phòng khi mount hoặc form thay đổi
+  useEffect(() => {
+    const calculatePrice = async () => {
+      setLoadingPrice(true);
+      try {
+        const result = await ShortTermPriceService.calculatePrice({
+          checkinDate: form.checkinDate,
+          checkinTime: form.checkinTime,
+          checkoutDate: form.checkoutDate,
+          checkoutTime: form.checkoutTime,
+          variantId: room.id,
+          productId: room.product_id,
+          storeId: room.store_id || 'store-001',
+        });
+        setPriceResult(result);
+      } catch (err) {
+        console.error('[ShortTermSummary] Price calculation error:', err);
+      } finally {
+        setLoadingPrice(false);
+      }
+    };
+    calculatePrice();
+  }, [form.checkinDate, form.checkinTime, form.checkoutDate, form.checkoutTime, room.id, room.product_id]);
+
   // Tính số lượng dịch vụ
   const serviceTotal = form.services.reduce((sum: number, s: any) => sum + (s.qty * s.unitPrice), 0);
 
-  // Logic tính số đêm lưu trú
+  // Tính số đêm (dùng để hiển thị)
   const checkin = new Date(form.checkinDate);
   const checkout = new Date(form.checkoutDate);
   const diffTime = checkout.getTime() - checkin.getTime();
-  const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1; // Mặc định ít nhất 1 đêm
+  const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
   // Tính toán tài chính
-  const roomTotal = room.price * nights;
+  const roomTotal = priceResult?.totalAmount || 0;
   const grandTotal = roomTotal + serviceTotal;
 
   return (
-    <ScrollView style={[styles.scrollView, { backgroundColor: themedColors.bg }]}>
+    <ScrollView 
+      style={[styles.scrollView, { backgroundColor: themedColors.bg }]}
+      removeClippedSubviews={true}
+      scrollEventThrottle={16}
+      automaticallyAdjustContentInsets={false}>
       <View style={styles.summaryContent}>
         
         {/* Thông tin phòng */}
@@ -95,7 +126,7 @@ export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEd
             <View style={styles.summaryGridItem}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
                 <Icon name="nights-stay" size={16} color="#9CA3AF" />
-                <Text style={{ fontSize: 14, color: themedColors.text, marginLeft: 6 }}>{nights} Đêm</Text>
+                <Text style={{ fontSize: 14, color: themedColors.text, marginLeft: 6 }}>{t('booking.summary.nights', { count: nights })}</Text>
               </View>
             </View>
           </View>
@@ -120,11 +151,37 @@ export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEd
           </>
         )}
 
+        {/* Chi tiết tính giá phòng */}
+        {priceResult && priceResult.breakdown.length > 0 && (
+          <View style={[styles.summaryTotalCard, { backgroundColor: themedColors.primaryLight, marginBottom: 12 }]}>
+            <Text style={[styles.summaryTotalTitle, { color: themedColors.text }]}>Chi tiết giá phòng</Text>
+            {priceResult.breakdown.map((item, index) => (
+              <View key={index} style={styles.summaryTotalRow}>
+                <Text style={styles.confSummaryTotalLabel}>{item.description}</Text>
+                <Text style={[styles.confSummaryTotalValue, { color: themedColors.text }]}>{formatVND(item.amount)}</Text>
+              </View>
+            ))}
+            <View style={{ borderTopWidth: 1, borderTopColor: themedColors.border, marginTop: 8, paddingTop: 8 }}>
+              <View style={styles.summaryTotalRow}>
+                <Text style={[styles.confSummaryTotalLabel, { fontWeight: '700' }]}>Tổng tiền phòng</Text>
+                <Text style={[styles.confSummaryTotalValue, { color: themedColors.text, fontWeight: '700' }]}>{formatVND(roomTotal)}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {loadingPrice && (
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <ActivityIndicator size="small" color={themedColors.primary} />
+            <Text style={{ fontSize: 12, color: themedColors.textSecondary, marginTop: 4 }}>Đang tính giá...</Text>
+          </View>
+        )}
+
         {/* Tổng kết chi tiết thanh toán */}
         <View style={[styles.summaryTotalCard, { backgroundColor: themedColors.primaryLight }]}>
           <Text style={[styles.summaryTotalTitle, { color: themedColors.text }]}>{t('booking.summary.paymentDetail')}</Text>
           <View style={styles.summaryTotalRow}>
-            <Text style={styles.confSummaryTotalLabel}>{t('booking.summary.roomRentNights', { nights })}</Text>
+            <Text style={styles.confSummaryTotalLabel}>Tiền phòng ({nights} đêm)</Text>
             <Text style={[styles.confSummaryTotalValue, { color: themedColors.text }]}>{formatVND(roomTotal)}</Text>
           </View>
           <View style={styles.summaryTotalRow}>

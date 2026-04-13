@@ -20,11 +20,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // Các service xử lý dữ liệu và nghiệp vụ
 import { PosQueryService } from '../../services/PosServices/PosQueryService';
 import customerService from '../../services/ResidentServices/CustomerService';
 import RoomActionService from '../../services/ResidentServices/RoomActionService';
+import { ShortTermPriceService, ShortTermPriceResult } from '../../services/ResidentServices/ShortTermPriceService';
 
 // Import Types
 import { BookingForm, ViewMode } from '../../components/booking/types';
@@ -43,12 +45,19 @@ import { IDScannerModal, CCCDData } from '../../components/booking/modals/IDScan
 const BookingScreen = ({ route, navigation, ...props }: any) => {
   const { isDark } = useTheme();
   const { t } = useTranslation();
+  const responsive = useResponsive();
 
   // ─── Cấu hình màu sắc theo Theme (Dark/Light) ───────────────────────────
   const themedColors = useMemo(() => ({
     primary: '#185FA5',
     primaryLight: isDark ? '#1E293B' : '#E6F1FB',
     primaryMid: '#378ADD',
+    success: '#16A34A',
+    successLight: isDark ? '#1E3A2F' : '#DCFCE7',
+    warning: '#CA8A04',
+    warningLight: isDark ? '#3F3820' : '#FEF9C3',
+    error: '#DC2626',
+    errorLight: isDark ? '#3F2020' : '#FEE2E2',
     text: isDark ? '#F1F5F9' : '#1A1A1A',
     textSecondary: isDark ? '#94A3B8' : '#6B7280',
     textHint: isDark ? '#64748B' : '#9CA3AF',
@@ -58,23 +67,41 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
     surface: isDark ? '#1E293B' : '#FFFFFF',
     surfaceAlt: isDark ? '#111827' : '#F3F4F6',
     danger: '#E24B4A',
-    success: '#1D9E75',
   }), [isDark]);
 
-  // Styles chung của màn hình (Chỉ giữ lại style layout chính)
+  // Styles chung của màn hình (Responsive)
   const screenStyles = useMemo(() => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: themedColors.surface },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: responsive.containerPadding,
+      paddingVertical: responsive.rv({
+        smallPhone: 10,
+        phone: 12,
+        largePhone: 12,
+        tablet: 14,
+        largeTablet: 16,
+        default: 12,
+      }),
       borderBottomWidth: 0.5,
       borderBottomColor: themedColors.border,
       backgroundColor: themedColors.surface,
+      minWidth: '100%',
     },
-    headerTitle: { fontSize: 16, fontWeight: '700', color: themedColors.text },
+    headerTitle: { 
+      fontSize: responsive.rv({
+        smallPhone: 14,
+        phone: 15,
+        largePhone: 16,
+        tablet: 17,
+        largeTablet: 18,
+        default: 16,
+      }), 
+      fontWeight: '700', 
+      color: themedColors.text 
+    },
     backBtn: {
       width: 32,
       height: 32,
@@ -85,56 +112,261 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
       justifyContent: 'center',
     },
     scrollView: { flex: 1, backgroundColor: themedColors.bg },
-    scrollContent: { padding: 16 },
+    scrollContent: { 
+      padding: responsive.containerPadding,
+      paddingBottom: responsive.rv({
+        smallPhone: 80,
+        phone: 80,
+        largePhone: 80,
+        tablet: 100,
+        largeTablet: 120,
+        default: 80,
+      }),
+    },
     card: {
       backgroundColor: themedColors.surface,
-      borderRadius: 12,
+      borderRadius: responsive.rv({
+        smallPhone: 10,
+        phone: 12,
+        largePhone: 12,
+        tablet: 14,
+        largeTablet: 16,
+        default: 12,
+      }),
       borderWidth: 0.5,
       borderColor: themedColors.border,
-      padding: 14,
+      padding: responsive.rv({
+        smallPhone: 12,
+        phone: 14,
+        largePhone: 14,
+        tablet: 16,
+        largeTablet: 18,
+        default: 14,
+      }),
     },
     toggleRow: { flexDirection: 'row', gap: 8 },
     toggleBtn: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: 8,
+      paddingVertical: responsive.rv({
+        smallPhone: 8,
+        phone: 10,
+        largePhone: 10,
+        tablet: 12,
+        largeTablet: 14,
+        default: 10,
+      }),
+      borderRadius: responsive.rv({
+        smallPhone: 6,
+        phone: 8,
+        largePhone: 8,
+        tablet: 10,
+        largeTablet: 12,
+        default: 8,
+      }),
       borderWidth: 0.5,
       borderColor: themedColors.border,
       alignItems: 'center',
       backgroundColor: themedColors.surface,
+      flexShrink: 0,
     },
     toggleBtnActive: { backgroundColor: themedColors.primary, borderColor: themedColors.primary },
-    toggleBtnText: { fontSize: 13, fontWeight: '500', color: themedColors.textSecondary },
+    toggleBtnText: { 
+      fontSize: responsive.rv({
+        smallPhone: 11,
+        phone: 12,
+        largePhone: 13,
+        tablet: 14,
+        largeTablet: 15,
+        default: 13,
+      }), 
+      fontWeight: '500', 
+      color: themedColors.textSecondary 
+    },
     toggleBtnTextActive: { color: '#fff' },
-    toggleBtnSub: { fontSize: 10, color: themedColors.textHint, marginTop: 2 },
+    toggleBtnSub: { 
+      fontSize: responsive.rv({
+        smallPhone: 8,
+        phone: 9,
+        largePhone: 10,
+        tablet: 11,
+        largeTablet: 12,
+        default: 10,
+      }), 
+      color: themedColors.textHint, 
+      marginTop: 2 
+    },
     toggleBtnSubActive: { color: 'rgba(255,255,255,0.75)' },
     confirmBtn: {
       backgroundColor: themedColors.primary,
-      borderRadius: 12,
-      paddingVertical: 16,
+      borderRadius: responsive.rv({
+        smallPhone: 10,
+        phone: 12,
+        largePhone: 12,
+        tablet: 14,
+        largeTablet: 16,
+        default: 12,
+      }),
+      paddingVertical: responsive.rv({
+        smallPhone: 14,
+        phone: 16,
+        largePhone: 16,
+        tablet: 18,
+        largeTablet: 20,
+        default: 16,
+      }),
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      marginTop: 20,
+      gap: responsive.rv({
+        smallPhone: 6,
+        phone: 8,
+        largePhone: 8,
+        tablet: 10,
+        largeTablet: 12,
+        default: 8,
+      }),
+      marginTop: responsive.rv({
+        smallPhone: 16,
+        phone: 20,
+        largePhone: 20,
+        tablet: 24,
+        largeTablet: 28,
+        default: 20,
+      }),
     },
     confirmBtnDisabled: { backgroundColor: themedColors.textHint, opacity: 0.6 },
-    confirmBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+    confirmBtnText: { 
+      fontSize: responsive.rv({
+        smallPhone: 14,
+        phone: 15,
+        largePhone: 16,
+        tablet: 17,
+        largeTablet: 18,
+        default: 16,
+      }), 
+      fontWeight: '700', 
+      color: '#fff' 
+    },
     summaryCard: {
       backgroundColor: themedColors.primaryLight,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 16,
+      borderRadius: responsive.rv({
+        smallPhone: 10,
+        phone: 12,
+        largePhone: 12,
+        tablet: 14,
+        largeTablet: 16,
+        default: 12,
+      }),
+      padding: responsive.rv({
+        smallPhone: 12,
+        phone: 14,
+        largePhone: 14,
+        tablet: 16,
+        largeTablet: 18,
+        default: 14,
+      }),
+      marginBottom: responsive.rv({
+        smallPhone: 12,
+        phone: 16,
+        largePhone: 16,
+        tablet: 20,
+        largeTablet: 24,
+        default: 16,
+      }),
       borderWidth: 1,
       borderColor: themedColors.primaryMid,
     },
-    summaryTitle: { fontSize: 15, fontWeight: '800', color: themedColors.primary, marginBottom: 12, textTransform: 'uppercase' },
-    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    summaryTotal: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(55,138,221,0.2)' },
-    summaryLabel: { fontSize: 13, color: themedColors.textSecondary },
-    summaryValue: { fontSize: 14, color: themedColors.text, fontWeight: '700' },
-    summaryTotalLabel: { fontSize: 15, fontWeight: '800', color: themedColors.primary },
-    summaryTotalValue: { fontSize: 18, fontWeight: '900', color: themedColors.primary },
+    summaryTitle: { 
+      fontSize: responsive.rv({
+        smallPhone: 13,
+        phone: 14,
+        largePhone: 15,
+        tablet: 16,
+        largeTablet: 17,
+        default: 15,
+      }), 
+      fontWeight: '800', 
+      color: themedColors.primary, 
+      marginBottom: responsive.rv({
+        smallPhone: 10,
+        phone: 12,
+        largePhone: 12,
+        tablet: 14,
+        largeTablet: 16,
+        default: 12,
+      }), 
+      textTransform: 'uppercase' 
+    },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: responsive.rv({
+        smallPhone: 6,
+        phone: 8,
+        largePhone: 8,
+        tablet: 10,
+        largeTablet: 12,
+        default: 8,
+    }), minWidth: '100%' },
+    summaryTotal: { flexDirection: 'row', justifyContent: 'space-between', marginTop: responsive.rv({
+        smallPhone: 8,
+        phone: 10,
+        largePhone: 10,
+        tablet: 12,
+        largeTablet: 14,
+        default: 10,
+    }), paddingTop: responsive.rv({
+        smallPhone: 8,
+        phone: 10,
+        largePhone: 10,
+        tablet: 12,
+        largeTablet: 14,
+        default: 10,
+    }), borderTopWidth: 1, borderTopColor: 'rgba(55,138,221,0.2)', minWidth: '100%' },
+    summaryLabel: { 
+      fontSize: responsive.rv({
+        smallPhone: 11,
+        phone: 12,
+        largePhone: 13,
+        tablet: 14,
+        largeTablet: 15,
+        default: 13,
+      }), 
+      color: themedColors.textSecondary 
+    },
+    summaryValue: { 
+      fontSize: responsive.rv({
+        smallPhone: 12,
+        phone: 13,
+        largePhone: 14,
+        tablet: 15,
+        largeTablet: 16,
+        default: 14,
+      }), 
+      color: themedColors.text, 
+      fontWeight: '700' 
+    },
+    summaryTotalLabel: { 
+      fontSize: responsive.rv({
+        smallPhone: 13,
+        phone: 14,
+        largePhone: 15,
+        tablet: 16,
+        largeTablet: 17,
+        default: 15,
+      }), 
+      fontWeight: '800', 
+      color: themedColors.primary 
+    },
+    summaryTotalValue: { 
+      fontSize: responsive.rv({
+        smallPhone: 15,
+        phone: 16,
+        largePhone: 18,
+        tablet: 20,
+        largeTablet: 22,
+        default: 18,
+      }), 
+      fontWeight: '900', 
+      color: themedColors.primary 
+    },
   }), [themedColors]);
 
   // ─── State & Dữ liệu ────────────────────────────────────────────────────
@@ -148,20 +380,25 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
     stayType: 'long_term',
     tenantTab: 'existing',
     searchQuery: '',
-    deposit: room?.price || 0,
+    deposit: room?.monthly_price || 0,
     note: '',
     services: [],
     contractStart: new Date().toISOString().split('T')[0],
     contractDuration: '1',
-    monthlyPrice: room?.price || 0,
+    monthlyPrice: room?.monthly_price || 0,
     electricStart: '0',
     waterStart: '0',
     fullName: '',
     phone: '',
     idCard: '',
-    checkinDate: new Date().toISOString().split('T')[0],
+    dateOfBirth: '',
+    gender: '',
+    email: '',
+    address: '',
+    nationality: '',
+    checkinDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
     checkinTime: '14:00',
-    checkoutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    checkoutDate: (() => { const d = new Date(Date.now() + 86400000); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })(),
     checkoutTime: '12:00',
     adults: 1,
     children: 0,
@@ -171,11 +408,23 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [shortTermPrice, setShortTermPrice] = useState<ShortTermPriceResult | null>(null);
+  const [loadingShortTermPrice, setLoadingShortTermPrice] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = useCallback((key: string) => {
+    setErrors(prev => {
+      if (!prev[key]) return prev;
+      const copy = { ...prev };
+      delete copy[key];
+      return copy;
+    });
+  }, []);
 
   // Load dữ liệu ban đầu
   useEffect(() => {
@@ -205,6 +454,33 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
       setLoading(false);
     }
   };
+
+  // Tính giá ngắn hạn khi form thay đổi
+  useEffect(() => {
+    const calculateShortTermPrice = async () => {
+      if (form.stayType !== 'short_term' || !room?.id) return;
+
+      setLoadingShortTermPrice(true);
+      try {
+        const result = await ShortTermPriceService.calculatePrice({
+          checkinDate: form.checkinDate,
+          checkinTime: form.checkinTime,
+          checkoutDate: form.checkoutDate,
+          checkoutTime: form.checkoutTime,
+          variantId: room.id,
+          productId: room.product_id,
+          storeId: storeId,
+        });
+        setShortTermPrice(result);
+      } catch (err) {
+        console.error('[BookingScreen] Short term price error:', err);
+      } finally {
+        setLoadingShortTermPrice(false);
+      }
+    };
+
+    calculateShortTermPrice();
+  }, [form.stayType, form.checkinDate, form.checkinTime, form.checkoutDate, form.checkoutTime, room?.id, room?.product_id, storeId]);
 
   // Logic lọc tìm kiếm khách hàng
   const filteredCustomers = useMemo(() => {
@@ -237,7 +513,7 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
       dateOfBirth: data.dateOfBirth || '',
       gender: data.gender || '',
       address: data.address || '',
-      issuedDate: data.issuedDate || '',
+      placeOfOrigin: data.placeOfOrigin || '',
       oldIdNumber: data.oldIdNumber || '',
     });
     setScannerVisible(false);
@@ -249,8 +525,23 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
     if (form.tenantTab === 'existing' && !selectedCustomer) {
       Alert.alert('Lỗi', 'Vui lòng chọn khách hàng'); return;
     }
-    if (form.tenantTab === 'new' && (!form.fullName || !form.phone)) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ họ tên và SĐT khách mới'); return;
+    if (form.tenantTab === 'new') {
+      const requiredFields = [
+        { key: 'fullName', name: 'Họ tên' },
+        { key: 'phone', name: 'Số điện thoại' },
+        { key: 'idCard', name: 'Số CCCD / Passport' },
+        { key: 'dateOfBirth', name: 'Ngày sinh' },
+        { key: 'gender', name: 'Giới tính' },
+        { key: 'email', name: 'Email' },
+        { key: 'address', name: 'Địa chỉ' },
+        { key: 'nationality', name: 'Quốc tịch' },
+      ];
+      for (const field of requiredFields) {
+        if (!form[field.key as keyof typeof form]) {
+          Alert.alert('Thiếu thông tin', `Vui lòng nhập ${field.name} cho khách mới`);
+          return;
+        }
+      }
     }
 
     setConfirming(true);
@@ -263,6 +554,16 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
           variantId: room.id,
           productId: room.product_id,
           customerId: form.tenantTab === 'existing' ? selectedCustomer.id : '',
+          // Dữ liệu khách mới (nếu customerId rỗng)
+          fullName: form.fullName,
+          phone: form.phone,
+          idNumber: form.idCard,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender,
+          email: form.email,
+          nationality: form.nationality,
+          address: form.address,
+          
           startDate: form.contractStart,
           durationMonths: duration,
           rentAmount: form.monthlyPrice,
@@ -285,20 +586,23 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
           storeId,
           variantId: room.id,
           productId: room.product_id,
+          customerId: form.tenantTab === 'existing' ? selectedCustomer.id : '',
+          // Dữ liệu khách mới (nếu customerId rỗng)
           fullName: form.fullName,
           phone: form.phone,
           idNumber: form.idCard,
-          // Trường ẩn từ QR CCCD
           dateOfBirth: form.dateOfBirth,
           gender: form.gender,
+          email: form.email,
+          nationality: form.nationality,
           address: form.address,
+          
           checkinDate: form.checkinDate,
           checkinTime: form.checkinTime,
           checkoutDate: form.checkoutDate,
           checkoutTime: form.checkoutTime,
           adults: form.adults,
           children: form.children,
-          rentPerNight: room.price,
           extraServices: form.services.map(s => ({
             productId: s.id,
             variantId: s.variantId,
@@ -321,11 +625,47 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
 
   const handleNext = () => {
     if (form.tenantTab === 'existing' && !selectedCustomer) {
-      Alert.alert('Lỗi', 'Vui lòng chọn khách hàng'); return;
+      Alert.alert(t('booking.errors.error'), t('booking.errors.selectCustomer')); return;
     }
-    if (form.tenantTab === 'new' && (!form.fullName || !form.phone)) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ họ tên và SĐT khách mới'); return;
+    if (form.tenantTab === 'new') {
+      const requiredFields = [
+        { key: 'fullName', name: t('booking.fields.fullName') },
+        { key: 'phone', name: t('booking.fields.phone') },
+        { key: 'idCard', name: t('booking.fields.idCard') },
+        { key: 'dateOfBirth', name: t('booking.fields.dateOfBirth') },
+        { key: 'gender', name: t('booking.fields.gender') },
+        { key: 'email', name: t('booking.fields.email') },
+        { key: 'address', name: t('booking.fields.address') },
+        { key: 'nationality', name: t('booking.fields.nationality') },
+      ];
+      const newErrors: Record<string, string> = {};
+      for (const field of requiredFields) {
+        if (!form[field.key as keyof typeof form]) {
+          newErrors[field.key] = t('booking.errors.requiredFieldNew', { field: field.name });
+        }
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
     }
+
+    // Kiểm tra thời gian Nhận/Trả phòng cho ngắn hạn
+    if (form.stayType === 'short_term') {
+      const checkinDateTime = new Date(`${form.checkinDate}T${form.checkinTime}`).getTime();
+      const checkoutDateTime = new Date(`${form.checkoutDate}T${form.checkoutTime}`).getTime();
+
+      if (checkoutDateTime <= checkinDateTime) {
+        Alert.alert(t('booking.errors.error'), t('booking.errors.checkoutAfterCheckin'));
+        return;
+      }
+
+      if (checkoutDateTime - checkinDateTime < 3600000) { // 3,600,000 ms = 1 giờ
+        Alert.alert(t('booking.errors.error'), t('booking.errors.minStay1h'));
+        return;
+      }
+    }
+
     setViewMode('summary');
   };
 
@@ -334,7 +674,6 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
 
   return (
     <SafeAreaView style={screenStyles.safeArea}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       {/* Header điều hướng */}
       <View style={screenStyles.header}>
@@ -353,7 +692,14 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
       </View>
 
       {viewMode === 'form' ? (
-        <ScrollView style={screenStyles.scrollView} contentContainerStyle={screenStyles.scrollContent}>
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={screenStyles.scrollContent} 
+          showsVerticalScrollIndicator={false} 
+          keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          automaticallyAdjustContentInsets={false}>
           
           {/* Thông tin phòng đang đăng ký */}
           <SectionLabel text={t('booking.sections.room')} />
@@ -371,6 +717,8 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
             selectedCustomer={selectedCustomer}
             setSelectedCustomer={setSelectedCustomer}
             setScannerVisible={setScannerVisible}
+            errors={errors}
+            clearError={clearError}
             t={t}
             themedColors={themedColors}
           />
@@ -434,17 +782,48 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
 
           {/* Tóm tắt nhanh chi phí dự tính */}
           <View style={screenStyles.summaryCard}>
-            <Text style={screenStyles.summaryTitle}>{t('booking.sections.summary')}</Text>
+            <Text style={screenStyles.summaryTitle}>Tạm tính thanh toán</Text>
 
-            <View style={screenStyles.summaryRow}>
-              <Text style={screenStyles.summaryLabel}>{form.stayType === 'long_term' ? t('booking.summary.roomRentMonth') : t('booking.summary.roomRent')}</Text>
-              <Text style={screenStyles.summaryValue}>{formatVND(form.stayType === 'long_term' ? form.monthlyPrice : room.price)}</Text>
-            </View>
-
-            {form.stayType === 'long_term' && (
+            {form.stayType === 'long_term' ? (
+              <>
+                <View style={screenStyles.summaryRow}>
+                  <Text style={screenStyles.summaryLabel}>{t('booking.summary.roomRentMonth')}</Text>
+                  <Text style={screenStyles.summaryValue}>{formatVND(form.monthlyPrice)}</Text>
+                </View>
+                <View style={screenStyles.summaryRow}>
+                  <Text style={screenStyles.summaryLabel}>{t('booking.summary.deposit')}</Text>
+                  <Text style={screenStyles.summaryValue}>{formatVND(form.deposit)}</Text>
+                </View>
+              </>
+            ) : loadingShortTermPrice ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <ActivityIndicator size="small" color={themedColors.primary} />
+                <Text style={{ fontSize: 13, color: themedColors.textSecondary }}>Đang tính giá...</Text>
+              </View>
+            ) : shortTermPrice && shortTermPrice.breakdown.length > 0 ? (
+              <View style={{ marginBottom: 8 }}>
+                {shortTermPrice.breakdown.map((item, index) => (
+                  <View key={index} style={[screenStyles.summaryRow, { marginBottom: 4 }]}>
+                    <Text style={[screenStyles.summaryLabel, { color: themedColors.textSecondary }]}>
+                      • {item.description}
+                    </Text>
+                    <Text style={[screenStyles.summaryValue, { fontSize: 13 }]}>
+                      {formatVND(item.amount)}
+                    </Text>
+                  </View>
+                ))}
+                <View style={[screenStyles.summaryRow, { borderTopWidth: 1, borderTopColor: themedColors.border, paddingTop: 8, marginTop: 4 }]}>
+                  <Text style={[screenStyles.summaryLabel, { fontWeight: '600' }]}>Giá phòng:</Text>
+                  <Text style={[screenStyles.summaryValue, { color: themedColors.primary, fontWeight: '700' }]}>
+                    {formatVND(shortTermPrice.totalAmount)}
+                  </Text>
+                </View>
+              </View>
+            ) : (
               <View style={screenStyles.summaryRow}>
-                <Text style={screenStyles.summaryLabel}>{t('booking.summary.deposit')}</Text>
-                <Text style={screenStyles.summaryValue}>{formatVND(form.deposit)}</Text>
+                <Text style={[screenStyles.summaryLabel, { color: themedColors.textSecondary }]}>
+                  Chưa có thông tin giá
+                </Text>
               </View>
             )}
 
@@ -456,12 +835,11 @@ const BookingScreen = ({ route, navigation, ...props }: any) => {
             )}
 
             <View style={screenStyles.summaryTotal}>
-              <Text style={screenStyles.summaryTotalLabel}>{t('booking.summary.total')}</Text>
+              <Text style={screenStyles.summaryTotalLabel}>Tổng cộng:</Text>
               <Text style={screenStyles.summaryTotalValue}>
-                {formatVND(
-                  (form.stayType === 'long_term' ? form.monthlyPrice + form.deposit : room.price) +
-                  form.services.reduce((sum, s) => sum + (s.qty * s.unitPrice), 0)
-                )}
+                {form.stayType === 'long_term'
+                  ? formatVND(form.monthlyPrice + form.deposit + form.services.reduce((sum, s) => sum + (s.qty * s.unitPrice), 0))
+                  : formatVND((shortTermPrice?.totalAmount || 0) + form.services.reduce((sum, s) => sum + (s.qty * s.unitPrice), 0))}
               </Text>
             </View>
           </View>

@@ -20,7 +20,11 @@ export const LongTermSummary = React.memo(({ form, room, selectedCustomer, onEdi
   const grandTotal = form.monthlyPrice + form.deposit + serviceTotal;
 
   return (
-    <ScrollView style={[styles.scrollView, { backgroundColor: themedColors.bg }]}>
+    <ScrollView 
+      style={[styles.scrollView, { backgroundColor: themedColors.bg }]}
+      removeClippedSubviews={true}
+      scrollEventThrottle={16}
+      automaticallyAdjustContentInsets={false}>
       <View style={styles.summaryContent}>
         
         {/* Tóm tắt phòng */}
@@ -65,9 +69,9 @@ export const LongTermSummary = React.memo(({ form, room, selectedCustomer, onEdi
             <View style={styles.summaryGridItem}>
               <Text style={styles.summaryGridLabel}>{t('booking.form.duration')}</Text>
               <Text style={[styles.summaryGridValue, { color: themedColors.text }]}>
-                {form.contractDuration === '1' ? '12 tháng' :
-                 form.contractDuration === '2' ? '24 tháng' :
-                 form.contractDuration + ' tháng'}
+                {form.contractDuration === '1' ? t('booking.summary.months', { count: 12 }) :
+                 form.contractDuration === '2' ? t('booking.summary.months', { count: 24 }) :
+                 t('booking.summary.months', { count: parseInt(form.contractDuration) })}
               </Text>
             </View>
           </View>
@@ -101,7 +105,7 @@ export const LongTermSummary = React.memo(({ form, room, selectedCustomer, onEdi
                   <Icon name="wifi" size={18} color={themedColors.primary} />
                 </View>
                 <Text style={[styles.summarySvcName, { color: themedColors.textSecondary }]}>{svc.name}</Text>
-                <Text style={[styles.summarySvcPrice, { color: themedColors.text }]}>{formatVND(svc.unitPrice)}/tháng</Text>
+                <Text style={[styles.summarySvcPrice, { color: themedColors.text }]}>{formatVND(svc.unitPrice)}/{t('booking.summary.months', { count: 1 })}</Text>
               </View>
             ))}
             <View style={{ height: 12 }} />
