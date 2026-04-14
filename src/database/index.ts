@@ -1,17 +1,17 @@
-import { DatabaseSchema } from '@dqcai/sqlite';
+import {DatabaseSchema} from '@dqcai/sqlite';
 import DatabaseFactory from './DatabaseFactory';
 import DatabaseManager from './DBManagers';
 
-import { ReactNativeAdapter } from './configs/ReactNativeAdapter';
-import { createModuleLogger, AppModules } from '../logger';
+import {ReactNativeAdapter} from './configs/ReactNativeAdapter';
+import {createModuleLogger, AppModules} from '../logger';
 
 // ─── Import schema chính ─────────────────────────────────────────
-import { posSchema as MyPOS } from './configs/MyPOS';
+import {posSchema as MyPOS} from './configs/MyPOS';
 
 const logger = createModuleLogger(AppModules.DATABASE);
 
 // ─── Export schema ───────────────────────────────────────────────
-export { posSchema as MyPOS } from './configs/MyPOS';
+export {posSchema as MyPOS} from './configs/MyPOS';
 
 // ─── Registry schemas ────────────────────────────────────────────
 export const onePosEcosystemSchemas: Record<string, DatabaseSchema> = {

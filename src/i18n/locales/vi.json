@@ -110,7 +110,14 @@
     "clear": "Xoá",
     "search_customers": "Tìm khách hàng...",
     "cart_empty": "Giỏ hàng trống",
-    "select_table": "Chọn bàn"
+    "select_table": "Chọn bàn",
+    "order_detail": "Chi tiết đơn hàng",
+    "products": "Sản phẩm",
+    "total": "Tổng tiền",
+    "cash": "Tiền mặt",
+    "change": "Tiền thừa",
+    "print": "In hóa đơn",
+    "confirm": "Xác nhận thanh toán"
   },
   "place": {
     "title": "Phân loại & Địa điểm",

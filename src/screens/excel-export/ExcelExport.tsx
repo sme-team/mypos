@@ -12,15 +12,17 @@ import {useTranslation} from 'react-i18next';
 import {useTheme} from '../../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {SheetCard, SheetConfig} from '../../components/excel-export/SheetCard';
+import {ExcelExportService} from '../../services/database/execlexport/ExcelexportService';
+import {useAuth} from '../../store/authStore';
+import {
+  ExcelExportScreenProps,
+  ConfirmDeleteModalProps,
+  AddSheetButtonProps,
+} from '../../screens/excel-export/type';
 
 const SHEETS_STORAGE_KEY = 'excel_export_sheets';
 
 // ─── ConfirmDeleteModal ────────────────────────────────────────────────────────
-interface ConfirmDeleteModalProps {
-  visible: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   visible,
@@ -52,7 +54,6 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
               {t('report.export.confirmDelete')}
             </Text>
           </View>
-
           <View className="flex-row gap-3">
             <TouchableOpacity
               onPress={onCancel}
@@ -82,11 +83,12 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   );
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const createDefaultSheet = (): SheetConfig => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
   return {
     id: Date.now().toString(),
     reportType: '',
@@ -97,18 +99,12 @@ const createDefaultSheet = (): SheetConfig => {
 };
 
 // ─── AddSheetButton ────────────────────────────────────────────────────────────
-interface AddSheetButtonProps {
-  onPress: () => void;
-  t: (key: string) => string;
-  isDark?: boolean;
-}
 
 const AddSheetButton: React.FC<AddSheetButtonProps> = ({
   onPress,
   isDark = false,
 }) => {
   const {t} = useTranslation();
-
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -141,80 +137,67 @@ const AddSheetButton: React.FC<AddSheetButtonProps> = ({
   );
 };
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ReportExport({
+  storeId: storeIdProp,
   onOpenMenu,
   onBack,
-}: {
-  onOpenMenu: () => void;
-  onBack: () => void;
-}) {
+}: ExcelExportScreenProps) {
   const [sheets, setSheets] = useState<SheetConfig[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [sheetToDelete, setSheetToDelete] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const {state: auth} = useAuth();
+  const storeId = storeIdProp ?? auth.user?.store_id ?? 'store-001'; // Fallback to mock storeId
   const {t} = useTranslation();
   const {isDark} = useTheme();
 
-  // Load sheets from AsyncStorage on mount
   useEffect(() => {
     loadSheetsFromStorage();
   }, []);
-
-  // Save sheets to AsyncStorage whenever they change
   useEffect(() => {
     saveSheetsToStorage();
   }, [sheets]);
 
   const loadSheetsFromStorage = async () => {
     try {
-      const storedSheets = await AsyncStorage.getItem(SHEETS_STORAGE_KEY);
-      if (storedSheets) {
-        const parsedSheets = JSON.parse(storedSheets).map((sheet: any) => ({
-          ...sheet,
-          fromDate: new Date(sheet.fromDate),
-          toDate: new Date(sheet.toDate),
+      const stored = await AsyncStorage.getItem(SHEETS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored).map((s: any) => ({
+          ...s,
+          fromDate: new Date(s.fromDate),
+          toDate: new Date(s.toDate),
         }));
-        setSheets(parsedSheets);
+        setSheets(parsed);
       }
-    } catch (error) {
-      console.warn('Failed to load sheets from storage:', error);
+    } catch (e) {
+      console.warn('[ExcelExport] load error:', e);
     }
   };
 
   const saveSheetsToStorage = async () => {
     try {
       await AsyncStorage.setItem(SHEETS_STORAGE_KEY, JSON.stringify(sheets));
-    } catch (error) {
-      console.warn('Failed to save sheets to storage:', error);
+    } catch (e) {
+      console.warn('[ExcelExport] save error:', e);
     }
   };
-
-  // Estimated rows — rough mock calculation
-  const estimatedRows = sheets.reduce((acc, s) => {
-    if (!s.reportType || !s.template) return acc;
-    const days =
-      Math.ceil(
-        (s.toDate.getTime() - s.fromDate.getTime()) / (1000 * 60 * 60 * 24),
-      ) + 1;
-    return acc + days * 12;
-  }, 0);
 
   const handleAddSheet = useCallback(() => {
     setSheets(prev => [...prev, createDefaultSheet()]);
   }, []);
-
   const handleUpdateSheet = useCallback((updated: SheetConfig) => {
     setSheets(prev => prev.map(s => (s.id === updated.id ? updated : s)));
   }, []);
-
   const handleRemoveSheet = useCallback((id: string) => {
     setSheetToDelete(id);
     setDeleteModalVisible(true);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
-    if (sheetToDelete) {
+    if (sheetToDelete)
       setSheets(prev => prev.filter(s => s.id !== sheetToDelete));
-    }
     setDeleteModalVisible(false);
     setSheetToDelete(null);
   }, [sheetToDelete]);
@@ -224,18 +207,28 @@ export default function ReportExport({
     setSheetToDelete(null);
   }, []);
 
-  const handleExport = () => {
-    // Export logic goes here
-    console.log('Exporting sheets:', sheets);
-  };
-
-  const clearStorage = async () => {
+  const handleExport = useCallback(async () => {
+    if (!canExport || exporting) return;
+    setExporting(true);
     try {
-      await AsyncStorage.removeItem(SHEETS_STORAGE_KEY);
-    } catch (error) {
-      console.warn('Failed to clear storage:', error);
+      const validSheets = sheets.filter(s => s.reportType && s.template);
+      const allData = await ExcelExportService.fetchAllSheets(
+        storeId,
+        validSheets.map(s => ({
+          reportType: s.reportType,
+          template: s.template,
+          fromDate: s.fromDate,
+          toDate: s.toDate,
+        })),
+      );
+      // TODO: Truyền allData vào thư viện xuất file Excel
+      console.log('[ExcelExport] Data ready:', allData);
+    } catch (err) {
+      console.error('[ExcelExport] Export error:', err);
+    } finally {
+      setExporting(false);
     }
-  };
+  }, [sheets, storeId, exporting]);
 
   const canExport =
     sheets.length > 0 && sheets.every(s => s.reportType && s.template);
@@ -267,7 +260,6 @@ export default function ReportExport({
         className="flex-1 px-4 pt-4"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
-        {/* Sheet Cards */}
         {sheets.map(sheet => (
           <SheetCard
             key={sheet.id}
@@ -277,44 +269,45 @@ export default function ReportExport({
             isDark={isDark}
           />
         ))}
-
-        {/* Add Sheet Button */}
-        <AddSheetButton onPress={handleAddSheet} t={t} isDark={isDark} />
-
-        {/* Spacer for bottom button */}
+        <AddSheetButton onPress={handleAddSheet} isDark={isDark} />
         <View className="h-28" />
       </ScrollView>
 
-      {/* Footer Export Button */}
+      {/* Footer */}
       <View
         className={`absolute bottom-0 left-0 right-0 border-t px-4 pb-8 pt-3 ${
           isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
         }`}>
         <TouchableOpacity
           onPress={handleExport}
-          disabled={!canExport}
+          disabled={!canExport || exporting}
           className={`flex-row items-center justify-center rounded-2xl py-4 gap-2 ${
-            canExport ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-blue-200'
+            canExport && !exporting
+              ? 'bg-blue-600'
+              : isDark
+              ? 'bg-gray-700'
+              : 'bg-blue-200'
           }`}>
           <Icon
-            name="download"
+            name={exporting ? 'hourglass-empty' : 'download'}
             size={20}
-            color={canExport ? 'white' : isDark ? '#6b7280' : '#cbd5e1'}
+            color={
+              canExport && !exporting ? 'white' : isDark ? '#6b7280' : '#cbd5e1'
+            }
           />
           <Text
             className={`text-base font-bold ${
-              canExport
+              canExport && !exporting
                 ? 'text-white'
                 : isDark
                 ? 'text-gray-500'
                 : 'text-blue-400'
             }`}>
-            {t('report.export.export')}
+            {exporting ? t('common.loading') : t('report.export.export')}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
         visible={deleteModalVisible}
         onConfirm={handleConfirmDelete}

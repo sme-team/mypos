@@ -1,36 +1,50 @@
-import { BaseService } from '../BaseService';
-import { generateUID } from '../../utils';
+import {BaseService} from '../BaseService';
+import {generateSequentialId} from '../../utils';
 
 // ─────────────────────────────────────────────
 //  Base services (mỗi bảng 1 class)
 // ─────────────────────────────────────────────
 
 class ContractService extends BaseService {
-  constructor() { super('mypos', 'contracts'); }
+  constructor() {
+    super('mypos', 'contracts');
+  }
 }
 
 class ContractMemberService extends BaseService {
-  constructor() { super('mypos', 'contract_members'); }
+  constructor() {
+    super('mypos', 'contract_members');
+  }
 }
 
 class CustomerService extends BaseService {
-  constructor() { super('mypos', 'customers'); }
+  constructor() {
+    super('mypos', 'customers');
+  }
 }
 
 class ResidentService extends BaseService {
-  constructor() { super('mypos', 'residents'); }
+  constructor() {
+    super('mypos', 'residents');
+  }
 }
 
 class BillService extends BaseService {
-  constructor() { super('mypos', 'bills'); }
+  constructor() {
+    super('mypos', 'bills');
+  }
 }
 
 class BillDetailService extends BaseService {
-  constructor() { super('mypos', 'bill_details'); }
+  constructor() {
+    super('mypos', 'bill_details');
+  }
 }
 
 class PaymentService extends BaseService {
-  constructor() { super('mypos', 'payments'); }
+  constructor() {
+    super('mypos', 'payments');
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -42,17 +56,17 @@ export interface LongTermCheckInInput {
   storeId: string;
   variantId: string;
   productId: string;
-  customerId: string;           // khách cũ → đã có trong customers
+  customerId: string; // khách cũ → đã có trong customers
   contractNumber?: string;
-  startDate: string;            // YYYY-MM-DD
-  durationMonths?: number;      // mặc định 12
+  startDate: string; // YYYY-MM-DD
+  durationMonths?: number; // mặc định 12
   rentAmount: number;
   depositAmount?: number;
   electricReadingInit?: number;
   waterReadingInit?: number;
   electricRate?: number;
   water_rate?: number;
-  billingDay?: number;          // ngày xuất bill hàng tháng, mặc định 1
+  billingDay?: number; // ngày xuất bill hàng tháng, mặc định 1
   notes?: string;
   // Dịch vụ thêm
   extraServices?: Array<{
@@ -80,13 +94,13 @@ export interface ShortTermCheckInInput {
   idCardFrontUrl?: string;
   idCardBackUrl?: string;
   // Thông tin đặt phòng
-  checkinDate: string;          // YYYY-MM-DD
-  checkinTime?: string;         // HH:mm
+  checkinDate: string; // YYYY-MM-DD
+  checkinTime?: string; // HH:mm
   checkoutDate: string;
   checkoutTime?: string;
   adults?: number;
   children?: number;
-  rentPerNight: number;         // UI tính: rentAmount = rentPerNight × số ngày
+  rentPerNight: number; // UI tính: rentAmount = rentPerNight × số ngày
   depositAmount?: number;
   notes?: string;
   extraServices?: Array<{
@@ -104,7 +118,7 @@ export interface ShortTermCheckInInput {
 /** Màn hình 3 — Chỉnh sửa thông tin phòng / khách */
 export interface EditRoomDetailsInput {
   storeId: string;
-  variantId: string;            // dùng để tìm contract active
+  variantId: string; // dùng để tìm contract active
   // Thông tin khách
   fullName?: string;
   phone?: string;
@@ -167,7 +181,9 @@ class RoomActionServiceClass {
     return Math.max(1, Math.round(ms / 86_400_000));
   }
 
-  private now(): string { return new Date().toISOString(); }
+  private now(): string {
+    return new Date().toISOString();
+  }
 
   /** Tạo bill_details rows từ mảng dịch vụ thêm */
   private async insertExtraServices(
@@ -183,7 +199,7 @@ class RoomActionServiceClass {
       const amount = svc.quantity * svc.unitPrice;
       totalSvcAmount += amount;
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: storeId,
         bill_id: billId,
         product_id: svc.productId,
@@ -208,11 +224,13 @@ class RoomActionServiceClass {
    * Tạo hợp đồng dài hạn cho khách cũ.
    * INSERT: contracts, contract_members, bills (deposit), bill_details, payments?
    */
-  async checkInLongTerm(input: LongTermCheckInInput): Promise<{ contractId: string; billId: string }> {
+  async checkInLongTerm(
+    input: LongTermCheckInInput,
+  ): Promise<{contractId: string; billId: string}> {
     return this.contractSvc.executeTransaction(async () => {
       const now = this.now();
-      const contractId = generateUID('CTR');
-      const billId = generateUID('BILL');
+      const contractId = await generateSequentialId(this.contractSvc, 'ctr');
+      const billId = await generateSequentialId(this.billSvc, 'bill');
 
       const endDate = this.calcEndDate(
         input.startDate,
@@ -245,7 +263,7 @@ class RoomActionServiceClass {
 
       // 2. contract_members (người thuê chính)
       await this.contractMemberSvc.create({
-        id: generateUID('CM'),
+        id: await generateSequentialId(this.contractMemberSvc, 'cm'),
         store_id: input.storeId,
         contract_id: contractId,
         customer_id: input.customerId,
@@ -278,7 +296,7 @@ class RoomActionServiceClass {
 
       // 4. bill_details — dòng tiền cọc
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: billId,
         line_description: 'Tiền đặt cọc',
@@ -292,9 +310,12 @@ class RoomActionServiceClass {
       });
 
       // 5. Bill Tiền nhà (RENT BILL) - Theo yêu cầu người dùng
-      const rentBillId = generateUID('BILL');
+      const rentBillId = await generateSequentialId(this.billSvc, 'bill');
       // Tính tổng dịch vụ
-      const svcAmount = (input.extraServices ?? []).reduce((s, sv) => s + sv.quantity * sv.unitPrice, 0);
+      const svcAmount = (input.extraServices ?? []).reduce(
+        (s, sv) => s + sv.quantity * sv.unitPrice,
+        0,
+      );
       const totalRentBill = input.rentAmount + svcAmount;
 
       await this.billSvc.create({
@@ -319,7 +340,7 @@ class RoomActionServiceClass {
       // 6. bill_details cho bill tiền nhà
       // - Dòng tiền phòng
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: rentBillId,
         line_description: 'Tiền thuê phòng (tháng đầu)',
@@ -333,12 +354,17 @@ class RoomActionServiceClass {
       });
 
       // - Dòng dịch vụ thêm
-      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10);
+      await this.insertExtraServices(
+        rentBillId,
+        input.storeId,
+        input.extraServices,
+        10,
+      );
 
       // 6. Thanh toán tiền cọc ngay (nếu có)
       if (input.payDepositNow && depositAmount > 0) {
         await this.paymentSvc.create({
-          id: generateUID('PAY'),
+          id: await generateSequentialId(this.paymentSvc, 'pay'),
           store_id: input.storeId,
           bill_id: billId,
           payment_method: input.depositPaymentMethod ?? 'cash',
@@ -358,7 +384,7 @@ class RoomActionServiceClass {
         });
       }
 
-      return { contractId, billId };
+      return {contractId, billId};
     });
   }
 
@@ -368,12 +394,14 @@ class RoomActionServiceClass {
    * Tạo hợp đồng ngắn hạn + khách mới.
    * INSERT: customers, residents, contracts, contract_members, bills, bill_details, payments?
    */
-  async checkInShortTerm(input: ShortTermCheckInInput): Promise<{ customerId: string; contractId: string; billId: string }> {
+  async checkInShortTerm(
+    input: ShortTermCheckInInput,
+  ): Promise<{customerId: string; contractId: string; billId: string}> {
     return this.contractSvc.executeTransaction(async () => {
       const now = this.now();
-      const customerId = generateUID('CUST');
-      const contractId = generateUID('CTR');
-      const billId = generateUID('BILL');
+      const customerId = await generateSequentialId(this.customerSvc, 'cust');
+      const contractId = await generateSequentialId(this.contractSvc, 'ctr');
+      const billId = await generateSequentialId(this.billSvc, 'bill');
 
       const nights = this.calcNights(input.checkinDate, input.checkoutDate);
       const rentAmount = input.rentPerNight * nights;
@@ -400,7 +428,7 @@ class RoomActionServiceClass {
 
       // 2. residents (ảnh CCCD + tạm trú)
       await this.residentSvc.create({
-        id: generateUID('RES'),
+        id: await generateSequentialId(this.residentSvc, 'res'),
         store_id: input.storeId,
         customer_id: customerId,
         id_card_front_url: input.idCardFrontUrl ?? '',
@@ -424,7 +452,7 @@ class RoomActionServiceClass {
         deposit_amount: input.depositAmount ?? 0,
         status: 'active',
         notes: input.notes ?? '',
-        metadata,          // adults, children, checkin_time, checkout_time
+        metadata, // adults, children, checkin_time, checkout_time
         sync_status: 'local',
         created_at: now,
         updated_at: now,
@@ -432,7 +460,7 @@ class RoomActionServiceClass {
 
       // 4. contract_members
       await this.contractMemberSvc.create({
-        id: generateUID('CM'),
+        id: await generateSequentialId(this.contractMemberSvc, 'cm'),
         store_id: input.storeId,
         contract_id: contractId,
         customer_id: customerId,
@@ -467,8 +495,11 @@ class RoomActionServiceClass {
       });
 
       // 7. Bill Tiền nhà & Dịch vụ ngắn hạn (RENT BILL)
-      const rentBillId = generateUID('BILL');
-      const svcAmount = (input.extraServices ?? []).reduce((s, sv) => s + sv.quantity * sv.unitPrice, 0);
+      const rentBillId = await generateSequentialId(this.billSvc, 'bill');
+      const svcAmount = (input.extraServices ?? []).reduce(
+        (s, sv) => s + sv.quantity * sv.unitPrice,
+        0,
+      );
       const totalRentBill = rentAmount + svcAmount;
 
       await this.billSvc.create({
@@ -492,7 +523,7 @@ class RoomActionServiceClass {
 
       // 8. bill_details (Tiền phòng)
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: rentBillId,
         line_description: `Tiền thuê phòng ngắn hạn (${nights} đêm)`,
@@ -506,12 +537,17 @@ class RoomActionServiceClass {
       });
 
       // 9. Dịch vụ thêm
-      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10);
+      await this.insertExtraServices(
+        rentBillId,
+        input.storeId,
+        input.extraServices,
+        10,
+      );
 
       // 8. Thanh toán cọc ngay
       if (input.payDepositNow && depositAmount > 0) {
         await this.paymentSvc.create({
-          id: generateUID('PAY'),
+          id: await generateSequentialId(this.paymentSvc, 'pay'),
           store_id: input.storeId,
           bill_id: billId,
           payment_method: input.depositPaymentMethod ?? 'cash',
@@ -530,7 +566,7 @@ class RoomActionServiceClass {
         });
       }
 
-      return { customerId, contractId, billId };
+      return {customerId, contractId, billId};
     });
   }
 
@@ -545,8 +581,8 @@ class RoomActionServiceClass {
 
     // 1. Tìm hợp đồng active của variant
     const contracts = await this.contractSvc.findAll(
-      { variant_id: input.variantId, status: 'active', store_id: input.storeId },
-      { columns: ['id', 'customer_id'] },
+      {variant_id: input.variantId, status: 'active', store_id: input.storeId},
+      {columns: ['id', 'customer_id']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
@@ -554,7 +590,7 @@ class RoomActionServiceClass {
     await this.contractSvc.executeTransaction(async () => {
       // 2. Cập nhật thông tin khách
       if (input.fullName || input.phone || input.idNumber) {
-        const customerUpdate: Record<string, any> = { updated_at: now };
+        const customerUpdate: Record<string, any> = {updated_at: now};
         if (input.fullName) customerUpdate.full_name = input.fullName;
         if (input.phone) customerUpdate.phone = input.phone;
         if (input.idNumber) customerUpdate.id_number = input.idNumber;
@@ -562,12 +598,16 @@ class RoomActionServiceClass {
       }
 
       // 3. Cập nhật hợp đồng
-      const contractUpdate: Record<string, any> = { updated_at: now };
-      if (input.rentAmount != null) contractUpdate.rent_amount = input.rentAmount;
-      if (input.electricRate != null) contractUpdate.electric_rate = input.electricRate;
+      const contractUpdate: Record<string, any> = {updated_at: now};
+      if (input.rentAmount != null)
+        contractUpdate.rent_amount = input.rentAmount;
+      if (input.electricRate != null)
+        contractUpdate.electric_rate = input.electricRate;
       if (input.waterRate != null) contractUpdate.water_rate = input.waterRate;
-      if (input.electricReadingInit != null) contractUpdate.electric_reading_init = input.electricReadingInit;
-      if (input.waterReadingInit != null) contractUpdate.water_reading_init = input.waterReadingInit;
+      if (input.electricReadingInit != null)
+        contractUpdate.electric_reading_init = input.electricReadingInit;
+      if (input.waterReadingInit != null)
+        contractUpdate.water_reading_init = input.waterReadingInit;
       if (input.endDate) contractUpdate.end_date = input.endDate;
       if (input.notes != null) contractUpdate.notes = input.notes;
 
@@ -587,8 +627,8 @@ class RoomActionServiceClass {
     extraMonths: number,
   ): Promise<void> {
     const contracts = await this.contractSvc.findAll(
-      { variant_id: variantId, status: 'active', store_id: storeId },
-      { columns: ['id', 'end_date'] },
+      {variant_id: variantId, status: 'active', store_id: storeId},
+      {columns: ['id', 'end_date']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
@@ -615,8 +655,8 @@ class RoomActionServiceClass {
     newRentAmount?: number,
   ): Promise<void> {
     const contracts = await this.contractSvc.findAll(
-      { variant_id: currentVariantId, status: 'active', store_id: storeId },
-      { columns: ['id'] },
+      {variant_id: currentVariantId, status: 'active', store_id: storeId},
+      {columns: ['id']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
@@ -639,8 +679,8 @@ class RoomActionServiceClass {
    */
   async checkOut(storeId: string, variantId: string): Promise<void> {
     const contracts = await this.contractSvc.findAll(
-      { variant_id: variantId, status: 'active', store_id: storeId },
-      { columns: ['id', 'customer_id'] },
+      {variant_id: variantId, status: 'active', store_id: storeId},
+      {columns: ['id', 'customer_id']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
@@ -658,8 +698,8 @@ class RoomActionServiceClass {
 
       // 2. Cập nhật left_date cho tất cả thành viên hợp đồng
       const members = await this.contractMemberSvc.findAll(
-        { contract_id: contract.id },
-        { columns: ['id'] },
+        {contract_id: contract.id},
+        {columns: ['id']},
       );
       for (const m of members) {
         await this.contractMemberSvc.update(m.id, {
@@ -670,8 +710,8 @@ class RoomActionServiceClass {
 
       // 3. Phát hành bill chốt cuối kỳ
       const bills = await this.billSvc.findAll(
-        { ref_id: contract.id, ref_type: 'contract', bill_status: 'draft' },
-        { columns: ['id'] },
+        {ref_id: contract.id, ref_type: 'contract', bill_status: 'draft'},
+        {columns: ['id']},
       );
       for (const b of bills) {
         await this.billSvc.update(b.id, {
@@ -693,30 +733,36 @@ class RoomActionServiceClass {
    */
   async collectMonthlyPayment(
     input: CollectMonthlyPaymentInput,
-  ): Promise<{ billId: string; total: number }> {
-    const contracts = await this.contractSvc.findAll(
-      { variant_id: input.variantId, status: 'active', store_id: input.storeId },
-    );
+  ): Promise<{billId: string; total: number}> {
+    const contracts = await this.contractSvc.findAll({
+      variant_id: input.variantId,
+      status: 'active',
+      store_id: input.storeId,
+    });
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
 
     // Chỉ số điện nước kỳ trước (lấy từ bill_details gần nhất)
     const prevBills = await this.billSvc.findAll(
-      { ref_id: contract.id, ref_type: 'contract', store_id: input.storeId },
-      { orderBy: [{ name: 'issued_at', order: 'DESC' }], limit: 1 },
+      {ref_id: contract.id, ref_type: 'contract', store_id: input.storeId},
+      {orderBy: [{name: 'issued_at', order: 'DESC'}], limit: 1},
     );
     let prevElectric = contract.electric_reading_init ?? 0;
     let prevWater = contract.water_reading_init ?? 0;
 
     if (prevBills.length > 0) {
-      const prevDetails = await this.billDetailSvc.findAll(
-        { bill_id: prevBills[0].id },
+      const prevDetails = await this.billDetailSvc.findAll({
+        bill_id: prevBills[0].id,
+      });
+      const eDet = prevDetails.find(
+        (d: any) =>
+          d.line_description?.includes('điện') ||
+          d.line_description?.includes('Điện'),
       );
-      const eDet = prevDetails.find((d: any) =>
-        d.line_description?.includes('điện') || d.line_description?.includes('Điện'),
-      );
-      const wDet = prevDetails.find((d: any) =>
-        d.line_description?.includes('nước') || d.line_description?.includes('Nước'),
+      const wDet = prevDetails.find(
+        (d: any) =>
+          d.line_description?.includes('nước') ||
+          d.line_description?.includes('Nước'),
       );
       if (eDet?.reading_to != null) prevElectric = eDet.reading_to;
       if (wDet?.reading_to != null) prevWater = wDet.reading_to;
@@ -728,13 +774,14 @@ class RoomActionServiceClass {
     const eAmount = eUsage * (contract.electric_rate ?? 0);
     const wAmount = wUsage * (contract.water_rate ?? 0);
     const svcAmount = (input.extraServices ?? []).reduce(
-      (s, sv) => s + sv.quantity * sv.unitPrice, 0,
+      (s, sv) => s + sv.quantity * sv.unitPrice,
+      0,
     );
     const total = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount;
 
     return this.billSvc.executeTransaction(async () => {
       const now = this.now();
-      const billId = generateUID('BILL');
+      const billId = await generateSequentialId(this.billSvc, 'bill');
 
       // 0. Update Contract Metadata (optional but recommended for persistence)
       const newMeta = JSON.stringify({
@@ -772,7 +819,7 @@ class RoomActionServiceClass {
 
       // 2. Dòng tiền phòng
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: billId,
         line_description: 'Tiền phòng',
@@ -787,7 +834,7 @@ class RoomActionServiceClass {
 
       // 3. Dòng tiền điện
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: billId,
         line_description: `Tiền điện (Cũ: ${prevElectric} / Mới: ${input.electricNew})`,
@@ -804,7 +851,7 @@ class RoomActionServiceClass {
 
       // 4. Dòng tiền nước
       await this.billDetailSvc.create({
-        id: generateUID('BDT'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdet'),
         store_id: input.storeId,
         bill_id: billId,
         line_description: `Tiền nước (Cũ: ${prevWater} / Mới: ${input.waterNew})`,
@@ -822,11 +869,14 @@ class RoomActionServiceClass {
       // 5. Dịch vụ thêm (Nếu có trong input)
       if ((input as any).extraServices) {
         await this.insertExtraServices(
-          billId, input.storeId, (input as any).extraServices, sortOrder,
+          billId,
+          input.storeId,
+          (input as any).extraServices,
+          sortOrder,
         );
       }
 
-      return { billId, total };
+      return {billId, total};
     });
   }
 }

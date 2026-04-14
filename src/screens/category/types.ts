@@ -1,4 +1,5 @@
 export type TabType = 'selling' | 'storage';
+export type UnitPickerTarget = 'add' | 'editVariant';
 
 export interface Variant {
   id: string;

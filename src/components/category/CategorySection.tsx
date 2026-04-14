@@ -13,6 +13,7 @@ interface Props {
   selectionMode: boolean;
   isGroupSelected: boolean;
   selectedItems: Set<string>;
+  selectedVariants: Set<string>;
   onDeleteGroup: (id: string) => void;
   onEditGroup: (id: string) => void;
   onToggleItem: (itemId: string) => void;
@@ -27,6 +28,7 @@ interface Props {
   onAddVariant: (itemId: string) => void;
   onToggleSelectGroup: (groupId: string) => void;
   onToggleSelectItem: (itemId: string) => void;
+  onToggleSelectVariant: (variantId: string) => void;
 }
 
 const Checkbox = ({checked}: {checked: boolean}) => (
@@ -51,6 +53,7 @@ const CategorySection: React.FC<Props> = ({
   selectionMode,
   isGroupSelected,
   selectedItems,
+  selectedVariants,
   onDeleteGroup,
   onEditGroup,
   onToggleItem,
@@ -59,8 +62,9 @@ const CategorySection: React.FC<Props> = ({
   onAddVariant,
   onToggleSelectGroup,
   onToggleSelectItem,
+  onToggleSelectVariant,
 }) => {
-  const [isSectionExpanded, setIsSectionExpanded] = useState(true);
+  const [isSectionExpanded, setIsSectionExpanded] = useState(false);
 
   return (
     <View
@@ -74,18 +78,15 @@ const CategorySection: React.FC<Props> = ({
       {/* Group header */}
       <TouchableOpacity
         className="flex-row items-center justify-between mb-1"
-        onPress={() => {
-          if (selectionMode) {
-            onToggleSelectGroup(group.id);
-          } else {
-            setIsSectionExpanded(prev => !prev);
-          }
-        }}
+        onPress={() => setIsSectionExpanded(prev => !prev)}
         activeOpacity={0.7}>
         <View className="flex-row items-center flex-1">
-          {selectionMode && <Checkbox checked={isGroupSelected} />}
+          {selectionMode && (
+            <TouchableOpacity onPress={() => onToggleSelectGroup(group.id)}>
+              <Checkbox checked={isGroupSelected} />
+            </TouchableOpacity>
+          )}
 
-          {/* Chevron mở/đóng — chỉ hiện khi không ở selection mode */}
           {!selectionMode && (
             <Icon
               name={
@@ -124,20 +125,22 @@ const CategorySection: React.FC<Props> = ({
         )}
       </TouchableOpacity>
 
-      {/* Items — ẩn/hiện theo isSectionExpanded */}
+      {/* Items */}
       {isSectionExpanded && (
         <View style={{marginTop: 8}}>
           {group.items.map(item => (
             <CategoryItem
-              key={item.id}
+              key={`${group.id}-${item.id}`}
               item={item}
               selectionMode={selectionMode}
               isSelected={selectedItems.has(item.id)}
+              selectedVariants={selectedVariants}
               onToggle={onToggleItem}
               onEdit={onEditItem}
               onEditProduct={onEditProduct}
               onAddVariant={onAddVariant}
               onToggleSelect={onToggleSelectItem}
+              onToggleSelectVariant={onToggleSelectVariant}
             />
           ))}
         </View>

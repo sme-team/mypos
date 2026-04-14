@@ -8,6 +8,7 @@ interface Props {
   item: CategoryItemType & {isExpanded: boolean};
   selectionMode: boolean;
   isSelected: boolean;
+  selectedVariants: Set<string>;
   onToggle: (id: string) => void;
   onEdit: (
     itemId: string,
@@ -19,6 +20,7 @@ interface Props {
   onEditProduct: (itemId: string) => void;
   onAddVariant: (id: string) => void;
   onToggleSelect: (itemId: string) => void;
+  onToggleSelectVariant: (variantId: string) => void;
 }
 
 const Checkbox = ({checked}: {checked: boolean}) => (
@@ -42,11 +44,13 @@ const CategoryItem: React.FC<Props> = ({
   item,
   selectionMode,
   isSelected,
+  selectedVariants,
   onToggle,
   onEdit,
   onEditProduct,
   onAddVariant,
   onToggleSelect,
+  onToggleSelectVariant,
 }) => (
   <View
     className="bg-white rounded-2xl mb-2 overflow-hidden"
@@ -55,19 +59,17 @@ const CategoryItem: React.FC<Props> = ({
       borderColor: isSelected ? '#93c5fd' : 'transparent',
       backgroundColor: isSelected ? '#eff6ff' : '#fff',
     }}>
-    {/* Header row */}
+    {/* Header row — luôn toggle expand khi nhấn, checkbox xử lý select riêng */}
     <TouchableOpacity
       className="flex-row items-center px-4 py-4"
-      onPress={() => {
-        if (selectionMode) {
-          onToggleSelect(item.id);
-        } else {
-          onToggle(item.id);
-        }
-      }}
+      onPress={() => onToggle(item.id)}
       activeOpacity={0.7}>
       {selectionMode ? (
-        <Checkbox checked={isSelected} />
+        <TouchableOpacity
+          onPress={() => onToggleSelect(item.id)}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Checkbox checked={isSelected} />
+        </TouchableOpacity>
       ) : (
         <Icon
           name={item.isExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
@@ -83,7 +85,7 @@ const CategoryItem: React.FC<Props> = ({
         {item.name}
       </Text>
 
-      {/* Icon edit → mở modal Chỉnh sửa sản phẩm */}
+      {/* Icon edit — chỉ hiện khi không ở selection mode */}
       {!selectionMode && (
         <TouchableOpacity
           onPress={() => onEditProduct(item.id)}
@@ -93,13 +95,15 @@ const CategoryItem: React.FC<Props> = ({
       )}
     </TouchableOpacity>
 
-    {/* Expanded: variants + add button — chỉ hiện khi không ở selection mode */}
-    {!selectionMode && item.isExpanded && (
+    {/* Expanded: variants + add button */}
+    {item.isExpanded && (
       <View className="px-3 pb-3" style={{gap: 8}}>
         {item.variants.map(variant => (
           <VariantItem
-            key={variant.id}
+            key={`${item.id}-${variant.id}`}
             variant={variant}
+            selectionMode={selectionMode}
+            isSelected={selectedVariants.has(variant.id)}
             onEdit={() =>
               onEdit(
                 item.id,
@@ -109,25 +113,29 @@ const CategoryItem: React.FC<Props> = ({
                 variant.unit,
               )
             }
+            onToggleSelect={onToggleSelectVariant}
           />
         ))}
 
-        <TouchableOpacity
-          onPress={() => onAddVariant(item.id)}
-          activeOpacity={0.7}
-          style={{
-            borderWidth: 1.5,
-            borderColor: '#3b82f6',
-            borderStyle: 'dashed',
-            borderRadius: 12,
-            paddingVertical: 12,
-            alignItems: 'center',
-            marginTop: 2,
-          }}>
-          <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '600'}}>
-            + Thêm biến thể
-          </Text>
-        </TouchableOpacity>
+        {/* Nút thêm biến thể — ẩn trong selection mode */}
+        {!selectionMode && (
+          <TouchableOpacity
+            onPress={() => onAddVariant(item.id)}
+            activeOpacity={0.7}
+            style={{
+              borderWidth: 1.5,
+              borderColor: '#3b82f6',
+              borderStyle: 'dashed',
+              borderRadius: 12,
+              paddingVertical: 12,
+              alignItems: 'center',
+              marginTop: 2,
+            }}>
+            <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '600'}}>
+              + Thêm biến thể
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     )}
   </View>

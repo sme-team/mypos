@@ -1,12 +1,11 @@
-/**
- * @file: ResponsivePanel.tsx
- * @description: Component bảng điều khiển thông minh.
- * Tự động chuyển đổi giữa dạng Modal (trên Mobile) và Side Panel (trên Tablet).
- * @path: src/components/common/ResponsivePanel.tsx
- */
-
 import React from 'react';
-import {View, Modal, TouchableOpacity, useWindowDimensions, SafeAreaView} from 'react-native';
+import {
+  View,
+  Modal,
+  TouchableOpacity,
+  useWindowDimensions,
+  SafeAreaView,
+} from 'react-native';
 import {useTheme} from '../../hooks/useTheme';
 
 interface Props {

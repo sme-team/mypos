@@ -32,10 +32,10 @@ import React, {
   useReducer,
 } from 'react';
 
-import { tokenManager } from '../services/token-manager';
-import { authService } from '../services/auth.service';
+import {tokenManager} from '../services/token-manager';
+import {authService} from '../services/auth.service';
 
-import { createModuleLogger, AppModules } from '../logger';
+import {createModuleLogger, AppModules} from '../logger';
 const logger = createModuleLogger(AppModules.AUTH_STORE);
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -46,6 +46,7 @@ export interface User {
   email: string;
   full_name?: string;
   role: string;
+  store_id?: string;
 }
 
 export interface AuthState {
@@ -57,7 +58,7 @@ export interface AuthState {
 }
 
 const initialState: AuthState = {
-  isLoading: true,   // true trong khi hydrate từ storage
+  isLoading: true, // true trong khi hydrate từ storage
   isAuthenticated: false,
   user: null,
   authMethod: null,
@@ -67,17 +68,23 @@ const initialState: AuthState = {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 type Action =
-  | { type: 'HYDRATE_START' }
-  | { type: 'HYDRATE_DONE'; payload: { user: User; authMethod: 'credentials' | 'google' } | null }
-  | { type: 'LOGIN_SUCCESS'; payload: { user: User; authMethod: 'credentials' | 'google' } }
-  | { type: 'LOGOUT' }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'CLEAR_ERROR' };
+  | {type: 'HYDRATE_START'}
+  | {
+      type: 'HYDRATE_DONE';
+      payload: {user: User; authMethod: 'credentials' | 'google'} | null;
+    }
+  | {
+      type: 'LOGIN_SUCCESS';
+      payload: {user: User; authMethod: 'credentials' | 'google'};
+    }
+  | {type: 'LOGOUT'}
+  | {type: 'SET_ERROR'; payload: string}
+  | {type: 'CLEAR_ERROR'};
 
 function reducer(state: AuthState, action: Action): AuthState {
   switch (action.type) {
     case 'HYDRATE_START':
-      return { ...state, isLoading: true, error: null };
+      return {...state, isLoading: true, error: null};
 
     case 'HYDRATE_DONE':
       if (action.payload) {
@@ -89,7 +96,7 @@ function reducer(state: AuthState, action: Action): AuthState {
           error: null,
         };
       }
-      return { ...initialState, isLoading: false };
+      return {...initialState, isLoading: false};
 
     case 'LOGIN_SUCCESS':
       return {
@@ -101,13 +108,13 @@ function reducer(state: AuthState, action: Action): AuthState {
       };
 
     case 'LOGOUT':
-      return { ...initialState, isLoading: false };
+      return {...initialState, isLoading: false};
 
     case 'SET_ERROR':
-      return { ...state, isLoading: false, error: action.payload };
+      return {...state, isLoading: false, error: action.payload};
 
     case 'CLEAR_ERROR':
-      return { ...state, error: null };
+      return {...state, error: null};
 
     default:
       return state;
@@ -119,7 +126,10 @@ function reducer(state: AuthState, action: Action): AuthState {
 interface AuthContextValue {
   state: AuthState;
   /** Đăng nhập bằng email / username + password */
-  loginCredentials: (emailOrUsername: string, password: string) => Promise<boolean>;
+  loginCredentials: (
+    emailOrUsername: string,
+    password: string,
+  ) => Promise<boolean>;
   /** Đăng nhập Google – nhận authorization code từ deep-link hoặc paste thủ công */
   loginWithCode: (code: string) => Promise<boolean>;
   /** Xử lý login qua token deep-link */
@@ -134,13 +144,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
+  children,
+}) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   // ── Hydrate: chạy một lần khi app khởi động ──────────────────────────────
   useEffect(() => {
     const hydrate = async () => {
-      dispatch({ type: 'HYDRATE_START' });
+      dispatch({type: 'HYDRATE_START'});
 
       try {
         await tokenManager.init();
@@ -150,14 +162,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (user && method) {
           dispatch({
             type: 'HYDRATE_DONE',
-            payload: { user, authMethod: method },
+            payload: {user, authMethod: method},
           });
         } else {
-          dispatch({ type: 'HYDRATE_DONE', payload: null });
+          dispatch({type: 'HYDRATE_DONE', payload: null});
         }
       } catch (err: any) {
         logger.error('[AuthStore] Hydrate error:', err?.message);
-        dispatch({ type: 'HYDRATE_DONE', payload: null });
+        dispatch({type: 'HYDRATE_DONE', payload: null});
       }
     };
 
@@ -167,12 +179,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ── loginCredentials ──────────────────────────────────────────────────────
   const loginCredentials = useCallback(
     async (emailOrUsername: string, _password: string): Promise<boolean> => {
-      dispatch({ type: 'CLEAR_ERROR' });
+      dispatch({type: 'CLEAR_ERROR'});
       // MOCK LOGIN: Bypassing backend service
       const mockUser: User = {
         id: 'mock-uuid-1234',
         username: emailOrUsername || 'admin',
-        email: emailOrUsername.includes('@') ? emailOrUsername : 'admin@example.com',
+        email: emailOrUsername.includes('@')
+          ? emailOrUsername
+          : 'admin@example.com',
         full_name: 'Admin User',
         role: 'super_admin',
       };
@@ -186,7 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       dispatch({
         type: 'LOGIN_SUCCESS',
-        payload: { user: mockUser, authMethod: 'credentials' },
+        payload: {user: mockUser, authMethod: 'credentials'},
       });
       return true;
     },
@@ -194,38 +208,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // ── handleDeepLinkToken ───────────────────────────────────────────────────
-  const handleDeepLinkToken = useCallback(async (token: string): Promise<boolean> => {
-    dispatch({ type: 'CLEAR_ERROR' });
-    try {
-      await tokenManager.updateTokens({
-        accessToken: token,
-      });
+  const handleDeepLinkToken = useCallback(
+    async (token: string): Promise<boolean> => {
+      dispatch({type: 'CLEAR_ERROR'});
+      try {
+        await tokenManager.updateTokens({
+          accessToken: token,
+        });
 
-      const { user } = await authService.getMe();
+        const {user} = await authService.getMe();
 
-      await tokenManager.setTokens({
-        accessToken: token,
-        refreshToken: '',
-        authMethod: 'google',
-        user: user,
-      });
+        await tokenManager.setTokens({
+          accessToken: token,
+          refreshToken: '',
+          authMethod: 'google',
+          user: user,
+        });
 
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { user, authMethod: 'google' },
-      });
-      return true;
-    } catch (err: any) {
-      logger.error('[AuthStore] Deep link token error:', err?.message);
-      dispatch({ type: 'SET_ERROR', payload: err.message });
-      await tokenManager.clearAll();
-      return false;
-    }
-  }, []);
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: {user, authMethod: 'google'},
+        });
+        return true;
+      } catch (err: any) {
+        logger.error('[AuthStore] Deep link token error:', err?.message);
+        dispatch({type: 'SET_ERROR', payload: err.message});
+        await tokenManager.clearAll();
+        return false;
+      }
+    },
+    [],
+  );
 
   // ── loginWithCode (Google OAuth) ──────────────────────────────────────────
   const loginWithCode = useCallback(async (_code: string): Promise<boolean> => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({type: 'CLEAR_ERROR'});
     // MOCK GOOGLE LOGIN
     const mockUser: User = {
       id: 'mock-google-789',
@@ -244,7 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     dispatch({
       type: 'LOGIN_SUCCESS',
-      payload: { user: mockUser, authMethod: 'google' },
+      payload: {user: mockUser, authMethod: 'google'},
     });
     return true;
   }, []);
@@ -252,13 +269,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ── logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(async (): Promise<void> => {
     await tokenManager.clearAll();
-    dispatch({ type: 'LOGOUT' });
+    dispatch({type: 'LOGOUT'});
   }, []);
 
-  const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
+  const clearError = useCallback(() => dispatch({type: 'CLEAR_ERROR'}), []);
 
   return (
-    <AuthContext.Provider value={{ state, loginCredentials, loginWithCode, handleDeepLinkToken, logout, clearError }}>
+    <AuthContext.Provider
+      value={{
+        state,
+        loginCredentials,
+        loginWithCode,
+        handleDeepLinkToken,
+        logout,
+        clearError,
+      }}>
       {children}
     </AuthContext.Provider>
   );

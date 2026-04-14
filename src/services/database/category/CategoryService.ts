@@ -1,549 +1,530 @@
-import {BaseService, FindOptions} from '../../BaseService';
+import {BaseService} from '../../BaseService';
+import {generateSequentialId} from '../../../utils';
+import {QueryBuilder} from '@dqcai/sqlite';
+import DatabaseManager from '../../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../../logger';
+import type {
+  TabType,
+  CategoryGroup,
+  CategoryItem,
+  Variant,
+} from '../../../screens/category/types';
 
-// ─── Types & Interfaces ──────────────────────────────────────────────────────
+const logger = createModuleLogger(AppModules.DATABASE);
 
-export type CategoryApplyTo = 'all' | 'pos' | 'hostel' | 'hotel' | 'booking';
-export type CategoryStatus = 'active' | 'inactive';
-export type SyncStatus = 'local' | 'synced' | 'conflict' | 'pending_sync';
+// ─── Base Services ────────────────────────────────────────────────────────────
 
-export interface Category {
-  id: string;
-  store_id: string;
-  parent_id: string | null;
-  category_code: string | null;
-  name: string;
-  icon: string | null;
-  color_code: string | null;
-  apply_to: CategoryApplyTo;
-  sort_order: number;
-  status: CategoryStatus;
-  sync_status: SyncStatus;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface CategoryWithChildren extends Category {
-  children?: CategoryWithChildren[];
-}
-
-export type CreateCategoryInput = {
-  store_id: string;
-  name: string;
-  parent_id?: string | null;
-  category_code?: string | null;
-  icon?: string | null;
-  color_code?: string | null;
-  apply_to?: CategoryApplyTo;
-  sort_order?: number;
-  status?: CategoryStatus;
-};
-
-export type UpdateCategoryInput = Partial<
-  Omit<CreateCategoryInput, 'store_id'>
-> & {
-  sync_status?: SyncStatus;
-  updated_at?: string;
-  deleted_at?: string | null;
-};
-
-export interface CategoryFindOptions extends FindOptions {
-  includeDeleted?: boolean;
-}
-
-// ─── CategoryService ─────────────────────────────────────────────────────────
-
-/**
- * CategoryService – ORM-style service cho bảng `categories`.
- *
- * Kế thừa BaseService (schemaName = 'mypos', tableName = 'categories').
- * Toàn bộ truy vấn sử dụng các method ORM của BaseService, không dùng raw SQL.
- *
- * @example
- * const svc = await CategoryService.getInstance();
- * const roots = await svc.findRootCategories('store-uuid');
- */
-export class CategoryService extends BaseService {
-  private static instance: CategoryService | null = null;
-
+class CategoryBaseService extends BaseService {
   constructor() {
     super('mypos', 'categories');
   }
+}
 
-  // ─── Singleton ─────────────────────────────────────────────────────────────
+class ProductBaseService extends BaseService {
+  constructor() {
+    super('mypos', 'products');
+  }
+}
+
+class VariantBaseService extends BaseService {
+  constructor() {
+    super('mypos', 'product_variants');
+  }
+}
+
+class PriceBaseService extends BaseService {
+  constructor() {
+    super('mypos', 'prices');
+  }
+}
+
+class UnitBaseService extends BaseService {
+  constructor() {
+    super('mypos', 'units');
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function applyToToTabs(applyTo: string | null): TabType[] {
+  if (!applyTo || applyTo === 'all') return ['selling', 'storage'];
+  if (applyTo === 'pos') return ['selling'];
+  return ['storage'];
+}
+
+function tabsToApplyTo(tabs: TabType[]): string {
+  const hasSelling = tabs.includes('selling');
+  const hasStorage = tabs.includes('storage');
+  if (hasSelling && hasStorage) return 'all';
+  if (hasSelling) return 'pos';
+  return 'hostel';
+}
+
+// ─── Service Class ────────────────────────────────────────────────────────────
+
+class CategoryServiceClass {
+  private categorySvc = new CategoryBaseService();
+  private productSvc = new ProductBaseService();
+  private variantSvc = new VariantBaseService();
+  private priceSvc = new PriceBaseService();
+  private unitSvc = new UnitBaseService();
+
+  private generateCategoryId = () =>
+    generateSequentialId(this.categorySvc, 'cat');
+  private generateProductId = () =>
+    generateSequentialId(this.productSvc, 'prod');
+  private generateVariantId = () =>
+    generateSequentialId(this.variantSvc, 'var');
+  private generatePriceId = () => generateSequentialId(this.priceSvc, 'price');
+
+  // ─── READ ──────────────────────────────────────────────────────────────────
 
   /**
-   * Lấy instance singleton đã được khởi tạo.
+   * Load toàn bộ categories + products + variants cho một store
    */
-  public static async getInstance(): Promise<CategoryService> {
-    if (!CategoryService.instance) {
-      CategoryService.instance = new CategoryService();
-      await CategoryService.instance.init();
-    }
-    return CategoryService.instance;
-  }
-
-  public static resetInstance(): void {
-    CategoryService.instance = null;
-  }
-
-  // ─── Helpers nội bộ ───────────────────────────────────────────────────────
-
-  private now(): string {
-    return new Date().toISOString();
-  }
-
-  /**
-   * Sinh ID cat1, cat2, cat3, ...
-   * Query toàn bộ store để tìm số thứ tự lớn nhất hiện có, rồi tăng lên 1.
-   */
-  private async generateId(storeId: string): Promise<string> {
-    const rows = (await this.findAll({store_id: storeId}, {
-      includeDeleted: true,
-    } as CategoryFindOptions)) as Category[];
-
-    const max = rows.reduce((acc, r) => {
-      const match = r.id.match(/^cat-(\d+)$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        return num > acc ? num : acc;
+  async loadAllGroups(storeId: string): Promise<CategoryGroup[]> {
+    try {
+      const db = DatabaseManager.get('mypos');
+      if (!db) {
+        logger.error('[CategoryService] DB not initialized');
+        return [];
       }
-      return acc;
-    }, 0);
 
-    return `cat-${max + 1}`;
+      // 1. Categories (root — parent_id IS NULL)
+      let groupRows: any[] = [];
+      try {
+        groupRows = await QueryBuilder.table('categories', db.getInternalDAO())
+          .select(['id', 'name', 'apply_to', 'sort_order', 'store_id'])
+          .where('store_id', storeId)
+          .where('status', 'active')
+          .whereNull('parent_id')
+          .whereNull('deleted_at')
+          .orderBy('sort_order', 'ASC')
+          .orderBy('name', 'ASC')
+          .get();
+      } catch (err) {
+        logger.error('[CategoryService] Error fetching categories:', err);
+      }
+
+      if (!groupRows || groupRows.length === 0) return [];
+
+      // 2. Products
+      let productRows: any[] = [];
+      try {
+        productRows = await QueryBuilder.table('products', db.getInternalDAO())
+          .select(['id', 'name', 'category_id', 'store_id', 'status'])
+          .where('store_id', storeId)
+          .where('status', 'active')
+          .whereNull('deleted_at')
+          .orderBy('sort_order', 'ASC')
+          .get();
+      } catch (err) {
+        logger.error('[CategoryService] Error fetching products:', err);
+      }
+
+      // 3. Variants join prices + units
+      let variantRows: any[] = [];
+      try {
+        variantRows = await QueryBuilder.table(
+          'product_variants',
+          db.getInternalDAO(),
+        )
+          .select([
+            'product_variants.id',
+            'product_variants.product_id',
+            'product_variants.name',
+            'product_variants.image_url',
+            'product_variants.status',
+            'prices.price',
+            'units.name AS unit_name',
+          ])
+          .leftJoin('prices', 'product_variants.id = prices.variant_id')
+          .leftJoin('units', 'prices.unit_id = units.id')
+          .where('product_variants.status', 'active')
+          .whereNull('product_variants.deleted_at')
+          .orderBy('product_variants.sort_order', 'ASC')
+          .get();
+      } catch (err) {
+        logger.error('[CategoryService] Error fetching variants:', err);
+      }
+
+      // 4. Assemble
+      const variantsByProduct = new Map<string, Variant[]>();
+      for (const v of variantRows) {
+        if (!variantsByProduct.has(v.product_id)) {
+          variantsByProduct.set(v.product_id, []);
+        }
+        variantsByProduct.get(v.product_id)!.push({
+          id: v.id,
+          name: v.name ?? 'Chưa có tên',
+          price: v.price ?? 0,
+          unit: v.unit_name ?? '',
+          imageUri: v.image_url ?? undefined,
+        });
+      }
+
+      const productsByCategory = new Map<string, typeof productRows>();
+      for (const p of productRows) {
+        if (!productsByCategory.has(p.category_id)) {
+          productsByCategory.set(p.category_id, []);
+        }
+        productsByCategory.get(p.category_id)!.push(p);
+      }
+
+      return groupRows.map(
+        (group): CategoryGroup => ({
+          id: group.id,
+          label: group.name ?? 'Chưa có tên',
+          tab: applyToToTabs(group.apply_to),
+          items: (productsByCategory.get(group.id) ?? []).map(
+            (prod): CategoryItem => ({
+              id: prod.id,
+              name: prod.name ?? 'Chưa có tên',
+              variants: variantsByProduct.get(prod.id) ?? [],
+            }),
+          ),
+        }),
+      );
+    } catch (err) {
+      logger.error('[CategoryService] loadAllGroups error:', err);
+      return [];
+    }
   }
 
   /**
-   * Lọc bỏ các record đã soft-delete (deleted_at != null).
-   * Cần thiết vì BaseService không hỗ trợ IS NULL trong where clause.
+   * Lọc danh sách CategoryGroup theo từ khóa tìm kiếm.
+   *
+   * - Nếu query khớp tên group → giữ toàn bộ items của group đó.
+   * - Nếu query khớp tên item  → chỉ giữ items khớp (group được giữ lại).
+   * - Nếu query khớp tên variant → giữ item chứa variant đó.
+   * - Trả về mảng rỗng nếu query là chuỗi rỗng sau khi trim (caller nên hiển thị data gốc).
+   *
+   * @param groups  Kết quả từ loadAllGroups (đã được memoize ở UI layer)
+   * @param query   Từ khóa tìm kiếm (không phân biệt hoa thường)
    */
-  private excludeDeleted(rows: Category[]): Category[] {
-    return rows.filter(r => !r.deleted_at);
+  searchGroups(groups: CategoryGroup[], query: string): CategoryGroup[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return groups;
+
+    const result: CategoryGroup[] = [];
+
+    for (const group of groups) {
+      const groupMatch = group.label.toLowerCase().includes(q);
+
+      if (groupMatch) {
+        // Giữ nguyên toàn bộ group
+        result.push(group);
+        continue;
+      }
+
+      // Lọc items
+      const matchedItems = group.items.filter(item => {
+        if (item.name.toLowerCase().includes(q)) return true;
+        // Kiểm tra variant names
+        return item.variants.some(v => v.name.toLowerCase().includes(q));
+      });
+
+      if (matchedItems.length > 0) {
+        result.push({...group, items: matchedItems});
+      }
+    }
+
+    return result;
   }
 
-  // ─── CREATE ───────────────────────────────────────────────────────────────
-
   /**
-   * Tự động sinh UUID, set timestamp, sync_status = 'local'.
+   * Load danh sách tên đơn vị tính từ bảng units
    */
-  async createCategory(input: CreateCategoryInput): Promise<Category> {
-    const now = this.now();
-    const data: Category = {
-      id: await this.generateId(input.store_id),
-      store_id: input.store_id,
-      parent_id: input.parent_id ?? null,
-      category_code: input.category_code ?? null,
-      name: input.name,
-      icon: input.icon ?? null,
-      color_code: input.color_code ?? null,
-      apply_to: input.apply_to ?? 'all',
-      sort_order: input.sort_order ?? 0,
-      status: input.status ?? 'active',
+  async loadUnits(storeId: string): Promise<string[]> {
+    try {
+      const db = DatabaseManager.get('mypos');
+      if (!db) return [];
+
+      const rows = await QueryBuilder.table('units', db.getInternalDAO())
+        .select(['name'])
+        .where('store_id', storeId)
+        .where('status', 'active')
+        .whereNull('deleted_at')
+        .orderBy('sort_order', 'ASC')
+        .get();
+
+      return rows.map(r => r.name as string).filter(Boolean);
+    } catch (err) {
+      logger.error('[CategoryService] loadUnits error:', err);
+      return [];
+    }
+  }
+
+  // ─── CATEGORY CRUD ─────────────────────────────────────────────────────────
+
+  async createGroup(
+    storeId: string,
+    name: string,
+    tabs: TabType[],
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const id = await this.generateCategoryId();
+
+    await this.categorySvc.create({
+      id,
+      store_id: storeId,
+      parent_id: null,
+      category_code: null,
+      name: name.trim().toUpperCase(),
+      icon: null,
+      color_code: null,
+      apply_to: tabsToApplyTo(tabs),
+      sort_order: 999,
+      status: 'active',
       sync_status: 'local',
       created_at: now,
       updated_at: now,
       deleted_at: null,
-    };
-    return this.create(data) as Promise<Category>;
+    });
   }
 
-  /**
-   * Bulk tạo nhiều danh mục trong một transaction.
-   */
-  async bulkCreateCategories(
-    inputs: CreateCategoryInput[],
-  ): Promise<Category[]> {
-    const now = this.now();
-    const dataArray: Category[] = [];
+  async updateGroup(
+    groupId: string,
+    name: string,
+    tabs: TabType[],
+  ): Promise<void> {
+    const now = new Date().toISOString();
 
-    // Sinh ID tuần tự, tránh race condition
-    for (const input of inputs) {
-      dataArray.push({
-        id: await this.generateId(input.store_id),
-        store_id: input.store_id,
-        parent_id: input.parent_id ?? null,
-        category_code: input.category_code ?? null,
-        name: input.name,
-        icon: input.icon ?? null,
-        color_code: input.color_code ?? null,
-        apply_to: input.apply_to ?? 'all',
-        sort_order: input.sort_order ?? 0,
-        status: input.status ?? 'active',
+    await this.categorySvc.update(groupId, {
+      name: name.trim().toUpperCase(),
+      apply_to: tabsToApplyTo(tabs),
+      sync_status: 'local',
+      updated_at: now,
+    });
+  }
+
+  async softDeleteGroup(groupId: string): Promise<void> {
+    const now = new Date().toISOString();
+
+    // Cascade soft delete products thuộc group
+    const products = await this.productSvc.findAll({category_id: groupId});
+    for (const p of products) {
+      await this.softDeleteProduct(p.id);
+    }
+
+    await this.categorySvc.update(groupId, {
+      status: 'inactive',
+      sync_status: 'local',
+      deleted_at: now,
+      updated_at: now,
+    });
+  }
+
+  // ─── PRODUCT CRUD ───────────────────────────────────────────────────────────
+
+  async createProduct(
+    storeId: string,
+    categoryId: string,
+    name: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const id = await this.generateProductId();
+
+    await this.productSvc.create({
+      id,
+      store_id: storeId,
+      category_id: categoryId,
+      unit_id: null,
+      product_code: null,
+      barcode: null,
+      name: name.trim(),
+      short_name: null,
+      description: null,
+      image_url: null,
+      product_type: 'product',
+      pricing_type: 'fixed',
+      is_active_pos: true,
+      is_trackable: false,
+      tax_rate: 0,
+      sort_order: 999,
+      metadata: null,
+      status: 'active',
+      sync_status: 'local',
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    });
+  }
+
+  async softDeleteProduct(productId: string): Promise<void> {
+    const now = new Date().toISOString();
+
+    // Cascade soft delete variants thuộc product
+    const variants = await this.variantSvc.findAll({product_id: productId});
+    for (const v of variants) {
+      await this.softDeleteVariant(v.id);
+    }
+
+    await this.productSvc.update(productId, {
+      status: 'inactive',
+      sync_status: 'local',
+      deleted_at: now,
+      updated_at: now,
+    });
+  }
+
+  // ─── VARIANT CRUD ───────────────────────────────────────────────────────────
+
+  /**
+   * Tìm unit_id từ tên đơn vị trong DB
+   */
+  private async resolveUnitId(
+    storeId: string,
+    unitName: string,
+  ): Promise<string | null> {
+    try {
+      const row = await this.unitSvc.findFirst({
+        store_id: storeId,
+        name: unitName,
+        status: 'active',
+      });
+      return row?.id ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async createVariant(
+    storeId: string,
+    productId: string,
+    name: string,
+    price: number,
+    unitName: string,
+    imageUrl?: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const today = now.split('T')[0]; // YYYY-MM-DD
+
+    const [variantId, priceId, unitId] = await Promise.all([
+      this.generateVariantId(),
+      this.generatePriceId(),
+      this.resolveUnitId(storeId, unitName),
+    ]);
+
+    // 1. Insert variant
+    await this.variantSvc.create({
+      id: variantId,
+      store_id: storeId,
+      product_id: productId,
+      variant_code: null,
+      name: name.trim(),
+      barcode: null,
+      attributes: null,
+      image_url: imageUrl ?? null,
+      is_default: false,
+      sort_order: 999,
+      status: 'active',
+      sync_status: 'local',
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    });
+
+    // 2. Insert price
+    await this.priceSvc.create({
+      id: priceId,
+      store_id: storeId,
+      variant_id: variantId,
+      unit_id: unitId,
+      price_list_name: 'default',
+      price,
+      cost_price: 0,
+      effective_from: today,
+      effective_to: null,
+      sort_order: 0,
+      status: 'active',
+      sync_status: 'local',
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    });
+  }
+
+  async updateVariant(
+    storeId: string,
+    variantId: string,
+    name: string,
+    price: number,
+    unitName: string,
+    imageUrl?: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const today = now.split('T')[0];
+
+    const unitId = await this.resolveUnitId(storeId, unitName);
+
+    // 1. Update variant
+    await this.variantSvc.update(variantId, {
+      name: name.trim(),
+      image_url: imageUrl ?? null,
+      sync_status: 'local',
+      updated_at: now,
+    });
+
+    // 2. Tìm price record hiện tại, update hoặc tạo mới
+    const existingPrice = await this.priceSvc.findFirst({
+      variant_id: variantId,
+      price_list_name: 'default',
+      status: 'active',
+    });
+
+    if (existingPrice) {
+      await this.priceSvc.update(existingPrice.id, {
+        price,
+        unit_id: unitId,
+        effective_from: today,
+        sync_status: 'local',
+        updated_at: now,
+      });
+    } else {
+      const priceId = await this.generatePriceId();
+      await this.priceSvc.create({
+        id: priceId,
+        store_id: storeId,
+        variant_id: variantId,
+        unit_id: unitId,
+        price_list_name: 'default',
+        price,
+        cost_price: 0,
+        effective_from: today,
+        effective_to: null,
+        sort_order: 0,
+        status: 'active',
         sync_status: 'local',
         created_at: now,
         updated_at: now,
         deleted_at: null,
       });
     }
-
-    return this.bulkCreate(dataArray) as Promise<Category[]>;
   }
 
-  // ─── READ ─────────────────────────────────────────────────────────────────
+  async softDeleteVariant(variantId: string): Promise<void> {
+    const now = new Date().toISOString();
 
-  /**
-   * Lấy tất cả danh mục của một store.
-   * Mặc định loại trừ soft-deleted, trừ khi includeDeleted = true.
-   */
-  async findByStore(
-    storeId: string,
-    options: CategoryFindOptions = {},
-  ): Promise<Category[]> {
-    const rows = (await this.findAll(
-      {store_id: storeId},
-      options,
-    )) as Category[];
-    return options.includeDeleted ? rows : this.excludeDeleted(rows);
-  }
-
-  /**
-   * Lấy danh mục theo ID. Trả null nếu không tồn tại hoặc đã soft-delete.
-   */
-  async findCategoryById(id: string): Promise<Category | null> {
-    const result = (await this.findById(id)) as Category | null;
-    if (!result || result.deleted_at) return null;
-    return result;
-  }
-
-  /**
-   * Tìm danh mục theo category_code trong store.
-   */
-  async findByCode(
-    storeId: string,
-    categoryCode: string,
-  ): Promise<Category | null> {
-    const result = (await this.findFirst({
-      store_id: storeId,
-      category_code: categoryCode,
-    })) as Category | null;
-    if (!result || result.deleted_at) return null;
-    return result;
-  }
-
-  /**
-   * Lấy tất cả danh mục gốc (parent_id = null) của store.
-   * BaseService không hỗ trợ IS NULL trong where, filter ở tầng JS.
-   */
-  async findRootCategories(
-    storeId: string,
-    options: CategoryFindOptions = {},
-  ): Promise<Category[]> {
-    const rows = await this.findByStore(storeId, options);
-    return rows.filter(r => !r.parent_id);
-  }
-
-  /**
-   * Lấy danh mục con trực tiếp (1 cấp) của một danh mục cha.
-   */
-  async findChildren(
-    parentId: string,
-    storeId: string,
-    options: CategoryFindOptions = {},
-  ): Promise<Category[]> {
-    const rows = (await this.findAll(
-      {store_id: storeId, parent_id: parentId},
-      options,
-    )) as Category[];
-    return options.includeDeleted ? rows : this.excludeDeleted(rows);
-  }
-
-  /**
-   * Lấy toàn bộ cây danh mục của store (đệ quy ở tầng JS).
-   * Chỉ query 1 lần, xây dựng cây trong bộ nhớ.
-   */
-  async findCategoryTree(storeId: string): Promise<CategoryWithChildren[]> {
-    const all = await this.findByStore(storeId, {
-      orderBy: [{name: 'sort_order', order: 'ASC'}],
-    });
-
-    const map = new Map<string, CategoryWithChildren>();
-    all.forEach(c => map.set(c.id, {...c, children: []}));
-
-    const roots: CategoryWithChildren[] = [];
-    map.forEach(node => {
-      if (node.parent_id && map.has(node.parent_id)) {
-        map.get(node.parent_id)!.children!.push(node);
-      } else {
-        roots.push(node);
-      }
-    });
-
-    return roots;
-  }
-
-  /**
-   * Lấy danh sách phẳng tất cả hậu duệ (mọi cấp) của một danh mục.
-   */
-  async findDescendants(
-    categoryId: string,
-    storeId: string,
-  ): Promise<Category[]> {
-    const tree = await this.findCategoryTree(storeId);
-    const results: Category[] = [];
-
-    const collect = (nodes: CategoryWithChildren[]) => {
-      for (const node of nodes) {
-        if (node.id === categoryId) {
-          this.collectAllNodes(node.children ?? [], results);
-          return;
-        }
-        if (node.children?.length) collect(node.children);
-      }
-    };
-    collect(tree);
-    return results;
-  }
-
-  private collectAllNodes(
-    nodes: CategoryWithChildren[],
-    acc: Category[],
-  ): void {
-    for (const node of nodes) {
-      const {children, ...category} = node;
-      acc.push(category as Category);
-      if (children?.length) this.collectAllNodes(children, acc);
-    }
-  }
-
-  /**
-   * Lấy danh mục theo apply_to trong store.
-   */
-  async findByApplyTo(
-    storeId: string,
-    applyTo: CategoryApplyTo,
-    options: CategoryFindOptions = {},
-  ): Promise<Category[]> {
-    const rows = (await this.findAll(
-      {store_id: storeId, apply_to: applyTo},
-      options,
-    )) as Category[];
-    return options.includeDeleted ? rows : this.excludeDeleted(rows);
-  }
-
-  /**
-   * Lấy danh mục theo status trong store.
-   */
-  async findByStatus(
-    storeId: string,
-    status: CategoryStatus,
-    options: CategoryFindOptions = {},
-  ): Promise<Category[]> {
-    const rows = (await this.findAll(
-      {store_id: storeId, status},
-      options,
-    )) as Category[];
-    return options.includeDeleted ? rows : this.excludeDeleted(rows);
-  }
-
-  /**
-   * Lấy danh mục theo sync_status – phục vụ quá trình đồng bộ.
-   */
-  async findBySyncStatus(
-    storeId: string,
-    syncStatus: SyncStatus,
-  ): Promise<Category[]> {
-    const rows = (await this.findAll({
-      store_id: storeId,
-      sync_status: syncStatus,
-    })) as Category[];
-    return this.excludeDeleted(rows);
-  }
-
-  /**
-   * Tìm kiếm danh mục theo tên (filter JS, không phân biệt hoa thường).
-   */
-  async searchByName(storeId: string, keyword: string): Promise<Category[]> {
-    const rows = await this.findByStore(storeId);
-    const lower = keyword.toLowerCase();
-    return rows.filter(r => r.name.toLowerCase().includes(lower));
-  }
-
-  /**
-   * Lấy danh mục hiển thị trên POS:
-   * apply_to IN ('all', 'pos') AND status = 'active'.
-   * Query 2 nhóm song song rồi gộp + dedup ở JS.
-   */
-  async findActiveForPOS(storeId: string): Promise<Category[]> {
-    const [allGroup, posGroup] = await Promise.all([
-      this.findAll(
-        {store_id: storeId, apply_to: 'all', status: 'active'},
-        {orderBy: [{name: 'sort_order', order: 'ASC'}]},
-      ) as Promise<Category[]>,
-      this.findAll(
-        {store_id: storeId, apply_to: 'pos', status: 'active'},
-        {orderBy: [{name: 'sort_order', order: 'ASC'}]},
-      ) as Promise<Category[]>,
-    ]);
-
-    const seen = new Set<string>();
-    return [...allGroup, ...posGroup].filter(r => {
-      if (r.deleted_at || seen.has(r.id)) return false;
-      seen.add(r.id);
-      return true;
-    });
-  }
-
-  /**
-   * Đếm số danh mục con trực tiếp của một category.
-   */
-  async countChildren(parentId: string, storeId: string): Promise<number> {
-    const children = await this.findChildren(parentId, storeId);
-    return children.length;
-  }
-
-  /**
-   * Số lượng danh mục active trong store.
-   */
-  async countActive(storeId: string): Promise<number> {
-    return this.count({store_id: storeId, status: 'active'});
-  }
-
-  /**
-   * Kiểm tra category_code có bị trùng trong store chưa.
-   * excludeId dùng khi update để loại trừ chính record đó.
-   */
-  async isCodeDuplicated(
-    storeId: string,
-    categoryCode: string,
-    excludeId?: string,
-  ): Promise<boolean> {
-    const rows = (await this.findAll({
-      store_id: storeId,
-      category_code: categoryCode,
-    })) as Category[];
-
-    return this.excludeDeleted(rows).some(r => r.id !== excludeId);
-  }
-
-  // ─── UPDATE ───────────────────────────────────────────────────────────────
-
-  /**
-   * Cập nhật thông tin danh mục.
-   * Tự động set updated_at và sync_status = 'pending_sync'.
-   */
-  async updateCategory(
-    id: string,
-    input: UpdateCategoryInput,
-  ): Promise<Category> {
-    const data: UpdateCategoryInput = {
-      ...input,
-      updated_at: this.now(),
-      sync_status: input.sync_status ?? 'pending_sync',
-    };
-    return this.update(id, data) as Promise<Category>;
-  }
-
-  /**
-   * Đổi trạng thái active / inactive.
-   */
-  async setStatus(id: string, status: CategoryStatus): Promise<Category> {
-    return this.updateCategory(id, {status});
-  }
-
-  /**
-   * Đánh dấu đã sync thành công.
-   */
-  async markSynced(id: string): Promise<Category> {
-    return this.updateCategory(id, {sync_status: 'synced'});
-  }
-
-  /**
-   * Cập nhật sort_order hàng loạt trong một transaction.
-   */
-  async reorder(
-    orders: Array<{id: string; sort_order: number}>,
-  ): Promise<void> {
-    await this.executeTransaction(async () => {
-      for (const {id, sort_order} of orders) {
-        await this.update(id, {
-          sort_order,
-          updated_at: this.now(),
-          sync_status: 'pending_sync',
-        });
-      }
-    });
-  }
-
-  /**
-   * Chuyển category sang danh mục cha mới (null = lên gốc).
-   */
-  async moveCategory(
-    id: string,
-    newParentId: string | null,
-  ): Promise<Category> {
-    return this.updateCategory(id, {parent_id: newParentId});
-  }
-
-  // ─── DELETE ───────────────────────────────────────────────────────────────
-
-  /**
-   * Soft delete: set deleted_at, status = 'inactive'.
-   */
-  async softDelete(id: string): Promise<Category> {
-    return this.updateCategory(id, {
-      deleted_at: this.now(),
-      status: 'inactive',
-    });
-  }
-
-  /**
-   * Hard delete: xoá vĩnh viễn khỏi DB.
-   */
-  async hardDelete(id: string): Promise<boolean> {
-    return this.delete(id);
-  }
-
-  /**
-   * Soft delete danh mục cha và toàn bộ cây con (đệ quy) trong một transaction.
-   */
-  async softDeleteWithChildren(id: string, storeId: string): Promise<void> {
-    const descendants = await this.findDescendants(id, storeId);
-    const deletedAt = this.now();
-
-    await this.executeTransaction(async () => {
-      for (const child of descendants) {
-        await this.update(child.id, {
-          deleted_at: deletedAt,
-          status: 'inactive',
-          updated_at: deletedAt,
-          sync_status: 'pending_sync',
-        });
-      }
-      await this.update(id, {
-        deleted_at: deletedAt,
+    // Soft delete prices liên quan
+    const prices = await this.priceSvc.findAll({variant_id: variantId});
+    for (const p of prices) {
+      await this.priceSvc.update(p.id, {
         status: 'inactive',
-        updated_at: deletedAt,
-        sync_status: 'pending_sync',
+        sync_status: 'local',
+        deleted_at: now,
+        updated_at: now,
       });
-    });
-  }
-
-  // ─── UPSERT / SYNC ────────────────────────────────────────────────────────
-
-  /**
-   * Upsert: update nếu đã tồn tại theo id, create nếu chưa có.
-   * Dùng khi import / đồng bộ dữ liệu từ server.
-   */
-  async upsert(data: Category): Promise<Category> {
-    const existing = await this.findCategoryById(data.id);
-    if (existing) {
-      const {id, created_at, store_id, ...rest} = data;
-      return this.updateCategory(id, rest as UpdateCategoryInput);
     }
-    return this.create(data) as Promise<Category>;
-  }
 
-  /**
-   * Bulk upsert trong một transaction – dùng cho sync từ server xuống.
-   */
-  async bulkUpsert(rows: Category[]): Promise<void> {
-    await this.executeTransaction(async () => {
-      for (const row of rows) {
-        await this.upsert(row);
-      }
+    // Soft delete variant
+    await this.variantSvc.update(variantId, {
+      status: 'inactive',
+      sync_status: 'local',
+      deleted_at: now,
+      updated_at: now,
     });
   }
 }
 
-export default CategoryService;
+export const CategoryService = new CategoryServiceClass();

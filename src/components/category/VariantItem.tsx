@@ -6,13 +6,57 @@ import type {Variant} from '../../screens/category/types';
 interface Props {
   variant: Variant;
   onEdit: () => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (variantId: string) => void;
 }
 
-const VariantItem: React.FC<Props> = ({variant, onEdit}) => (
+const Checkbox = ({checked}: {checked: boolean}) => (
+  <View
+    style={{
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: checked ? '#3b82f6' : '#d1d5db',
+      backgroundColor: checked ? '#3b82f6' : '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 10,
+    }}>
+    {checked && <Icon name="check" size={14} color="#fff" />}
+  </View>
+);
+
+const VariantItem: React.FC<Props> = ({
+  variant,
+  onEdit,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+}) => (
   <TouchableOpacity
     className="flex-row items-center bg-gray-50 rounded-xl px-3 py-3"
-    onPress={onEdit}
-    activeOpacity={0.7}>
+    onPress={() => {
+      if (selectionMode) {
+        onToggleSelect?.(variant.id);
+      } else {
+        onEdit();
+      }
+    }}
+    activeOpacity={0.7}
+    style={{
+      borderWidth: isSelected ? 1.5 : 0,
+      borderColor: isSelected ? '#93c5fd' : 'transparent',
+      backgroundColor: isSelected ? '#eff6ff' : '#f9fafb',
+    }}>
+    {/* Checkbox khi selection mode */}
+    {selectionMode && (
+      <TouchableOpacity onPress={() => onToggleSelect?.(variant.id)}>
+        <Checkbox checked={isSelected} />
+      </TouchableOpacity>
+    )}
+
     {/* Thumbnail */}
     <View
       style={{

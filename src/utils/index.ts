@@ -1,10 +1,21 @@
-/**
- * Tạo UID ngẫu nhiên với prefix và timestamp
- * @param prefix Tiền tố UID (Vd: CUST, BILL, RES...)
- * @returns Chuỗi UID (Vd: CUST-1678234567-abcd)
- */
-export const generateUID = (prefix: string = ''): string => {
-  const timestamp = Date.now().toString(36);
-  const randomStr = Math.random().toString(36).substring(2, 5);
-  return `${prefix ? prefix + '-' : ''}${timestamp}-${randomStr}`.toUpperCase();
+import {BaseService} from '../services/BaseService';
+
+export const generateSequentialId = async (
+  svc: BaseService,
+  prefix: string,
+  offset: number = 0,
+): Promise<string> => {
+  const rows = await svc.findAll();
+
+  let max = 0;
+  for (const row of rows) {
+    const id: string = row.id;
+    const match = id.match(new RegExp(`^${prefix}-(\\d+)$`));
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > max) max = num;
+    }
+  }
+
+  return `${prefix}-${String(max + 1 + offset).padStart(3, '0')}`;
 };

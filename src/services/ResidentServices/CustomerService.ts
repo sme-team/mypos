@@ -1,9 +1,9 @@
-import { QueryBuilder } from '@dqcai/sqlite';
+import {QueryBuilder} from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
-import { createModuleLogger, AppModules } from '../../logger';
+import {createModuleLogger, AppModules} from '../../logger';
 
-import { BaseService } from '../BaseService';
-import { generateUID } from '../../utils';
+import {BaseService} from '../BaseService';
+import {generateSequentialId} from '../../utils';
 
 // ─────────────────────────────────────────────
 //  Interfaces
@@ -14,7 +14,7 @@ export interface Customer {
   store_id: string;
   customer_code?: string;
   full_name: string;
-  id_number?: string;             // CCCD / CMND / Passport
+  id_number?: string; // CCCD / CMND / Passport
   date_of_birth?: string;
   gender?: 'male' | 'female' | 'other';
   phone?: string;
@@ -25,7 +25,7 @@ export interface Customer {
   loyalty_points?: number;
   total_spent?: number;
   notes?: string;
-  metadata?: string;              // JSON string
+  metadata?: string; // JSON string
   status?: 'active' | 'inactive' | 'blacklisted';
   sync_status?: 'local' | 'synced' | 'conflict' | 'pending_sync';
   created_at?: string;
@@ -50,14 +50,13 @@ export interface Resident {
   approved_by?: string;
   approved_date?: string;
   note?: string;
-  status?: number;                // 1 = active, 0 = inactive
+  status?: number; // 1 = active, 0 = inactive
   sort_order?: number;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string;
 }
 
-// ─────────────────────────────────────────────
 //  CustomerService — kế thừa BaseService
 // ─────────────────────────────────────────────
 
@@ -93,7 +92,7 @@ export class CustomerServiceClass extends BaseService {
   // ── CRUD helpers ──────────────────────────────
 
   async create(data: Customer): Promise<Customer> {
-    const id = generateUID('CUST');
+    const id = await generateSequentialId(this, 'cust');
     const now = new Date().toISOString();
     return super.create({
       ...data,
@@ -123,14 +122,14 @@ export class CustomerServiceClass extends BaseService {
    * Màn hình 2A – Chọn khách hàng cũ (dropdown / search)
    * Trả về: id, full_name, phone, id_number
    */
-  async getCustomerPickerList(storeId: string): Promise<
-    Pick<Customer, 'id' | 'full_name' | 'phone' | 'id_number'>[]
-  > {
+  async getCustomerPickerList(
+    storeId: string,
+  ): Promise<Pick<Customer, 'id' | 'full_name' | 'phone' | 'id_number'>[]> {
     const rows = await this.findAll(
-      { store_id: storeId, status: 'active' },
+      {store_id: storeId, status: 'active'},
       {
         columns: ['id', 'full_name', 'phone', 'id_number'],
-        orderBy: [{ name: 'full_name', order: 'ASC' }],
+        orderBy: [{name: 'full_name', order: 'ASC'}],
       },
     );
     return rows as Pick<Customer, 'id' | 'full_name' | 'phone' | 'id_number'>[];
@@ -152,8 +151,8 @@ export class CustomerServiceClass extends BaseService {
   ): Promise<Pick<Customer, 'id' | 'full_name' | 'phone' | 'id_number'>[]> {
     // Dùng findAll rồi filter phía JS vì BaseService chưa hỗ trợ LIKE
     const all = await this.findAll(
-      { store_id: storeId, status: 'active' },
-      { columns: ['id', 'full_name', 'phone', 'id_number'] },
+      {store_id: storeId, status: 'active'},
+      {columns: ['id', 'full_name', 'phone', 'id_number']},
     );
     const kw = keyword.toLowerCase();
     return all.filter(
@@ -175,7 +174,7 @@ export class CustomerServiceClass extends BaseService {
       Resident,
       'id_card_front_url' | 'id_card_back_url' | 'portrait_url'
     >,
-  ): Promise<{ customerId: string }> {
+  ): Promise<{customerId: string}> {
     return this.executeTransaction(async () => {
       // 1. Tạo customer
       const customer = await this.create({
@@ -196,7 +195,7 @@ export class CustomerServiceClass extends BaseService {
         status: 1,
       });
 
-      return { customerId: customer.id! };
+      return {customerId: customer.id!};
     });
   }
 
@@ -221,7 +220,7 @@ export class ResidentServiceClass extends BaseService {
   }
 
   async create(data: Resident): Promise<Resident> {
-    const id = generateUID('RES');
+    const id = await generateSequentialId(this, 'res');
     const now = new Date().toISOString();
     return super.create({
       ...data,
@@ -242,7 +241,7 @@ export class ResidentServiceClass extends BaseService {
 
   /** Lấy thông tin cư dân theo customer_id */
   async getByCustomerId(customerId: string): Promise<Resident | null> {
-    const rows = await this.findAll({ customer_id: customerId, status: 1 });
+    const rows = await this.findAll({customer_id: customerId, status: 1});
     return rows.length > 0 ? rows[0] : null;
   }
 
