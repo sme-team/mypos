@@ -1,1 +1,0 @@
-../../../Target Support Files/RNBootSplash/RNBootSplash-umbrella.h

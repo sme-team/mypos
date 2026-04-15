@@ -43,7 +43,7 @@ export const TEMPLATE_OPTIONS: Record<string, TemplateOption[]> = {
 
 class BillExportService extends BaseService {
   constructor() {
-    super('mypos', 'bills');
+    super('pos', 'bills');
   }
 
   async getBillsInRange(
@@ -84,7 +84,7 @@ class BillExportService extends BaseService {
 
 class BillDetailExportService extends BaseService {
   constructor() {
-    super('mypos', 'bill_details');
+    super('pos', 'bill_details');
   }
 
   async getDetailsByBillIds(billIds: string[]): Promise<any[]> {
@@ -125,7 +125,7 @@ class BillDetailExportService extends BaseService {
 
 class PaymentExportService extends BaseService {
   constructor() {
-    super('mypos', 'payments');
+    super('pos', 'payments');
   }
 
   async getPaymentsByBillIds(billIds: string[]): Promise<any[]> {
@@ -165,7 +165,7 @@ class PaymentExportService extends BaseService {
 
 class ContractExportService extends BaseService {
   constructor() {
-    super('mypos', 'contracts');
+    super('pos', 'contracts');
   }
 
   async getContractsInRange(
@@ -206,7 +206,7 @@ class ContractExportService extends BaseService {
 
 class CustomerExportService extends BaseService {
   constructor() {
-    super('mypos', 'customers');
+    super('pos', 'customers');
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
@@ -222,7 +222,7 @@ class CustomerExportService extends BaseService {
 
 class ProductExportService extends BaseService {
   constructor() {
-    super('mypos', 'products');
+    super('pos', 'products');
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
@@ -238,7 +238,7 @@ class ProductExportService extends BaseService {
 
 class ProductVariantExportService extends BaseService {
   constructor() {
-    super('mypos', 'product_variants');
+    super('pos', 'product_variants');
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
@@ -254,7 +254,7 @@ class ProductVariantExportService extends BaseService {
 
 class UnitExportService extends BaseService {
   constructor() {
-    super('mypos', 'units');
+    super('pos', 'units');
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
@@ -270,7 +270,7 @@ class UnitExportService extends BaseService {
 
 class ReceivableExportService extends BaseService {
   constructor() {
-    super('mypos', 'receivables');
+    super('pos', 'receivables');
   }
 
   async getReceivablesInRange(

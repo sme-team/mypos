@@ -45,7 +45,7 @@ const BILL_TYPE_TO_APPLY_TO: Record<string, string> = {
 
 class BillService extends BaseService {
   constructor() {
-    super('mypos', 'bills');
+    super('pos', 'bills');
   }
 
   async getBillsInRange(
@@ -89,7 +89,7 @@ class BillService extends BaseService {
 
 class BillDetailService extends BaseService {
   constructor() {
-    super('mypos', 'bill_details');
+    super('pos', 'bill_details');
   }
 
   async getDetailsByBillIds(billIds: string[]): Promise<any[]> {
@@ -117,7 +117,7 @@ class BillDetailService extends BaseService {
 
 class ProductService extends BaseService {
   constructor() {
-    super('mypos', 'products');
+    super('pos', 'products');
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
@@ -404,7 +404,7 @@ class ReportServiceClass {
     ];
 
     try {
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (!db) return [];
 
       const rows = await QueryBuilder.table('categories', db.getInternalDAO())

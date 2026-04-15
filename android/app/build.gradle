@@ -95,6 +95,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            matchingFallbacks = ['release', 'debug']
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -102,6 +103,7 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            matchingFallbacks = ['release', 'debug']
         }
     }
 }
@@ -113,9 +115,13 @@ dependencies {
     implementation project(":react-native-bootsplash")
     implementation project(":react-native-randombytes")
     implementation project(":react-native-safe-area-context")
-    implementation project(":react-native-sqlite-storage")
+
     implementation project(":react-native-vector-icons")
     implementation project(':react-native-image-picker')
+    implementation project(':react-native-vision-camera')
+    implementation project(':@react-native-ml-kit_text-recognition')
+    implementation project(':react-native-sqlite-storage')
+    implementation project(':react-native-worklets-core')
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

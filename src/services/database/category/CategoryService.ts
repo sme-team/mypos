@@ -16,31 +16,31 @@ const logger = createModuleLogger(AppModules.DATABASE);
 
 class CategoryBaseService extends BaseService {
   constructor() {
-    super('mypos', 'categories');
+    super('pos', 'categories');
   }
 }
 
 class ProductBaseService extends BaseService {
   constructor() {
-    super('mypos', 'products');
+    super('pos', 'products');
   }
 }
 
 class VariantBaseService extends BaseService {
   constructor() {
-    super('mypos', 'product_variants');
+    super('pos', 'product_variants');
   }
 }
 
 class PriceBaseService extends BaseService {
   constructor() {
-    super('mypos', 'prices');
+    super('pos', 'prices');
   }
 }
 
 class UnitBaseService extends BaseService {
   constructor() {
-    super('mypos', 'units');
+    super('pos', 'units');
   }
 }
 
@@ -84,7 +84,7 @@ class CategoryServiceClass {
    */
   async loadAllGroups(storeId: string): Promise<CategoryGroup[]> {
     try {
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (!db) {
         logger.error('[CategoryService] DB not initialized');
         return [];
@@ -237,7 +237,7 @@ class CategoryServiceClass {
    */
   async loadUnits(storeId: string): Promise<string[]> {
     try {
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (!db) return [];
 
       const rows = await QueryBuilder.table('units', db.getInternalDAO())

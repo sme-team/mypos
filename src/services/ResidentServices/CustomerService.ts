@@ -27,7 +27,7 @@ export interface Customer {
   notes?: string;
   metadata?: string; // JSON string
   status?: 'active' | 'inactive' | 'blacklisted';
-  sync_status?: 'local' | 'synced' | 'conflict' | 'pending_sync';
+  sync_status?: 'local' | 'synced' ;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string;
@@ -62,7 +62,7 @@ export interface Resident {
 
 export class CustomerServiceClass extends BaseService {
   constructor() {
-    super('mypos', 'customers');
+    super('pos', 'customers');
   }
 
   protected _validateData(data: Partial<Customer>): void {
@@ -216,7 +216,7 @@ export class CustomerServiceClass extends BaseService {
 
 export class ResidentServiceClass extends BaseService {
   constructor() {
-    super('mypos', 'residents');
+    super('pos', 'residents');
   }
 
   async create(data: Resident): Promise<Resident> {

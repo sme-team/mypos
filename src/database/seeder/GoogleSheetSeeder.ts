@@ -580,7 +580,7 @@ export class DatabaseSeeder {
       return { success: cleanedData.length, failed: 0, tableErrors: 0 };
     }
 
-    const db: SQLiteDAO = DatabaseManager.get('mypos');
+    const db: SQLiteDAO = DatabaseManager.get('pos');
     if (!db) {
       console.error(`[ERROR] ${tableName}: No database connection`);
       return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
@@ -728,7 +728,7 @@ export class DatabaseSeeder {
    * Diagnostic helper to find out which specific foreign key is missing
    */
   private async diagnoseForeignKeyError(row: any, columns: string[]): Promise<string> {
-    const db = DatabaseManager.get('mypos');
+    const db = DatabaseManager.get('pos');
     if (!db) return 'Invalid reference: Related record not found';
 
     // Map of foreign key columns to their parent tables
@@ -804,7 +804,7 @@ export class DatabaseSeeder {
 
       if (strategy === 'overwrite') {
         if (!dryRun) {
-          const db = DatabaseManager.get('mypos');
+          const db = DatabaseManager.get('pos');
           if (db) {
             logger.info('🗑️ Overwrite mode: Clearing existing data');
             for (const table of [...this.TABLE_ORDER].reverse()) {
@@ -853,7 +853,7 @@ export class DatabaseSeeder {
       }
 
       // Log to import_logs
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (db) {
         const logId = await this.generateUUID();
         await db.runSql(`

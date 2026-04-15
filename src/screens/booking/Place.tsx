@@ -7,25 +7,24 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Dimensions,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useTranslation} from 'react-i18next';
+import {useResponsive} from '../../hooks/useResponsive';
 
 import {RoomQueryService} from '../../services/ResidentServices/RoomQueryService';
 // We'll import RoomDetailScreen once we create it.
 import RoomDetailScreen from './RoomDetailScreen';
 import BookingScreen from './BookingScreen';
 
-const {width} = Dimensions.get('window');
-
 const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   onOpenMenu,
   onBack,
 }) => {
-  useTranslation();
+  const {t} = useTranslation();
+  const responsive = useResponsive();
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +43,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     try {
       const dbRooms = await RoomQueryService.getRoomsFlatList('store-001');
       console.log(`[PlaceScreen] Received ${dbRooms.length} rooms from service`);
+      if (dbRooms.length > 0) {
+        console.log('[PlaceScreen] Sample room price data:', {
+          id: dbRooms[0].id,
+          name: dbRooms[0].name,
+          displayPriceText: dbRooms[0].displayPriceText
+        });
+      }
       setRooms(dbRooms);
     } catch (err) {
       console.error('[PlaceScreen] loadRooms error:', err);
@@ -67,6 +73,292 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     return price.toLocaleString('vi-VN') + 'đ';
   };
 
+  // Responsive calculations
+  const cardWidth = responsive.cardWidth(responsive.gridColumns, responsive.containerPadding * 2, 12);
+
+  // Dynamic styles
+  const styles = StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: '#F4F6FB',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: responsive.containerPadding,
+      paddingTop: 12,
+      paddingBottom: 4,
+      backgroundColor: '#F4F6FB',
+      minWidth: '100%',
+    },
+    iconBtn: {
+      padding: 8,
+    },
+    headerTitle: {
+      fontSize: responsive.rv({
+        smallPhone: 18,
+        phone: 20,
+        largePhone: 22,
+        tablet: 24,
+        largeTablet: 26,
+        default: 22,
+      }),
+      fontWeight: '800',
+      color: '#1a1a2e',
+    },
+    headerSubtitle: {
+      fontSize: responsive.rv({
+        smallPhone: 11,
+        phone: 12,
+        largePhone: 13,
+        tablet: 14,
+        largeTablet: 15,
+        default: 13,
+      }),
+      color: '#888',
+    },
+    legend: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    dot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    legendText: {
+      fontSize: 12,
+      color: '#888',
+      marginLeft: 6,
+    },
+    tabsContainer: {
+      paddingHorizontal: responsive.containerPadding,
+      paddingVertical: 12,
+    },
+    tab: {
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      borderWidth: 1.5,
+      borderColor: '#E0E0E0',
+      backgroundColor: '#fff',
+      marginRight: 8,
+    },
+    tabActive: {
+      borderColor: '#1565C0',
+      backgroundColor: '#1565C0',
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#555',
+    },
+    tabTextActive: {
+      color: '#fff',
+    },
+    filtersWrapper: {
+      paddingHorizontal: responsive.containerPadding,
+      paddingBottom: 12,
+      gap: 10,
+    },
+    filterScroll: {
+      gap: 8,
+    },
+    filterChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 16,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+    },
+    filterChipActive: {
+      backgroundColor: '#1565C0',
+      borderColor: '#1565C0',
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#555',
+    },
+    filterChipTextActive: {
+      color: '#fff',
+    },
+    priceFilterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    priceInput: {
+      flex: 1,
+      height: 36,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      fontSize: 13,
+      color: '#333',
+      flexShrink: 0,
+    },
+    priceDash: {
+      color: '#555',
+      fontWeight: '600',
+    },
+    listContent: {
+      paddingHorizontal: responsive.containerPadding,
+      paddingBottom: 100,
+    },
+    emptyText: {
+      textAlign: 'center',
+      color: '#aaa',
+      marginTop: 60,
+    },
+    roomGrid: {
+      gap: 12,
+    },
+    roomCard: {
+      width: responsive.isTablet || responsive.isLargeTablet ? cardWidth : '100%',
+      borderWidth: 1.5,
+      borderRadius: 14,
+      padding: responsive.rv({
+        smallPhone: 12,
+        phone: 14,
+        largePhone: 14,
+        tablet: 16,
+        largeTablet: 18,
+        default: 14,
+      }),
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 5,
+      shadowOffset: {width: 0, height: 2},
+      elevation: 2,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 8,
+      minWidth: '100%',
+    },
+    iconBox: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    roomName: {
+      fontWeight: '700',
+      fontSize: responsive.rv({
+        smallPhone: 14,
+        phone: 15,
+        largePhone: 16,
+        tablet: 17,
+        largeTablet: 18,
+        default: 16,
+      }),
+      color: '#1a1a2e',
+    },
+    roomType: {
+      fontSize: responsive.rv({
+        smallPhone: 10,
+        phone: 11,
+        largePhone: 12,
+        tablet: 13,
+        largeTablet: 14,
+        default: 12,
+      }),
+      color: '#1565C0',
+      fontWeight: '600',
+      marginTop: 1,
+    },
+    checkoutText: {
+      fontSize: responsive.rv({
+        smallPhone: 9,
+        phone: 10,
+        largePhone: 11,
+        tablet: 12,
+        largeTablet: 13,
+        default: 11,
+      }),
+      color: '#666',
+      marginTop: 1,
+    },
+    badge: {
+      paddingVertical: 3,
+      paddingHorizontal: 10,
+      borderRadius: 20,
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    tenantRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 6,
+    },
+    tenantAvatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#1565C0',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+    },
+    tenantAvatarText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    tenantName: {
+      fontSize: responsive.rv({
+        smallPhone: 12,
+        phone: 13,
+        largePhone: 14,
+        tablet: 15,
+        largeTablet: 16,
+        default: 14,
+      }),
+      color: '#333',
+      flex: 1,
+      flexShrink: 0,
+    },
+    priceEmpty: {
+      fontSize: responsive.rv({
+        smallPhone: 12,
+        phone: 13,
+        largePhone: 14,
+        tablet: 15,
+        largeTablet: 16,
+        default: 14,
+      }),
+      fontWeight: '700',
+      color: '#2E7D32',  // Màu xanh lá đậm để dễ nhìn
+      marginTop: 6,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: '#1565C0',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#1565C0',
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      shadowOffset: {width: 0, height: 4},
+      elevation: 6,
+    },
+  });
+
   const floors = Array.from(
     new Set(rooms.map(r => String(r.floor || '?'))),
   ).sort((a, b) => {
@@ -88,7 +380,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     const matchStatus = activeStatus === 'all' ? true : r.status === activeStatus;
     const matchType = activeRoomType === 'all' ? true : (r.product_name || '') === activeRoomType;
     
-    const price = r.price || 0;
+    const price = r.displayPriceValue || 0;
     const minP = minPrice ? parseInt(minPrice.replace(/\D/g, '')) || 0 : 0;
     const maxP = maxPrice ? parseInt(maxPrice.replace(/\D/g, '')) || Infinity : Infinity;
     const matchPrice = price >= minP && price <= maxP;
@@ -241,8 +533,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
 
       {/* Room Grid */}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
+        automaticallyAdjustContentInsets={false}>
         {loading ? (
           <ActivityIndicator
             size="large"
@@ -258,6 +555,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
           <View style={styles.roomGrid}>
             {filteredRooms.map(room => {
               const occupied = room.contract_status === 'active';
+              console.log(`[PlaceScreen] Rendering room ${room.name}: displayPriceText="${room.displayPriceText}"`);
               return (
                 <TouchableOpacity
                   key={room.id}
@@ -326,7 +624,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                     </View>
                   </View>
 
-                  {occupied ? (
+                  {occupied && (
                     <View style={styles.tenantRow}>
                       <View style={styles.tenantAvatar}>
                         <Text style={styles.tenantAvatarText}>
@@ -339,11 +637,10 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                         {room.customer_name || 'Đang ở'}
                       </Text>
                     </View>
-                  ) : (
-                    <Text style={styles.priceEmpty}>
-                      {formatPrice(room.price)} / tháng
-                    </Text>
                   )}
+                  <Text style={[styles.priceEmpty, occupied && { marginTop: 4, fontSize: 13 }]}>
+                    {room.displayPriceText ? room.displayPriceText : 'Liên hệ'}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -360,227 +657,3 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
 };
 
 export default PlaceScreen;
-
-const CARD_WIDTH = width - 32;
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F4F6FB',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-    backgroundColor: '#F4F6FB',
-  },
-  iconBtn: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1a1a2e',
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#888',
-  },
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendText: {
-    fontSize: 12,
-    color: '#888',
-    marginLeft: 6,
-  },
-  tabsContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  tab: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-    marginRight: 8,
-  },
-  tabActive: {
-    borderColor: '#1565C0',
-    backgroundColor: '#1565C0',
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#555',
-  },
-  tabTextActive: {
-    color: '#fff',
-  },
-  filtersWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 10,
-  },
-  filterScroll: {
-    gap: 8,
-  },
-  filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  filterChipActive: {
-    backgroundColor: '#1565C0',
-    borderColor: '#1565C0',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#555',
-  },
-  filterChipTextActive: {
-    color: '#fff',
-  },
-  priceFilterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  priceInput: {
-    flex: 1,
-    height: 36,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    color: '#333',
-  },
-  priceDash: {
-    color: '#555',
-    fontWeight: '600',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#aaa',
-    marginTop: 60,
-  },
-  roomGrid: {
-    gap: 12,
-  },
-  roomCard: {
-    width: CARD_WIDTH,
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roomName: {
-    fontWeight: '700',
-    fontSize: 16,
-    color: '#1a1a2e',
-  },
-  roomType: {
-    fontSize: 12,
-    color: '#1565C0',
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  checkoutText: {
-    fontSize: 11,
-    color: '#666',
-    marginTop: 1,
-  },
-  badge: {
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tenantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  tenantAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1565C0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  tenantAvatarText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tenantName: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  priceEmpty: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8D9E5A',
-    marginTop: 4,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1565C0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#1565C0',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 6,
-  },
-});

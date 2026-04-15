@@ -35,7 +35,10 @@ export default function PaymentModal({
   const [expand, setExpand] = useState(false);
 
   const total = useMemo(() => {
-    return cartItems.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+    return cartItems.reduce((sum, i) => {
+      const price = i.selectedVariant?.price ?? i.product.price;
+      return sum + price * i.quantity;
+    }, 0);
   }, [cartItems]);
 
   const isEmptyCart = cartItems.length === 0;
@@ -138,7 +141,9 @@ export default function PaymentModal({
                           {item.product.name}
                         </Text>
                         <Text className="font-semibold text-sm">
-                          {formatPrice(item.product.price)}
+                          {formatPrice(
+                            item.selectedVariant?.price ?? item.product.price,
+                          )}
                         </Text>
                       </View>
 
@@ -148,7 +153,10 @@ export default function PaymentModal({
                           {item.quantity}
                         </Text>
                         <Text>
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice(
+                            (item.selectedVariant?.price ??
+                              item.product.price) * item.quantity,
+                          )}
                         </Text>
                       </View>
                     </View>

@@ -19,3 +19,11 @@ export const generateSequentialId = async (
 
   return `${prefix}-${String(max + 1 + offset).padStart(3, '0')}`;
 };
+
+// Export code generators
+export {
+  generateCustomerCode,
+  generateContractCode,
+  generateBillNumber,
+  generateReceivableCode,
+} from './codeGenerator';

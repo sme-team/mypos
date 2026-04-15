@@ -3,19 +3,19 @@ import {generateSequentialId} from '../../../utils';
 
 class BillService extends BaseService {
   constructor() {
-    super('mypos', 'bills');
+    super('pos', 'bills');
   }
 }
 
 class BillDetailService extends BaseService {
   constructor() {
-    super('mypos', 'bill_details');
+    super('pos', 'bill_details');
   }
 }
 
 class PaymentBaseService extends BaseService {
   constructor() {
-    super('mypos', 'payments');
+    super('pos', 'payments');
   }
 }
 

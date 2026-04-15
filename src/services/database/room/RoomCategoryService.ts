@@ -23,22 +23,22 @@ import {generateSequentialId} from '../../../utils';
 
 class ProductBaseService extends BaseService {
   constructor() {
-    super('mypos', 'products');
+    super('pos', 'products');
   }
 }
 class VariantBaseService extends BaseService {
   constructor() {
-    super('mypos', 'product_variants');
+    super('pos', 'product_variants');
   }
 }
 class PriceBaseService extends BaseService {
   constructor() {
-    super('mypos', 'prices');
+    super('pos', 'prices');
   }
 }
 class CategoryBaseService extends BaseService {
   constructor() {
-    super('mypos', 'categories');
+    super('pos', 'categories');
   }
 }
 

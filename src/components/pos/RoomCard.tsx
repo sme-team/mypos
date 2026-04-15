@@ -1,6 +1,14 @@
+/**
+ * @file: RoomCard.tsx
+ * @description: Component hiển thị thẻ thông tin phòng trong phân hệ LƯU TRÚ.
+ * Hiển thị số phòng, tầng, trạng thái (màu sắc động), giá tiền và các nhãn (tags).
+ * @path: src/components/pos/RoomCard.tsx
+ */
+
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useTheme} from '../../hooks/useTheme';
+import {useTranslation} from 'react-i18next';
 
 import {Room} from '../../screens/pos/types';
 
@@ -20,13 +28,9 @@ const STATUS_DOT: Record<Room['status'], string> = {
   maintenance: '#9E9E9E', // Bảo trì - Xám
 };
 
-/**
- * Hàm định dạng tiền tệ Việt Nam
- */
-const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
-
 const RoomCard: React.FC<RoomCardProps> = React.memo(
   ({room, cardWidth, onPress}) => {
+    const {t} = useTranslation();
     const {isDark} = useTheme();
 
     const cardBg = isDark ? '#1f2937' : '#fff';
@@ -37,12 +41,12 @@ const RoomCard: React.FC<RoomCardProps> = React.memo(
 
     const statusText =
       room.status === 'available'
-        ? 'Trống'
+        ? t('pos.status_empty')
         : room.status === 'occupied'
-        ? 'Đang ở'
+        ? t('pos.status_occupied')
         : room.status === 'cleaning'
-        ? 'Dọn dẹp'
-        : 'Bảo trì';
+        ? t('pos.status_cleaning')
+        : t('pos.status_maintenance');
 
     return (
       <TouchableOpacity
@@ -88,7 +92,9 @@ const RoomCard: React.FC<RoomCardProps> = React.memo(
 
         <View style={styles.roomStatusRow}>
           <View style={styles.floorBadge}>
-            <Text style={styles.floorText}>Tầng {room.floor}</Text>
+            <Text style={styles.floorText}>
+              {t('pos.floor')} {room.floor}
+            </Text>
           </View>
           <View style={styles.statusInfo}>
             <View
@@ -103,10 +109,14 @@ const RoomCard: React.FC<RoomCardProps> = React.memo(
           </View>
         </View>
 
-        <Text
-          style={[styles.roomPrice, {color: isDark ? '#60A5FA' : '#2563EB'}]}>
-          {formatPrice(room.price)}
-        </Text>
+        {/* Hiển thị giá phòng */}
+        {room.displayPriceText && (
+          <View style={styles.priceRow}>
+            <Text style={[styles.priceText, {color: '#1565C0'}]}>
+              {room.displayPriceText}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   },
@@ -172,8 +182,14 @@ const styles = StyleSheet.create({
   roomStatusLabel: {
     fontSize: 12,
   },
-  roomPrice: {
-    fontSize: 14,
+  priceRow: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  priceText: {
+    fontSize: 13,
     fontWeight: '700',
   },
 });

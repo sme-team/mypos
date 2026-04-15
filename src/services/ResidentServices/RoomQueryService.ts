@@ -1,6 +1,7 @@
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
 import { BaseService } from '../BaseService';
+import { RoomPriceService } from './RoomPriceService';
 
 // ─────────────────────────────────────────────
 //  Types
@@ -15,7 +16,7 @@ export interface RoomGridItem {
   product_name: string;      // tên loại phòng (products.name)
   label: string;
   floor: string;            // lấy từ attributes.floor
-  price: number;            // prices.price
+  monthly_price?: number;    // Giá theo tháng (unit-019), chỉ có ở phòng dài hạn
   status: RoomStatus;
   contract_id: string | null;
   contract_status: string;
@@ -25,6 +26,8 @@ export interface RoomGridItem {
   borderColor: string;
   attributes: Record<string, any>;
   product_id: string;
+  displayPriceText?: string; // Giá hiển thị theo độ ưu tiên
+  displayPriceValue?: number; // Giá trị số để filter
 }
 
 /** Shape trả về cho màn hình Chi tiết phòng (Màn hình 3) */
@@ -60,6 +63,17 @@ export interface RoomDetailInfo {
   bill_items?: BillDetailItem[];
   total_amount?: number;
   metadata?: string; // contracts.metadata
+  check_in_time?: string;
+  check_out_time?: string;
+  adults?: number;
+  children?: number;
+  // logic AR mới
+  negative_balance?: number;
+  billing_day?: number;
+  total_payable?: number;
+  total_paid?: number;
+  balance?: number;
+  history_bills?: any[];
 }
 
 export interface BillDetailItem {
@@ -77,9 +91,12 @@ export interface AvailableRoomItem {
   id: string;
   name: string;
   floor: string | number;
-  price: number;
+  monthly_price?: number;    // Giá theo tháng (unit-019), chỉ có ở phòng dài hạn
   product_id: string;
+  product_name: string;
   attributes: Record<string, any>;
+  displayPriceText?: string;
+  displayPriceValue?: number;
 }
 
 // ─────────────────────────────────────────────
@@ -98,31 +115,31 @@ const BORDER_COLORS: Record<RoomStatus, string> = {
 // ─────────────────────────────────────────────
 
 class ProductVariantService extends BaseService {
-  constructor() { super('mypos', 'product_variants'); }
+  constructor() { super('pos', 'product_variants'); }
 }
 
 class ProductService extends BaseService {
-  constructor() { super('mypos', 'products'); }
+  constructor() { super('pos', 'products'); }
 }
 
 class PriceService extends BaseService {
-  constructor() { super('mypos', 'prices'); }
+  constructor() { super('pos', 'prices'); }
 }
 
 class ContractService extends BaseService {
-  constructor() { super('mypos', 'contracts'); }
+  constructor() { super('pos', 'contracts'); }
 }
 
 class CustomerBaseService extends BaseService {
-  constructor() { super('mypos', 'customers'); }
+  constructor() { super('pos', 'customers'); }
 }
 
 class BillService extends BaseService {
-  constructor() { super('mypos', 'bills'); }
+  constructor() { super('pos', 'bills'); }
 }
 
 class BillDetailService extends BaseService {
-  constructor() { super('mypos', 'bill_details'); }
+  constructor() { super('pos', 'bill_details'); }
 }
 
 // ─────────────────────────────────────────────
@@ -172,7 +189,7 @@ class RoomQueryServiceClass {
    */
   async getRoomsFlatList(storeId: string): Promise<RoomGridItem[]> {
     try {
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (!db) return [];
 
       const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
@@ -183,7 +200,6 @@ class RoomQueryServiceClass {
           'product_variants.status as variant_status',
           'products.name as product_name',
           'products.id as product_id',
-          'prices.price',
           'contracts.id as contract_id',
           'contracts.status as contract_status',
           'contracts.start_date',
@@ -191,7 +207,6 @@ class RoomQueryServiceClass {
           'customers.full_name as customer_name'
         ])
         .innerJoin('products', 'product_variants.product_id = products.id')
-        .leftJoin('prices', 'product_variants.id = prices.variant_id AND prices.price_list_name = "default" AND prices.effective_to IS NULL')
         .leftJoin('contracts', 'product_variants.id = contracts.variant_id AND contracts.status = "active"')
         .leftJoin('customers', 'contracts.customer_id = customers.id')
         .where('product_variants.store_id', storeId)
@@ -200,10 +215,53 @@ class RoomQueryServiceClass {
         .orderBy('product_variants.name', 'ASC')
         .get();
 
+      // Lấy tất cả giá cho các variant này
+      const variantIds = rows.map((r: any) => r.id);
+      let allPrices: any[] = [];
+      if (variantIds.length > 0) {
+        // Relax filter: remove effective_to check and initial price_list_name check
+        allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
+          .select(['variant_id', 'unit_id', 'price', 'price_list_name'])
+          .whereIn('variant_id', variantIds)
+          .get();
+        
+        console.log(`[RoomQueryService] Fetched ${allPrices.length} total prices for ${variantIds.length} variants`);
+        if (allPrices.length > 0) {
+          console.log('[RoomQueryService] Sample price record:', JSON.stringify(allPrices[0]));
+        }
+      }
+
       return rows.map((r: any): RoomGridItem => {
         const attr = this.parseAttr(r.attributes);
         const status = this.resolveStatus(r.variant_status, r.contract_id, attr.room_status);
         const floor = this.resolveFloor(attr, r.name);
+
+        // Lọc giá của variant này và tìm giá ưu tiên (ưu tiên giá 'default' trước)
+        const variantPrices = allPrices.filter(p => p.variant_id === r.id);
+        const defaultPrices = variantPrices.filter(p => 
+          p.price_list_name && p.price_list_name.toLowerCase() === 'default'
+        );
+        const pricesToUse = defaultPrices.length > 0 ? defaultPrices : variantPrices;
+        
+        console.log(`[RoomQueryService] Room ${r.name}: variantPrices=${variantPrices.length}, defaultPrices=${defaultPrices.length}, pricesToUse=${pricesToUse.length}`);
+        if (pricesToUse.length > 0) {
+          console.log(`[RoomQueryService] Room ${r.name}: First price unit_id=${pricesToUse[0].unit_id}, price=${pricesToUse[0].price}`);
+        }
+        
+        const priorityPrice = RoomPriceService.getPriorityPrice(pricesToUse);
+        console.log(`[RoomQueryService] Room ${r.name}: priorityPrice=${JSON.stringify(priorityPrice)}`);
+        
+        const displayPriceText = priorityPrice 
+          ? RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
+          : '';
+
+        console.log(`[RoomQueryService] Room ${r.name}: displayPriceText="${displayPriceText}"`);
+
+        if (!displayPriceText) {
+          console.log(`[RoomQueryService] Room ${r.name} has NO display price. Total prices for variant: ${variantPrices.length}`);
+        }
+
+        const mPrice = variantPrices.find(p => p.unit_id === 'unit-019')?.price;
 
         return {
           id: r.id,
@@ -211,7 +269,7 @@ class RoomQueryServiceClass {
           product_name: r.product_name || '',
           label: attr.room ?? r.name,
           floor,
-          price: r.price || 0,
+          monthly_price: mPrice || undefined,
           status,
           contract_id: r.contract_id || null,
           contract_status: r.contract_status || 'inactive',
@@ -221,6 +279,8 @@ class RoomQueryServiceClass {
           borderColor: BORDER_COLORS[status],
           attributes: attr,
           product_id: r.product_id,
+          displayPriceText,  // Giá hiển thị theo độ ưu tiên
+          displayPriceValue: priorityPrice?.price || 0,
         };
       });
     } catch (err) {
@@ -281,16 +341,24 @@ class RoomQueryServiceClass {
       customer = await this.customerSvc.findById(contract.customer_id);
     }
 
-    // 5. Bill hiện tại (cycle bill gần nhất của hợp đồng)
+    // 5. Bill hiện tại (cycle bill kỳ hiện tại của hợp đồng)
     let currentBill: any = null;
     let billItems: BillDetailItem[] = [];
+    const today = new Date().toISOString().split('T')[0];
 
     if (contract?.id) {
-      const bills = await this.billSvc.findAll(
-        { ref_id: contract.id, ref_type: 'contract' },
-        { orderBy: [{ name: 'created_at', order: 'DESC' }], limit: 1 },
-      );
-      currentBill = bills.length > 0 ? bills[0] : null;
+      const db = DatabaseManager.get('pos');
+      const billRows = await QueryBuilder.table('bills', db!.getInternalDAO())
+        .where('ref_id', contract.id)
+        .where('ref_type', 'contract')
+        .where('cycle_period_from', '<=', today)
+        .where('cycle_period_to', '>=', today)
+        .whereIn('bill_status', ['draft', 'partial', 'overdue', 'issued'])
+        .orderBy('created_at', 'DESC')
+        .limit(1)
+        .get();
+
+      currentBill = billRows.length > 0 ? billRows[0] : null;
 
       if (currentBill?.id) {
         const details = await this.billDetailSvc.findAll(
@@ -309,6 +377,66 @@ class RoomQueryServiceClass {
       }
     }
 
+    // 6. Khoản dư âm kỳ trước (adjustment âm pending)
+    let negativeBalance = 0;
+    if (contract?.id) {
+      const db = DatabaseManager.get('pos');
+      const adjResult = await QueryBuilder.table('receivables', db!.getInternalDAO())
+        .select(['SUM(amount) as total'])
+        .where('contract_id', contract.id)
+        .where('receivable_type', 'adjustment')
+        .where('amount', '<', 0)
+        .where('status', 'pending')
+        .first();
+      negativeBalance = adjResult?.total || 0;
+    }
+
+    // 7. Chi tiết Lịch sử Hợp đồng (Tổng nợ, Tổng trả, Lịch sử Bill)
+    let totalPayable = 0;
+    let totalPaid = 0;
+    let historyBills: any[] = [];
+
+    if (contract?.id) {
+      const db = DatabaseManager.get('pos');
+      const dao = db!.getInternalDAO();
+
+      // a. Tổng Phải thu (receivables.status != cancelled)
+      const payResult = await QueryBuilder.table('receivables', dao)
+        .select(['SUM(amount) as total'])
+        .where('contract_id', contract.id)
+        .where('status', '!=', 'cancelled')
+        .first();
+      totalPayable = payResult?.total || 0;
+
+      // b. Tổng Đã trả (payments.status = success)
+      const paidResult = await QueryBuilder.table('payments', dao)
+        .select(['SUM(payments.amount) as total'])
+        .leftJoin('bills', 'payments.bill_id = bills.id')
+        .where('bills.ref_id', contract.id)
+        .where('bills.ref_type', 'contract')
+        .where('payments.status', 'success')
+        .first();
+      totalPaid = paidResult?.total || 0;
+
+      // c. Danh sách Bills lịch sử
+      const billRows = await QueryBuilder.table('bills', dao)
+        .where('ref_id', contract.id)
+        .where('ref_type', 'contract')
+        .orderBy('cycle_period_from', 'DESC')
+        .get();
+
+      historyBills = billRows || [];
+    }
+
+    let metaDataObj: any = {};
+    if (contract?.metadata) {
+      try {
+        metaDataObj = JSON.parse(contract.metadata);
+      } catch (e) {
+        console.warn('[RoomQueryService] Parse metadata error:', e);
+      }
+    }
+
     return {
       variant_id: variant.id,
       variant_name: variant.name,
@@ -320,6 +448,7 @@ class RoomQueryServiceClass {
       product_name: product?.name ?? '',
       contract_id: contract?.id,
       contract_status: contract?.status,
+      contract_type: contract?.contract_type,
       start_date: contract?.start_date,
       end_date: contract?.end_date,
       rent_amount: contract?.rent_amount,
@@ -327,6 +456,7 @@ class RoomQueryServiceClass {
       water_rate: contract?.water_rate,
       electric_reading_init: contract?.electric_reading_init,
       water_reading_init: contract?.water_reading_init,
+      billing_day: contract?.billing_day,
       customer_name: customer?.full_name,
       customer_phone: customer?.phone,
       cccd: customer?.id_number,
@@ -335,6 +465,15 @@ class RoomQueryServiceClass {
       bill_items: billItems,
       total_amount: currentBill?.total_amount,
       metadata: contract?.metadata,
+      check_in_time: metaDataObj.checkin_time,
+      check_out_time: metaDataObj.checkout_time,
+      adults: metaDataObj.adults,
+      children: metaDataObj.children,
+      negative_balance: negativeBalance,
+      total_payable: totalPayable,
+      total_paid: totalPaid,
+      balance: totalPayable - totalPaid,
+      history_bills: historyBills,
     };
   }
 
@@ -349,7 +488,7 @@ class RoomQueryServiceClass {
     excludeVariantId?: string,
   ): Promise<Array<{ title: string; data: AvailableRoomItem[] }>> {
     try {
-      const db = DatabaseManager.get('mypos');
+      const db = DatabaseManager.get('pos');
       if (!db) return [];
 
       // 1. Lấy variants loại 'room' và không có hợp đồng active
@@ -359,16 +498,25 @@ class RoomQueryServiceClass {
           'product_variants.name',
           'product_variants.product_id',
           'product_variants.attributes',
-          'prices.price'
+          'products.name as product_name'
         ])
         .innerJoin('products', 'product_variants.product_id = products.id')
-        .leftJoin('prices', 'product_variants.id = prices.variant_id AND prices.price_list_name = "default" AND prices.effective_to IS NULL')
         .leftJoin('contracts', 'product_variants.id = contracts.variant_id AND contracts.status = "active"')
         .where('product_variants.store_id', storeId)
         .where('product_variants.status', 'active')
         .where('products.product_type', 'room')
-        .whereIn('contracts.id', [null]) // Chỉ lấy phòng trống (không có hợp đồng active)
+        .whereNull('contracts.id') // Chỉ lấy phòng trống (không có hợp đồng active)
         .get();
+
+      // Lấy tất cả giá cho các variant này
+      const variantIds = rows.map((r: any) => r.id);
+      let allPrices: any[] = [];
+      if (variantIds.length > 0) {
+        allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
+          .select(['variant_id', 'unit_id', 'price', 'price_list_name'])
+          .whereIn('variant_id', variantIds)
+          .get();
+      }
 
       // 2. Lọc loại trừ variant hiện tại và Group theo tầng
       const byFloor: Record<string, AvailableRoomItem[]> = {};
@@ -380,14 +528,31 @@ class RoomQueryServiceClass {
         const floor = this.resolveFloor(attr, r.name);
         const key = floor !== '?' ? `Tầng ${floor}` : 'Khác';
 
+        // Tìm giá ưu tiên
+        const variantPrices = allPrices.filter(p => p.variant_id === r.id);
+        const defaultPrices = variantPrices.filter(p => 
+          p.price_list_name && p.price_list_name.toLowerCase() === 'default'
+        );
+        const pricesToUse = defaultPrices.length > 0 ? defaultPrices : variantPrices;
+
+        const priorityPrice = RoomPriceService.getPriorityPrice(pricesToUse);
+        const displayPriceText = priorityPrice 
+          ? RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
+          : '';
+
+        const mPrice = variantPrices.find(p => p.unit_id === 'unit-019')?.price;
+
         if (!byFloor[key]) byFloor[key] = [];
         byFloor[key].push({
           id: r.id,
           name: attr.room ?? r.name,
           floor,
-          price: r.price || 0,
+          monthly_price: mPrice || undefined,
           product_id: r.product_id,
+          product_name: r.product_name || '',
           attributes: attr,
+          displayPriceText,
+          displayPriceValue: priorityPrice?.price || 0,
         });
       }
 

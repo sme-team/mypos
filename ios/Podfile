@@ -2,8 +2,8 @@ require_relative '../node_modules/react-native/scripts/react_native_pods'
 
 prepare_react_native_project!
 
-# 0.76 yêu cầu iOS 15.1
-platform :ios, '15.1'
+# 0.76 yêu cầu iOS 16.0 cho ML Kit
+platform :ios, '16.0'
 
 prepare_react_native_project!
 
