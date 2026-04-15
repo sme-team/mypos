@@ -37,6 +37,7 @@ import {
 interface EditProfileScreenProps {
   onBack: () => void;
   onSaved?: () => void;
+  onChangePassword?: () => void;
 }
 
 // URL trang đổi mật khẩu — fallback nếu .env chưa set
@@ -109,7 +110,7 @@ function LabeledInput({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function EditProfileScreen({ onBack, onSaved }: EditProfileScreenProps) {
+export default function EditProfileScreen({ onBack, onSaved, onChangePassword }: EditProfileScreenProps) {
   const { isDark } = useTheme();
   const { updateProfileInStore } = useAuth();
   const colors = useColors(isDark);
@@ -166,8 +167,13 @@ export default function EditProfileScreen({ onBack, onSaved }: EditProfileScreen
     }
   };
 
-  // ── Đổi mật khẩu → mở trình duyệt ──────────────────────────────────────
+  // ── Đổi mật khẩu → gọi callback hoặc mở trình duyệt ────────────────────
   const handleChangePassword = useCallback(async () => {
+    if (onChangePassword) {
+      onChangePassword();
+      return;
+    }
+    
     try {
       const canOpen = await Linking.canOpenURL(CHANGE_PASSWORD_URL);
       if (canOpen) {
@@ -181,7 +187,7 @@ export default function EditProfileScreen({ onBack, onSaved }: EditProfileScreen
     } catch {
       Alert.alert('Lỗi', 'Không thể mở trang đổi mật khẩu');
     }
-  }, []);
+  }, [onChangePassword]);
 
   // ── Chọn avatar ─────────────────────────────────────────────────────────
   const handlePickAvatar = async () => {

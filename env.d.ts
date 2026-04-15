@@ -3,4 +3,6 @@ declare module '@env' {
   export const AUTH_API_BASE: string;
   /** URL Web App (Next.js). Dùng để mở change-password trong browser. VD: http://192.168.1.103:3000 */
   export const WEB_BASE_URL: string;
+
+  export  const WEB_LANDING_URL : string;
 }
