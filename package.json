@@ -16,6 +16,8 @@
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@reduxjs/toolkit": "^2.11.2",
+
+    "@react-native-google-signin/google-signin": "^16.1.2",
     "@types/react-native-vector-icons": "^6.4.18",
     "axios": "^1.9.0",
     "i18next": "^25.8.13",
@@ -24,7 +26,7 @@
     "react": "18.3.1",
     "react-i18next": "^16.5.4",
     "react-native": "0.76.0",
-    "react-native-bootsplash": "^7.1.0",
+    "react-native-bootsplash": "^7.2.0",
     "react-native-crypto": "^2.2.1",
     "react-native-image-picker": "^7.1.2",
     "react-native-randombytes": "^3.6.2",

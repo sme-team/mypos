@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,27 +10,36 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SettingsHeader from '../../components/setting/SettingsHeader';
 import SettingsSection from '../../components/setting/SettingsSection';
 import SettingsItem from '../../components/setting/SettingsItem';
-import { databaseSeeder } from '../../database/seeder/GoogleSheetSeeder';
+import {databaseSeeder} from '../../database/seeder/GoogleSheetSeeder';
 
 const SHEET_LINK_KEY = 'GOOGLE_SHEET_URL';
 
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
+  onNavigateProfile: () => void;
 }
-export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
-  const { t, i18n } = useTranslation();
+
+export default function Setting({
+  onOpenMenu,
+  onBack,
+  onNavigateProfile,
+}: SettingProps) {
+  const {t, i18n} = useTranslation();
   const [sheetLink, setSheetLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(SHEET_LINK_KEY).then(saved => {
-      if (saved) { setSheetLink(saved); }
+      if (saved) {
+        setSheetLink(saved);
+      }
     });
   }, []);
 
@@ -42,20 +51,35 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
 
   const handleSync = (strategy: 'merge' | 'overwrite') => {
     if (!sheetLink) {
-      Alert.alert(t('error', 'Lỗi'), t('settings.sheetLinkRequired', 'Vui lòng nhập đường dẫn Google Sheets.'));
+      Alert.alert(
+        t('error', 'Lỗi'),
+        t(
+          'settings.sheetLinkRequired',
+          'Vui lòng nhập đường dẫn Google Sheets.',
+        ),
+      );
       return;
     }
 
     setIsSyncing(true);
     // Save the link for future use
-    AsyncStorage.setItem(SHEET_LINK_KEY, sheetLink).catch(err => console.error('Failed to save sheetLink', err));
+    AsyncStorage.setItem(SHEET_LINK_KEY, sheetLink).catch(err =>
+      console.error('Failed to save sheetLink', err),
+    );
 
-    databaseSeeder.seedRunner(sheetLink, strategy)
+    databaseSeeder
+      .seedRunner(sheetLink, strategy)
       .then(() => {
-        Alert.alert(t('success', 'Thành công'), t('settings.syncSuccess', 'Đồng bộ dữ liệu thành công!'));
+        Alert.alert(
+          t('success', 'Thành công'),
+          t('settings.syncSuccess', 'Đồng bộ dữ liệu thành công!'),
+        );
       })
       .catch((error: any) => {
-        Alert.alert(t('error', 'Lỗi đồng bộ'), error.message || 'Unknown error');
+        Alert.alert(
+          t('error', 'Lỗi đồng bộ'),
+          error.message || 'Unknown error',
+        );
       })
       .finally(() => {
         setIsSyncing(false);
@@ -64,17 +88,33 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
 
   const showSyncStrategyPrompt = () => {
     if (!sheetLink) {
-      Alert.alert(t('error', 'Lỗi'), t('settings.sheetLinkRequired', 'Vui lòng nhập đường dẫn Google Sheets.'));
+      Alert.alert(
+        t('error', 'Lỗi'),
+        t(
+          'settings.sheetLinkRequired',
+          'Vui lòng nhập đường dẫn Google Sheets.',
+        ),
+      );
       return;
     }
     Alert.alert(
       t('settings.syncData', 'Đồng bộ dữ liệu'),
-      t('settings.syncStrategyPrompt', 'Bạn muốn ghi đè (xoá dữ liệu cũ) hay kết hợp (giữ nguyên những gì có sẵn) dữ liệu mới?'),
+      t(
+        'settings.syncStrategyPrompt',
+        'Bạn muốn ghi đè (xoá dữ liệu cũ) hay kết hợp (giữ nguyên những gì có sẵn) dữ liệu mới?',
+      ),
       [
-        { text: t('settings.merge', 'Kết hợp (Merge)'), onPress: () => handleSync('merge') },
-        { text: t('settings.overwrite', 'Ghi đè (Overwrite)'), onPress: () => handleSync('overwrite'), style: 'destructive' },
-        { text: t('settings.cancel', 'Hủy'), style: 'cancel' },
-      ]
+        {
+          text: t('settings.merge', 'Kết hợp (Merge)'),
+          onPress: () => handleSync('merge'),
+        },
+        {
+          text: t('settings.overwrite', 'Ghi đè (Overwrite)'),
+          onPress: () => handleSync('overwrite'),
+          style: 'destructive',
+        },
+        {text: t('settings.cancel', 'Hủy'), style: 'cancel'},
+      ],
     );
   };
 
@@ -83,6 +123,7 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
       icon: 'person-outline',
       title: 'settings.profile',
       desc: 'settings.profileDesc',
+      onPress: onNavigateProfile,
     },
     {
       icon: 'wallet-outline',
@@ -106,11 +147,13 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
       icon: 'help-circle-outline',
       title: 'settings.help',
       desc: 'settings.helpDesc',
+      onPress: () => {},
     },
     {
       icon: 'information-circle-outline',
       title: 'settings.about',
       desc: 'settings.aboutDesc',
+      onPress: () => {},
     },
   ];
 
@@ -126,6 +169,7 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
               icon={item.icon}
               title={item.title}
               desc={item.desc}
+              onPress={item.onPress}
             />
           ))}
         </SettingsSection>
@@ -180,15 +224,23 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
             <TouchableOpacity
               onPress={showSyncStrategyPrompt}
               disabled={isSyncing}
-              className={`flex-row items-center justify-center py-3 rounded-xl ${isSyncing ? 'bg-blue-300' : 'bg-blue-500'}`}
-            >
+              className={`flex-row items-center justify-center py-3 rounded-xl ${
+                isSyncing ? 'bg-blue-300' : 'bg-blue-500'
+              }`}>
               {isSyncing ? (
                 <ActivityIndicator color="#fff" size="small" className="mr-2" />
               ) : (
-                <Icon name="sync" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Icon
+                  name="sync"
+                  size={20}
+                  color="#fff"
+                  style={{marginRight: 8}}
+                />
               )}
               <Text className="text-white font-semibold text-base">
-                {isSyncing ? t('settings.syncing', 'Đang đồng bộ...') : t('settings.syncDataBtn', 'Đồng bộ dữ liệu')}
+                {isSyncing
+                  ? t('settings.syncing', 'Đang đồng bộ...')
+                  : t('settings.syncDataBtn', 'Đồng bộ dữ liệu')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -202,6 +254,7 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
               icon={item.icon}
               title={item.title}
               desc={item.desc}
+              onPress={item.onPress}
             />
           ))}
         </SettingsSection>

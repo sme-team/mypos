@@ -1,7 +1,7 @@
 // src/services/auth.service.ts
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { tokenManager } from './token-manager';
-import { authApiClient, refreshCredentialsToken } from './api-client';
+import { authApiClient, refreshCredentialsToken, AUTH_API_BASE, API_V1 } from './api-client';
 
 import {createModuleLogger, AppModules} from '../logger';
 const logger = createModuleLogger(AppModules.AUTH_SERVICE);
@@ -87,7 +87,10 @@ export const authService = {
     try {
       logger.info('[AuthService] 🔐 Attempting login with credentials');
 
-      const response = await authApiClient.post<AuthResponse>('/login', credentials);
+      // BE endpoint: GET /api/auth/login/:username/:password
+      const identifier = encodeURIComponent(credentials.username ?? credentials.email ?? '');
+      const pwd = encodeURIComponent(credentials.password);
+      const response = await authApiClient.get<AuthResponse>(`/login/${identifier}/${pwd}`);
       const result = response.data;
 
       if (!result.user || !result.accessToken || !result.refreshToken) {
@@ -215,7 +218,12 @@ export const authService = {
     try {
       logger.info('[AuthService] 👤 Getting current user profile');
 
-      const response = await authApiClient.get<UserProfileResponse>('/me');
+      // BE endpoint: GET /api/v1/users/me (users.controller có version: '1')
+      const token = tokenManager.getAccessToken();
+      const response = await axios.get<UserProfileResponse>(
+        `${AUTH_API_BASE}${API_V1}/users/me`,
+        { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 },
+      );
       const result = response.data;
 
       logger.info('[AuthService] ✅ User profile retrieved', {

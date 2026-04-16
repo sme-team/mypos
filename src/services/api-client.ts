@@ -5,40 +5,62 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import {tokenManager} from './token-manager';
-// Thay vì dùng process.env (đôi khi không ổn định trong RN), hãy dùng import
 import {AUTH_API_BASE as ENV_AUTH_API_BASE} from '@env';
 
 import {createModuleLogger, AppModules} from '../logger';
 const logger = createModuleLogger(AppModules.API_CLIENT);
 
 // ─── Config ─────────────────────────────────────────────────────────────────
-// Thay đổi BASE_URL cho phù hợp với môi trường của bạn:
-// - Máy thật: dùng IP máy chủ BE (vd: http://192.168.1.100:3000)
-// - Emulator Android: http://10.0.2.2:3000
-// - Simulator iOS: http://127.0.0.1:3000
-export const AUTH_API_BASE = ENV_AUTH_API_BASE ?? 'http://10.0.2.2:3000';
+// - Máy thật (cùng WiFi): dùng IP máy chủ BE (set trong .env)
+// - Emulator Android:      http://10.0.2.2:3001
+// - Simulator iOS:         http://127.0.0.1:3001
+export const AUTH_API_BASE = ENV_AUTH_API_BASE ?? 'http://192.168.1.76:3001';
 logger.trace('AUTH_API_BASE:', AUTH_API_BASE);
+
+// ─── Route prefix theo từng controller ──────────────────────────────────────────
+// BE dùng URI versioning (enableVersioning), nhưng KHÔNG phải tất cả controller đều có version:
+//
+//   auth.controller.ts      → @Controller('auth')                    → /api/auth/...
+//   password.controller.ts  → @Controller({ path:'auth', version:'1' }) → /api/v1/auth/...
+//   users.controller.ts     → @Controller({ version: '1' })           → /api/v1/users/...
+//
+// auth routes (login, register, google/token, shop/setup) KHÔNG có /v1
+const API_NO_VERSION = '/api';
+// password / users routes CÓ /v1
+export const API_V1 = '/api/v1';
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 function createAuthApiClient(apiPrefix: string, tag: string): AxiosInstance {
   const instance = axios.create({
-    baseURL: `${AUTH_API_BASE}${apiPrefix}`,
+    baseURL: `${AUTH_API_BASE}${API_NO_VERSION}${apiPrefix}`,
     headers: {'Content-Type': 'application/json'},
-    timeout: 10000,
+    timeout: 15000,
   });
 
   // Request interceptor - tự động đính token vào header
   instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
       // --- DANH SÁCH CÁC API KHÔNG CẦN CHECK TOKEN ---
-      const publicEndpoints = ['/login', '/register', '/url', '/callback'];
+      const publicEndpoints = [
+        '/login',
+        '/register',
+        '/pre-register',
+        '/verify-email',
+        '/url',
+        '/callback',
+        '/token',
+        '/shop/setup',
+      ];
       const isPublicEndpoint = publicEndpoints.some(endpoint =>
-        config.url?.endsWith(endpoint),
+        config.url?.includes(endpoint),
       );
 
       if (isPublicEndpoint) {
-        return config; // Trả về ngay, không chạy logic check token phía dưới
+        logger.debug(
+          `[${tag}] ➡️ PUBLIC ${config.method?.toUpperCase()} ${config.url}`,
+        );
+        return config;
       }
 
       // Logic check token chỉ dành cho các API bảo mật (Private)
@@ -52,7 +74,6 @@ function createAuthApiClient(apiPrefix: string, tag: string): AxiosInstance {
           hasAuth: !!token,
         },
       );
-      // trường hợp hết token thì gọi refresh nhé
       return config;
     },
     error => {
@@ -81,7 +102,9 @@ function createAuthApiClient(apiPrefix: string, tag: string): AxiosInstance {
           const authMethod = tokenManager.getAuthMethod();
           const refreshToken = tokenManager.getRefreshToken();
 
-          if (!refreshToken) {throw new Error('No refresh token available');}
+          if (!refreshToken) {
+            throw new Error('No refresh token available');
+          }
 
           let refreshSuccess = false;
 
@@ -108,6 +131,8 @@ function createAuthApiClient(apiPrefix: string, tag: string): AxiosInstance {
       logger.error(`[${tag}] ❌ Response error:`, {
         status: error.response?.status,
         message: error.message,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
       });
 
       return Promise.reject(error);
@@ -126,7 +151,7 @@ export async function refreshCredentialsToken(
     logger.info('[ApiClient] 🔄 Refreshing access token (credentials)');
 
     const response = await axios.post(
-      `${AUTH_API_BASE}/api/auth/refresh`,
+      `${AUTH_API_BASE}${API_NO_VERSION}/auth/refresh`,
       {refreshToken},
       {headers: {'Content-Type': 'application/json'}, timeout: 10000},
     );
@@ -157,7 +182,7 @@ export async function refreshGoogleToken(
     logger.info('[ApiClient] 🔄 Refreshing Google access token');
 
     const response = await axios.post(
-      `${AUTH_API_BASE}/api/auth/google/refresh`,
+      `${AUTH_API_BASE}${API_NO_VERSION}/auth/google/refresh`,
       {refreshToken},
       {headers: {'Content-Type': 'application/json'}, timeout: 10000},
     );
@@ -183,8 +208,9 @@ export async function refreshGoogleToken(
 
 // ─── Instances ───────────────────────────────────────────────────────────────
 
-export const authApiClient = createAuthApiClient('/api/auth', 'AUTH_SERVICE');
+export const authApiClient = createAuthApiClient('/auth', 'AUTH_SERVICE');
+
 export const googleAuthApiClient = createAuthApiClient(
-  '/api/auth/google',
+  '/auth/google',
   'GOOGLE_AUTH_SERVICE',
 );
