@@ -151,25 +151,6 @@ export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEd
           </>
         )}
 
-        {/* Chi tiết tính giá phòng */}
-        {priceResult && priceResult.breakdown.length > 0 && (
-          <View style={[styles.summaryTotalCard, { backgroundColor: themedColors.primaryLight, marginBottom: 12 }]}>
-            <Text style={[styles.summaryTotalTitle, { color: themedColors.text }]}>Chi tiết giá phòng</Text>
-            {priceResult.breakdown.map((item, index) => (
-              <View key={index} style={styles.summaryTotalRow}>
-                <Text style={styles.confSummaryTotalLabel}>{item.description}</Text>
-                <Text style={[styles.confSummaryTotalValue, { color: themedColors.text }]}>{formatVND(item.amount)}</Text>
-              </View>
-            ))}
-            <View style={{ borderTopWidth: 1, borderTopColor: themedColors.border, marginTop: 8, paddingTop: 8 }}>
-              <View style={styles.summaryTotalRow}>
-                <Text style={[styles.confSummaryTotalLabel, { fontWeight: '700' }]}>Tổng tiền phòng</Text>
-                <Text style={[styles.confSummaryTotalValue, { color: themedColors.text, fontWeight: '700' }]}>{formatVND(roomTotal)}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
         {loadingPrice && (
           <View style={{ alignItems: 'center', marginBottom: 12 }}>
             <ActivityIndicator size="small" color={themedColors.primary} />

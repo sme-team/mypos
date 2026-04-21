@@ -37,8 +37,8 @@ export interface AddRoomPayload {
   category: string;
   name: string;
   floor: string;
-  priceOvernight: string;
-  priceHalfDay: string;
+  priceListed: string;
+  priceHourFirst: string;
   priceHour: string;
   priceMonth: string;
 }
@@ -48,21 +48,10 @@ export interface RoomDetailInitialData {
   typeId: string;
   name: string;
   floor: string;
-  priceOvernight: string;
-  priceHalfDay: string;
+  priceListed: string;
+  priceHourFirst: string;
   priceHour: string;
   priceMonth: string;
-}
-
-/**
- * Map unit_code → unit_id (lấy từ bảng units đã seed)
- * Nên truyền từ ngoài vào qua props nếu có thể, hoặc dùng hardcode tạm.
- */
-export interface UnitIds {
-  ovnight: string; // unit_code = OVNIGHT
-  halfday: string; // unit_code = HALFDAY
-  hour: string; // unit_code = HOUR
-  month: string; // unit_code = MONTH
 }
 
 interface Props {
@@ -74,8 +63,6 @@ interface Props {
   onRoomTypeCreated?: (newType: RoomType) => void;
   mode?: 'add' | 'edit';
   initialData?: RoomDetailInitialData;
-  /** Unit IDs từ bảng units (truyền vào để tránh hardcode) */
-  unitIds?: UnitIds;
 }
 
 // ─── Sub-components (khai báo NGOÀI component chính để tránh re-mount) ────────
@@ -171,7 +158,6 @@ export default function AddRoom({
   onRoomTypeCreated,
   mode = 'add',
   initialData,
-  unitIds,
 }: Props) {
   const {t} = useTranslation();
   const {isDark} = useTheme();
@@ -192,11 +178,11 @@ export default function AddRoom({
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [name, setName] = useState(initialData?.name ?? '');
   const [floor, setFloor] = useState(initialData?.floor ?? '');
-  const [priceOvernight, setPriceOvernight] = useState(
-    initialData?.priceOvernight ?? '',
+  const [priceListed, setPriceListed] = useState(
+    initialData?.priceListed ?? '',
   );
-  const [priceHalfDay, setPriceHalfDay] = useState(
-    initialData?.priceHalfDay ?? '',
+  const [priceHourFirst, setPriceHourFirst] = useState(
+    initialData?.priceHourFirst ?? '',
   );
   const [priceHour, setPriceHour] = useState(initialData?.priceHour ?? '');
   const [priceMonth, setPriceMonth] = useState(initialData?.priceMonth ?? '');
@@ -211,19 +197,18 @@ export default function AddRoom({
   const isEdit = mode === 'edit';
   const selectedType = roomTypes.find(rt => rt.id === selectedTypeId);
 
-  // ── Build price inputs từ unitIds + form values ────────────────────────────
+  // ── Build price inputs từ form values ───────────────────────────────────────
   const buildPriceInputs = useCallback((): RoomPriceInput[] => {
-    if (!unitIds) return [];
-    const entries: Array<{unitId: string; value: string}> = [
-      {unitId: unitIds.ovnight, value: priceOvernight},
-      {unitId: unitIds.halfday, value: priceHalfDay},
-      {unitId: unitIds.hour, value: priceHour},
-      {unitId: unitIds.month, value: priceMonth},
+    const entries: Array<{unitCode: string; value: string}> = [
+      {unitCode: 'DAY', value: priceListed},
+      {unitCode: 'HOURFIRST', value: priceHourFirst},
+      {unitCode: 'HOUR', value: priceHour},
+      {unitCode: 'MONTH', value: priceMonth},
     ];
     return entries
       .filter(e => e.value.trim() !== '' && !isNaN(Number(e.value)))
-      .map(e => ({unitId: e.unitId, price: Number(e.value)}));
-  }, [unitIds, priceOvernight, priceHalfDay, priceHour, priceMonth]);
+      .map(e => ({unitCode: e.unitCode, price: Number(e.value)}));
+  }, [priceListed, priceHourFirst, priceHour, priceMonth]);
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -273,8 +258,8 @@ export default function AddRoom({
         category: selectedType?.name ?? '',
         name,
         floor,
-        priceOvernight,
-        priceHalfDay,
+        priceListed,
+        priceHourFirst,
         priceHour,
         priceMonth,
       });
@@ -566,14 +551,14 @@ export default function AddRoom({
           <View style={{gap: 16}}>
             {[
               {
-                label: t('room.priceOvernight', 'Giá qua đêm (VNĐ)'),
-                value: priceOvernight,
-                set: setPriceOvernight,
+                label: t('room.priceListed', 'Giá niêm yết (VNĐ)'),
+                value: priceListed,
+                set: setPriceListed,
               },
               {
-                label: t('room.priceHalfDay', 'Giá nửa ngày (VNĐ)'),
-                value: priceHalfDay,
-                set: setPriceHalfDay,
+                label: t('room.priceHourFirst', 'Giá giờ đầu (VNĐ)'),
+                value: priceHourFirst,
+                set: setPriceHourFirst,
               },
               {
                 label: t('room.priceHour', 'Giá một giờ (VNĐ)'),

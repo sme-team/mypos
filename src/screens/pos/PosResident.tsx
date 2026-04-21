@@ -21,6 +21,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import ResponsivePanel from '../../components/pos/ResponsivePanel';
 import ProductCard from '../../components/pos/ProductCard';
 import RoomCard from '../../components/pos/RoomCard';
+import RoomDetailBottomSheet from '../../components/booking/ui/RoomDetailBottomSheet';
 import CartItemRow from '../../components/pos/CartItemRow';
 import {
   Customer,
@@ -93,30 +94,46 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
       setProducts(prods);
       setCategories(cats);
-      setRooms(roomsData);
+
+      // Map RoomGridItem to Room interface
+      const mappedRooms = roomsData.map(group => ({
+        title: group.title,
+        data: group.data.map((item: any): Room => {
+          console.log('[PosResident Mapping] item.id:', item.id, 'item.status:', item.status, 'item.contract_id:', item.contract_id, 'item.start_date:', item.start_date, 'item.end_date:', item.end_date);
+          return {
+            id: item.id,
+            status: item.status,
+            name: item.name,
+            label: item.label,
+            product_name: item.product_name,
+            monthly_price: item.monthly_price,
+            displayPriceText: item.displayPriceText,
+            floor: item.floor,
+            customer_name: item.customer_name,
+            product_id: item.product_id,
+            attributes: item.attributes,
+            borderColor: item.borderColor,
+            tag: undefined,
+            contract_id: item.contract_id,
+            start_date: item.start_date,
+            end_date: item.end_date,
+          };
+        }),
+      }));
+
+      setRooms(mappedRooms);
 
       if (cats.length > 0 && !activeMainCategory) {
-        // Tìm danh mục gốc đầu tiên
+        // Tìm danh mục gốc đầu tiên - chỉ set activeMainCategory, không thay đổi activeSection
         const rootCats = cats.filter(c => !c.parent_id || c.parent_id === c.id);
         if (rootCats.length > 0) {
-          //Ưu tiên pos trước
-          const posRoot = rootCats.find(c => c.apply_to === 'pos');
-          if (posRoot) {
-            setActiveSection('pos');
-            setActiveMainCategory(posRoot.id);
+          // Tìm danh mục theo activeSection hiện tại
+          const sectionRoot = rootCats.find(c => c.apply_to === activeSection);
+          if (sectionRoot) {
+            setActiveMainCategory(sectionRoot.id);
           } else {
-            const stayRoot = rootCats.find(
-              c =>
-                c.apply_to === 'accommodation' ||
-                c.apply_to === 'hostel' ||
-                c.apply_to === 'hotel',
-            );
-            if (stayRoot) {
-              setActiveSection('stay');
-              setActiveMainCategory(stayRoot.id);
-            } else {
-              setActiveMainCategory(rootCats[0].id);
-            }
+            // Nếu không tìm thấy, dùng danh mục đầu tiên
+            setActiveMainCategory(rootCats[0].id);
           }
         }
       }
@@ -144,7 +161,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       status: room.status,
       label: room.label,
     });
-    if (room.status === 'available') {
+    if (room.status === 'available' || room.status === 'booked') {
       setBookingRoom(room);
     } else if (room.status === 'occupied') {
       setSelectedRoom(room);
@@ -171,6 +188,10 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   // Detail Modal
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
+  // Room Detail Bottom Sheet
+  const [roomDetailVisible, setRoomDetailVisible] = useState(false);
+  const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<Room | null>(null);
 
   const [paymentVisible, setPaymentVisible] = useState(false);
 
@@ -234,6 +255,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     () => [
       {key: 'all', label: t('pos.status_all')},
       {key: 'available', label: t('pos.status_empty')},
+      {key: 'booked', label: t('pos.status_booked', 'Đã đặt')},
       {key: 'occupied', label: t('pos.status_occupied')},
     ],
     [t],
@@ -938,6 +960,11 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                     room={room}
                     cardWidth={cardWidth}
                     onPress={() => handleRoomPress(room)}
+                    onTimelinePress={() => {
+                      console.log('[PosResident] onTimelinePress - room:', room);
+                      setSelectedRoomForDetail(room);
+                      setRoomDetailVisible(true);
+                    }}
                   />
                 ))}
               </View>
@@ -1568,6 +1595,13 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           />
         )}
       </Modal>
+
+      {/* Room Detail Bottom Sheet */}
+      <RoomDetailBottomSheet
+        visible={roomDetailVisible}
+        room={selectedRoomForDetail}
+        onClose={() => setRoomDetailVisible(false)}
+      />
     </SafeAreaView>
   );
 }

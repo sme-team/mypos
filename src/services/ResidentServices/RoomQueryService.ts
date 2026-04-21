@@ -7,7 +7,7 @@ import { RoomPriceService } from './RoomPriceService';
 //  Types
 // ─────────────────────────────────────────────
 
-export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
+export type RoomStatus = 'available' | 'occupied' | 'booked' | 'cleaning' | 'maintenance';
 
 /** Shape trả về cho 1 ô phòng trên Grid (Màn hình 1) */
 export interface RoomGridItem {
@@ -106,6 +106,7 @@ export interface AvailableRoomItem {
 const BORDER_COLORS: Record<RoomStatus, string> = {
   available: '#4CAF50',
   occupied: '#FF4444',
+  booked: '#2196F3',
   cleaning: '#FFA726',
   maintenance: '#9E9E9E',
 };
@@ -172,15 +173,146 @@ class RoomQueryServiceClass {
   private resolveStatus(
     variantStatus: string,
     contractId: string | null,
+    contractStartDate: string | null,
+    contractEndDate: string | null,
     attrStatus?: string,
+    checkInTime?: string,
+    checkOutTime?: string,
   ): RoomStatus {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // Parse check-in/check-out times (format: "14:00")
+    const checkInHour = checkInTime ? parseInt(checkInTime.split(':')[0]) : 14;
+    const checkInMinute = checkInTime ? parseInt(checkInTime.split(':')[1]) : 0;
+    const checkInTimeInMinutes = checkInHour * 60 + checkInMinute;
+
+    const checkOutHour = checkOutTime ? parseInt(checkOutTime.split(':')[0]) : 12;
+    const checkOutMinute = checkOutTime ? parseInt(checkOutTime.split(':')[1]) : 0;
+    const checkOutTimeInMinutes = checkOutHour * 60 + checkOutMinute;
+
+    console.log('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`);
+
     if (variantStatus === 'inactive') return 'maintenance';
     if (attrStatus === 'cleaning') return 'cleaning';
-    if (contractId) return 'occupied';
+
+    if (contractId && contractStartDate && contractEndDate) {
+      const start = contractStartDate;
+      const end = contractEndDate;
+
+      // Check-in day: before check-in time
+      if (today === start && currentTimeInMinutes < checkInTimeInMinutes) {
+        console.log('[resolveStatus] Returning booked (check-in day, before time)');
+        return 'booked';
+      }
+
+      // Check-out day: after check-out time
+      if (today === end && currentTimeInMinutes >= checkOutTimeInMinutes) {
+        console.log('[resolveStatus] Returning available (check-out day, after time)');
+        return 'available';
+      }
+
+      // Within contract period (including check-in day after time, check-out day before time)
+      if (today >= start && today <= end) {
+        console.log('[resolveStatus] Returning occupied');
+        return 'occupied';
+      } else if (today < start) {
+        console.log('[resolveStatus] Returning booked');
+        return 'booked';
+      }
+    }
+
+    console.log('[resolveStatus] Returning available');
     return 'available';
   }
 
   // ── Màn hình 1: Danh sách phòng ─────────────
+
+  /**
+   * Lấy tất cả contracts của một phòng cho timeline
+   */
+  async getRoomContracts(variantId: string): Promise<any[]> {
+    const db = DatabaseManager.get('pos');
+    if (!db) return [];
+
+    const rows = await QueryBuilder.table('contracts', db.getInternalDAO())
+      .select([
+        'contracts.id',
+        'contracts.start_date',
+        'contracts.end_date',
+        'contracts.status',
+        'contracts.metadata',
+        'customers.full_name',
+      ])
+      .innerJoin('customers', 'contracts.customer_id = customers.id')
+      .where('contracts.variant_id', variantId)
+      .where('contracts.status', '!=', 'cancelled')
+      .where('contracts.status', '!=', 'terminated')
+      .orderBy('contracts.start_date', 'ASC')
+      .get();
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    return rows.map(r => {
+      let checkInTime = '';
+      let checkOutTime = '';
+      if (r.metadata) {
+        try {
+          const meta = JSON.parse(r.metadata);
+          checkInTime = meta.checkin_time || '';
+          checkOutTime = meta.checkout_time || '';
+        } catch (e) {
+          console.warn('[RoomQueryService] Error parsing metadata for contract:', r.id);
+        }
+      }
+
+      // Parse check-in/check-out times
+      const checkInHour = checkInTime ? parseInt(checkInTime.split(':')[0]) : 14;
+      const checkInMinute = checkInTime ? parseInt(checkInTime.split(':')[1]) : 0;
+      const checkInTimeInMinutes = checkInHour * 60 + checkInMinute;
+
+      const checkOutHour = checkOutTime ? parseInt(checkOutTime.split(':')[0]) : 12;
+      const checkOutMinute = checkOutTime ? parseInt(checkOutTime.split(':')[1]) : 0;
+      const checkOutTimeInMinutes = checkOutHour * 60 + checkOutMinute;
+
+      // Calculate status based on current date AND time
+      let status: 'occupied' | 'booked' = 'booked';
+
+      // Check-in day: before check-in time
+      if (today === r.start_date && currentTimeInMinutes < checkInTimeInMinutes) {
+        status = 'booked';
+      }
+      // Check-out day: after check-out time
+      else if (today === r.end_date && currentTimeInMinutes >= checkOutTimeInMinutes) {
+        // Past contract - don't include in timeline
+        return null;
+      }
+      // Within contract period (including check-in day after time, check-out day before time)
+      else if (today >= r.start_date && today <= r.end_date) {
+        status = 'occupied';
+      } else if (today > r.end_date) {
+        // Past contract - don't include in timeline
+        return null;
+      }
+
+      return {
+        id: r.id,
+        customerName: r.full_name,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        checkInTime,
+        checkOutTime,
+        status,
+      };
+    }).filter(c => c !== null);
+  }
 
   /**
    * Lấy toàn bộ phòng (flat list) — dùng cho getRoomsGroupedByFloor
@@ -192,6 +324,7 @@ class RoomQueryServiceClass {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
+      // Get all rooms first
       const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
         .select([
           'product_variants.id',
@@ -200,59 +333,147 @@ class RoomQueryServiceClass {
           'product_variants.status as variant_status',
           'products.name as product_name',
           'products.id as product_id',
-          'contracts.id as contract_id',
-          'contracts.status as contract_status',
-          'contracts.start_date',
-          'contracts.end_date',
-          'customers.full_name as customer_name'
         ])
         .innerJoin('products', 'product_variants.product_id = products.id')
-        .leftJoin('contracts', 'product_variants.id = contracts.variant_id AND contracts.status = "active"')
-        .leftJoin('customers', 'contracts.customer_id = customers.id')
         .where('product_variants.store_id', storeId)
         .where('products.product_type', 'room')
         .whereIn('product_variants.status', ['active', 'inactive'])
         .orderBy('product_variants.name', 'ASC')
         .get();
 
-      // Lấy tất cả giá cho các variant này
+      // Fetch contracts separately for each room to get the most relevant one
       const variantIds = rows.map((r: any) => r.id);
+      let contracts: any[] = [];
+      if (variantIds.length > 0) {
+        contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+          .select([
+            'contracts.id',
+            'contracts.variant_id',
+            'contracts.status',
+            'contracts.start_date',
+            'contracts.end_date',
+            'contracts.metadata',
+            'customers.full_name as customer_name'
+          ])
+          .innerJoin('customers', 'contracts.customer_id = customers.id')
+          .where('contracts.variant_id', 'in', variantIds)
+          .where('contracts.status', '!=', 'cancelled')
+          .where('contracts.status', '!=', 'terminated')
+          .orderBy('contracts.start_date', 'ASC')
+          .get();
+      }
+
+      // Match contracts to rooms - get the most relevant contract for each room
+      const contractMap = new Map<string, any>();
+      const today = new Date().toISOString().split('T')[0];
+
+      for (const contract of contracts) {
+        const roomId = contract.variant_id;
+        const existing = contractMap.get(roomId);
+
+        // If no contract yet, add this one
+        if (!existing) {
+          contractMap.set(roomId, contract);
+          continue;
+        }
+
+        // If existing contract is already in the past, replace with new one
+        if (existing.end_date < today && contract.start_date >= today) {
+          contractMap.set(roomId, contract);
+          continue;
+        }
+
+        // If new contract is in the past and existing is current/future, keep existing
+        if (contract.end_date < today && existing.start_date >= today) {
+          continue;
+        }
+
+        // If both are in the future, keep the earliest one
+        if (contract.start_date >= today && existing.start_date >= today) {
+          if (contract.start_date < existing.start_date) {
+            contractMap.set(roomId, contract);
+          }
+          continue;
+        }
+
+        // If both are current (overlap), keep the one that ends later
+        if (contract.start_date <= today && contract.end_date >= today &&
+            existing.start_date <= today && existing.end_date >= today) {
+          if (contract.end_date > existing.end_date) {
+            contractMap.set(roomId, contract);
+          }
+          continue;
+        }
+      }
+
+      // Lấy tất cả giá cho các variant này với unit_code
       let allPrices: any[] = [];
       if (variantIds.length > 0) {
-        // Relax filter: remove effective_to check and initial price_list_name check
         allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
-          .select(['variant_id', 'unit_id', 'price', 'price_list_name'])
-          .whereIn('variant_id', variantIds)
+          .select([
+            'prices.variant_id',
+            'prices.unit_id',
+            'prices.price',
+            'prices.price_list_name',
+            'units.unit_code'
+          ])
+          .innerJoin('units', 'prices.unit_id = units.id')
+          .whereIn('prices.variant_id', variantIds)
           .get();
-        
+
         console.log(`[RoomQueryService] Fetched ${allPrices.length} total prices for ${variantIds.length} variants`);
         if (allPrices.length > 0) {
           console.log('[RoomQueryService] Sample price record:', JSON.stringify(allPrices[0]));
         }
       }
 
-      return rows.map((r: any): RoomGridItem => {
+      // Process rooms with price calculation
+      const roomItems: RoomGridItem[] = [];
+      for (const r of rows) {
         const attr = this.parseAttr(r.attributes);
-        const status = this.resolveStatus(r.variant_status, r.contract_id, attr.room_status);
+        const contract = contractMap.get(r.id) || null;
+
+        // Parse check-in/check-out times from contract metadata
+        let checkInTime: string | undefined;
+        let checkOutTime: string | undefined;
+        if (contract?.metadata) {
+          try {
+            const meta = JSON.parse(contract.metadata);
+            checkInTime = meta.checkin_time;
+            checkOutTime = meta.checkout_time;
+          } catch (e) {
+            console.warn('[RoomQueryService] Error parsing metadata for contract:', contract.id);
+          }
+        }
+
+        const status = this.resolveStatus(
+          r.variant_status,
+          contract?.id || null,
+          contract?.start_date || null,
+          contract?.end_date || null,
+          attr.room_status,
+          checkInTime,
+          checkOutTime
+        );
         const floor = this.resolveFloor(attr, r.name);
 
         // Lọc giá của variant này và tìm giá ưu tiên (ưu tiên giá 'default' trước)
         const variantPrices = allPrices.filter(p => p.variant_id === r.id);
-        const defaultPrices = variantPrices.filter(p => 
+        const defaultPrices = variantPrices.filter(p =>
           p.price_list_name && p.price_list_name.toLowerCase() === 'default'
         );
         const pricesToUse = defaultPrices.length > 0 ? defaultPrices : variantPrices;
-        
+
         console.log(`[RoomQueryService] Room ${r.name}: variantPrices=${variantPrices.length}, defaultPrices=${defaultPrices.length}, pricesToUse=${pricesToUse.length}`);
         if (pricesToUse.length > 0) {
-          console.log(`[RoomQueryService] Room ${r.name}: First price unit_id=${pricesToUse[0].unit_id}, price=${pricesToUse[0].price}`);
+          console.log(`[RoomQueryService] Room ${r.name}: First price unit_code=${pricesToUse[0].unit_code}, price=${pricesToUse[0].price}`);
         }
-        
-        const priorityPrice = RoomPriceService.getPriorityPrice(pricesToUse);
+
+        const priorityPrice = await RoomPriceService.getPriorityPrice(pricesToUse);
         console.log(`[RoomQueryService] Room ${r.name}: priorityPrice=${JSON.stringify(priorityPrice)}`);
-        
-        const displayPriceText = priorityPrice 
-          ? RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
+
+        const displayPriceText = priorityPrice
+          ? await RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
           : '';
 
         console.log(`[RoomQueryService] Room ${r.name}: displayPriceText="${displayPriceText}"`);
@@ -261,9 +482,9 @@ class RoomQueryServiceClass {
           console.log(`[RoomQueryService] Room ${r.name} has NO display price. Total prices for variant: ${variantPrices.length}`);
         }
 
-        const mPrice = variantPrices.find(p => p.unit_id === 'unit-019')?.price;
+        const mPrice = variantPrices.find(p => p.unit_code?.toUpperCase() === 'MONTH')?.price;
 
-        return {
+        roomItems.push({
           id: r.id,
           name: r.name,
           product_name: r.product_name || '',
@@ -271,18 +492,20 @@ class RoomQueryServiceClass {
           floor,
           monthly_price: mPrice || undefined,
           status,
-          contract_id: r.contract_id || null,
-          contract_status: r.contract_status || 'inactive',
-          start_date: r.start_date || null,
-          end_date: r.end_date || null,
-          customer_name: r.customer_name || '',
+          contract_id: contract?.id || null,
+          contract_status: contract?.status || 'inactive',
+          start_date: contract?.start_date || null,
+          end_date: contract?.end_date || null,
+          customer_name: contract?.customer_name || '',
           borderColor: BORDER_COLORS[status],
           attributes: attr,
           product_id: r.product_id,
           displayPriceText,  // Giá hiển thị theo độ ưu tiên
           displayPriceValue: priorityPrice?.price || 0,
-        };
-      });
+        });
+      }
+
+      return roomItems;
     } catch (err) {
       console.error('[RoomQueryService] getRoomsFlatList error:', err);
       return [];
@@ -329,11 +552,14 @@ class RoomQueryServiceClass {
     // 2. Product (tên loại phòng)
     const product = await this.productSvc.findById(variant.product_id);
 
-    // 3. Hợp đồng active
+    // 3. Hợp đồng active - tìm với nhiều status khác nhau
     const contracts = await this.contractSvc.findAll(
-      { variant_id: variantId, status: 'active' },
+      { variant_id: variantId },
     );
-    const contract = contracts.length > 0 ? contracts[0] : null;
+    // Lọc contract không bị cancelled hoặc terminated
+    const activeContracts = contracts.filter(c => c.status !== 'cancelled' && c.status !== 'terminated');
+    // Lấy contract mới nhất (sắp xếp theo created_at DESC)
+    const contract = activeContracts.length > 0 ? activeContracts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] : null;
 
     // 4. Khách hàng
     let customer: any = null;
@@ -508,13 +734,20 @@ class RoomQueryServiceClass {
         .whereNull('contracts.id') // Chỉ lấy phòng trống (không có hợp đồng active)
         .get();
 
-      // Lấy tất cả giá cho các variant này
+      // Lấy tất cả giá cho các variant này với unit_code
       const variantIds = rows.map((r: any) => r.id);
       let allPrices: any[] = [];
       if (variantIds.length > 0) {
         allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
-          .select(['variant_id', 'unit_id', 'price', 'price_list_name'])
-          .whereIn('variant_id', variantIds)
+          .select([
+            'prices.variant_id',
+            'prices.unit_id',
+            'prices.price',
+            'prices.price_list_name',
+            'units.unit_code'
+          ])
+          .innerJoin('units', 'prices.unit_id = units.id')
+          .whereIn('prices.variant_id', variantIds)
           .get();
       }
 
@@ -530,17 +763,17 @@ class RoomQueryServiceClass {
 
         // Tìm giá ưu tiên
         const variantPrices = allPrices.filter(p => p.variant_id === r.id);
-        const defaultPrices = variantPrices.filter(p => 
+        const defaultPrices = variantPrices.filter(p =>
           p.price_list_name && p.price_list_name.toLowerCase() === 'default'
         );
         const pricesToUse = defaultPrices.length > 0 ? defaultPrices : variantPrices;
 
-        const priorityPrice = RoomPriceService.getPriorityPrice(pricesToUse);
-        const displayPriceText = priorityPrice 
-          ? RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
+        const priorityPrice = await RoomPriceService.getPriorityPrice(pricesToUse);
+        const displayPriceText = priorityPrice
+          ? await RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
           : '';
 
-        const mPrice = variantPrices.find(p => p.unit_id === 'unit-019')?.price;
+        const mPrice = variantPrices.find(p => p.unit_code?.toUpperCase() === 'MONTH')?.price;
 
         if (!byFloor[key]) byFloor[key] = [];
         byFloor[key].push({

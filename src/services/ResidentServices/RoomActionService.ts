@@ -84,9 +84,15 @@ export interface LongTermCheckInInput {
   address?: string;
   idCardFrontUrl?: string;
   idCardBackUrl?: string;
+  // Thông tin cư dân bổ sung (residents)
+  hometown?: string;
+  occupation?: string;
+  workplace?: string;
+  portraitUrl?: string;
 
   contractNumber?: string;
   startDate: string; // YYYY-MM-DD
+  endDate: string;              // YYYY-MM-DD - thời gian kết thúc hợp đồng từ UI
   durationMonths?: number; // mặc định 12
   rentAmount: number;
   depositAmount?: number;
@@ -104,10 +110,14 @@ export interface LongTermCheckInInput {
     name: string;
     quantity: number;
     unitPrice: number;
+    taxRate?: number;  // FIX #7: Thêm tax_rate từ products.tax_rate
   }>;
   // Trả cọc ngay không?
   payDepositNow?: boolean;
   depositPaymentMethod?: 'cash' | 'bank_transfer' | 'e_wallet';
+  // Thông tin session
+  cashierUserId?: string;
+  sessionId?: string;
 }
 
 /** Màn hình 2B — Đặt phòng ngắn hạn (hỗ trợ cả khách cũ và mới) */
@@ -128,6 +138,11 @@ export interface ShortTermCheckInInput {
   address?: string; // Địa chỉ thường trú
   idCardFrontUrl?: string;
   idCardBackUrl?: string;
+  // Thông tin cư dân bổ sung (residents)
+  hometown?: string;
+  occupation?: string;
+  workplace?: string;
+  portraitUrl?: string;
   // Thông tin đặt phòng
   checkinDate: string; // YYYY-MM-DD
   checkinTime: string; // HH:mm (bắt buộc)
@@ -144,9 +159,13 @@ export interface ShortTermCheckInInput {
     name: string;
     quantity: number;
     unitPrice: number;
+    taxRate?: number;  // FIX #7: Thêm tax_rate từ products.tax_rate
   }>;
   payDepositNow?: boolean;
   depositPaymentMethod?: 'cash' | 'bank_transfer' | 'e_wallet';
+  // Thông tin session
+  cashierUserId?: string;
+  sessionId?: string;
 }
 
 /** Màn hình 3 — Chỉnh sửa thông tin phòng / khách */
@@ -245,13 +264,18 @@ class RoomActionServiceClass {
     storeId: string,
     services: any,
     startOrder = 10,
+    notes?: string,  // FIX #9: Thêm notes parameter
   ): Promise<number> {
     if (!services || services.length === 0) return 0;
     let totalSvcAmount = 0;
     for (let i = 0; i < services.length; i++) {
       const svc = services[i];
       const amount = svc.quantity * svc.unitPrice;
+      // FIX #7: Tính tax_amount từ tax_rate
+      const taxRate = svc.taxRate ?? 0;
+      const taxAmount = amount * taxRate / 100;
       totalSvcAmount += amount;
+      
       await this.billDetailSvc.create({
         id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: storeId,
@@ -263,8 +287,12 @@ class RoomActionServiceClass {
         quantity: svc.quantity,
         unit_price: svc.unitPrice,
         amount: amount,
+        // FIX #7: Thêm tax_rate và tax_amount
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        notes: notes || null,  // FIX #9: Thêm notes từ UI
         sort_order: startOrder + i,
-        sync_status: 'local',
+        sync_status: 'local',  // FIX #11: Luôn là local
         created_at: this.now(),
         updated_at: this.now(),
       });
@@ -274,14 +302,19 @@ class RoomActionServiceClass {
 
   /**
    * Đảm bảo có customerId (nếu chưa có thì tạo mới)
+   * FIX #1: Thêm customer_group, loyalty_points, total_spent theo yêu cầu
    */
-  private async ensureCustomer(input: any, now: string): Promise<string> {
+  private async ensureCustomer(input: any, now: string, tempResidenceTo?: string): Promise<string> {
     if (input.customerId && input.customerId !== '') {
       return input.customerId;
     }
 
     const customerId = await generateSequentialId(this.customerSvc, 'cust');
     const customerCode = await generateCustomerCode(input.storeId);
+
+    // Tính total_spent tạm = tiền phòng + dịch vụ (sẽ cập nhật lại sau mỗi thanh toán)
+    const totalSpent = input.rentAmount || 0;
+    const svcAmount = (input.extraServices ?? []).reduce((s: number, sv: any) => s + sv.quantity * sv.unitPrice, 0);
 
     await this.customerSvc.create({
       id: customerId,
@@ -301,20 +334,39 @@ class RoomActionServiceClass {
       email: input.email || null,
       nationality: input.nationality || 'VN',
       address: input.address || null,
-      status: 'active',
+      // FIX #1: Thêm các trường thiếu theo yêu cầu
+      customer_group: 'regular',        // Mặc định 'regular'
+      loyalty_points: 0,                // Mặc định 0
+      total_spent: totalSpent + svcAmount, // Tính tạm = tiền phòng + dịch vụ
+      notes: input.notes || null,       // FIX #9: Thêm notes từ UI
+      // FIX #10: Bỏ status - dùng schema default 'active'
+      sync_status: 'local',             // FIX #11: Luôn là local
       created_at: now,
       updated_at: now,
     });
 
+    // FIX #2: Thêm các trường thiếu cho residents theo yêu cầu
     await this.residentSvc.create({
       id: await generateSequentialId(this.residentSvc, 'res'),
       store_id: input.storeId,
       customer_id: customerId,
+      // Thông tin giấy tờ
       id_card_front_url: input.idCardFrontUrl || '',
       id_card_back_url: input.idCardBackUrl || '',
+      portrait_url: input.portraitUrl || null,  // FIX #2: Thêm portrait_url
+      // Thông tin cá nhân bổ sung
+      hometown: input.hometown || null,         // FIX #2: Thêm hometown (quê quán)
+      occupation: input.occupation || null,     // FIX #2: Thêm occupation (nghề nghiệp)
+      workplace: input.workplace || null,        // FIX #2: Thêm workplace (nơi làm việc)
+      // Tạm trú
       temp_residence_from: input.checkinDate || input.startDate,
-      temp_residence_to: input.checkoutDate || null,
-      status: 1,
+      temp_residence_to: tempResidenceTo || input.checkoutDate || null, // Dài hạn dùng thời gian hợp đồng
+      temp_residence_status: 'pending',        // FIX #2: Mặc định 'pending'
+      police_ref_number: null,                 // FIX #2: Để trống, điền sau khi khai báo công an
+      approved_by: null,                       // FIX #2: Để trống
+      approved_date: null,                     // FIX #2: Để trống
+      note: input.notes || null,               // FIX #9: Thêm note từ UI
+      // FIX #10: Bỏ status - dùng schema default 1
       created_at: now,
     });
 
@@ -345,14 +397,22 @@ class RoomActionServiceClass {
     input: LongTermCheckInInput,
   ): Promise<{contractId: string; billId: string}> {
     return this.contractSvc.executeTransaction(async () => {
+      // Kiểm tra trùng lịch trước khi tạo hợp đồng
+      await this.checkRoomAvailability(
+        input.variantId,
+        input.startDate,
+        input.endDate,
+        input.storeId,
+      );
+
       const now = this.now();
       const contractId = await generateSequentialId(this.contractSvc, 'ctr');
       const depositBillId = await generateSequentialId(this.billSvc, 'bill');
 
-      const endDate = this.calcEndDate(
-        input.startDate,
-        input.durationMonths ?? 12,
-      );
+      // Tính cycle_period_to cho bill tháng đầu = start_date + 1 tháng
+      const d = new Date(input.startDate);
+      d.setMonth(d.getMonth() + 1);
+      const cyclePeriodTo = d.toISOString().split('T')[0];
 
       // Generate codes
       const contractCode = await generateContractCode(input.storeId);
@@ -369,7 +429,7 @@ class RoomActionServiceClass {
       );
 
       // 0. Đảm bảo có customerId
-      const customerId = await this.ensureCustomer(input, now);
+      const customerId = await this.ensureCustomer(input, now, input.endDate);
 
       // 1. contracts
       await this.contractSvc.create({
@@ -380,7 +440,7 @@ class RoomActionServiceClass {
         product_id: input.productId,
         variant_id: input.variantId,
         start_date: input.startDate,
-        end_date: endDate,
+        end_date: input.endDate,
         signed_date: now.split('T')[0],
         rent_amount: input.rentAmount,
         deposit_amount: input.depositAmount ?? 0,
@@ -390,20 +450,21 @@ class RoomActionServiceClass {
         water_reading_init: input.waterReadingInit ?? 0,
         billing_day: input.billingDay ?? 1,
         cycle_id: cycleId,
-        status: 'active',
-        notes: input.notes ?? '',
+        notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+        // FIX #10: Bỏ status - dùng schema default 'active'
         created_at: now,
         updated_at: now,
       });
 
       // 2. contract_members (người thuê chính)
       await this.contractMemberSvc.create({
-        id: generateSequentialId(this.contractMemberSvc, 'cm'),
+        id: await generateSequentialId(this.contractMemberSvc, 'cm'),
         store_id: input.storeId,
         contract_id: contractId,
         customer_id: customerId,
         is_primary: true,
         joined_date: input.startDate,
+        note: input.notes || null,  // FIX #9: Thêm note từ UI
         created_at: now,
         updated_at: now,
       });
@@ -426,22 +487,28 @@ class RoomActionServiceClass {
           remaining_amount: depositAmount,
           bill_status: 'issued',
           issued_at: now,
-          sync_status: 'local',
+          due_at: input.startDate,  // FIX #6: Hạn thanh toán = ngày nhận phòng
+          notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+          // FIX #6: Thêm thông tin session
+          cashier_user_id: input.cashierUserId || null,
+          session_id: input.sessionId || null,
+          sync_status: 'local',  // FIX #11: Luôn là local
           created_at: now,
           updated_at: now,
         });
 
         // 3.1 bill_details — dòng tiền cọc
         await this.billDetailSvc.create({
-          id: generateSequentialId(this.billDetailSvc, 'bdt'),
+          id: await generateSequentialId(this.billDetailSvc, 'bdt'),
           store_id: input.storeId,
           bill_id: depositBillId,
           line_description: 'Tiền đặt cọc',
           quantity: 1,
           unit_price: depositAmount,
           amount: depositAmount,
+          notes: input.notes || null,  // FIX #9: Thêm notes từ UI
           sort_order: 1,
-          sync_status: 'local',
+          sync_status: 'local',  // FIX #11: Luôn là local
           created_at: now,
           updated_at: now,
         });
@@ -451,7 +518,7 @@ class RoomActionServiceClass {
           input.storeId,
         );
         await this.receivableSvc.create({
-          id: generateSequentialId(this.receivableSvc, 'rec'),
+          id: await generateSequentialId(this.receivableSvc, 'rec'),
           store_id: input.storeId,
           customer_id: customerId,
           contract_id: contractId,
@@ -481,41 +548,49 @@ class RoomActionServiceClass {
         ref_type: 'contract',
         cycle_id: cycleId,
         cycle_period_from: input.startDate,
-        cycle_period_to: endDate,
+        cycle_period_to: cyclePeriodTo,  // FIX #4: Dùng cyclePeriodTo thay vì endDate
         subtotal: totalRentBill,
         total_amount: totalRentBill,
         paid_amount: 0,
         remaining_amount: totalRentBill,
         bill_status: 'issued',
         issued_at: now,
-        sync_status: 'local',
+        due_at: input.startDate,  // FIX #6: Hạn thanh toán = ngày nhận phòng
+        notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+        // FIX #6: Thêm thông tin session
+        cashier_user_id: input.cashierUserId || null,
+        session_id: input.sessionId || null,
+        sync_status: 'local',  // FIX #11: Luôn là local
         created_at: now,
         updated_at: now,
       });
 
       // 6. bill_details cho bill tiền nhà
       // - Dòng tiền phòng
+      // FIX #7: Tính tax_amount cho tiền phòng (giả định tax_rate = 0 cho phòng, có thể thay đổi sau)
+      const roomTaxRate = 0;
+      const roomTaxAmount = input.rentAmount * roomTaxRate / 100;
+      
       await this.billDetailSvc.create({
-        id: generateSequentialId(this.billDetailSvc, 'bdt'),
+        id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: input.storeId,
         bill_id: rentBillId,
         line_description: 'Tiền thuê phòng (tháng đầu)',
         quantity: 1,
         unit_price: input.rentAmount,
         amount: input.rentAmount,
+        // FIX #7: Thêm tax_rate và tax_amount
+        tax_rate: roomTaxRate,
+        tax_amount: roomTaxAmount,
+        notes: input.notes || null,  // FIX #9: Thêm notes từ UI
         sort_order: 1,
-        sync_status: 'local',
+        sync_status: 'local',  // FIX #11: Luôn là local
         created_at: now,
         updated_at: now,
       });
 
       // - Dòng dịch vụ thêm
-      await this.insertExtraServices(
-        rentBillId,
-        input.storeId,
-        input.extraServices,
-        10,
-      );
+      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10, input.notes);
 
       // 6. Receivable cho tiền nhà
       let receivableCodeRent = await generateReceivableCode(input.storeId);
@@ -550,7 +625,8 @@ class RoomActionServiceClass {
           amount: depositAmount,
           paid_at: now,
           status: 'success',
-          sync_status: 'local',
+          notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+          sync_status: 'local',  // FIX #11: Luôn là local
           created_at: now,
           updated_at: now,
         });
@@ -582,6 +658,51 @@ class RoomActionServiceClass {
   // ── Màn hình 2B: Check-in ngắn hạn ──────────
 
   /**
+   * Kiểm tra trùng lịch: phòng có hợp đồng nào chưa bị hủy mà overlap với khoảng thời gian mới không
+   * Điều kiện overlap: existing.start < new.checkout AND existing.end > new.checkin
+   */
+  private async checkRoomAvailability(
+    variantId: string,
+    checkinDate: string,
+    checkoutDate: string,
+    storeId: string,
+  ): Promise<void> {
+    const db = DatabaseManager.get('pos');
+    if (!db) return;
+
+    console.log('[checkRoomAvailability] Checking availability for room:', variantId, 'from', checkinDate, 'to', checkoutDate);
+
+    const conflictingContracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+      .select(['contracts.id', 'contracts.start_date', 'contracts.end_date', 'customers.full_name'])
+      .innerJoin('customers', 'contracts.customer_id = customers.id')
+      .where('contracts.variant_id', variantId)
+      .where('contracts.store_id', storeId)
+      .where('contracts.status', '!=', 'cancelled')
+      .where('contracts.status', '!=', 'terminated')
+      .where('contracts.start_date', '<', checkoutDate)
+      .where('contracts.end_date', '>', checkinDate)
+      .get();
+
+    console.log('[checkRoomAvailability] Found conflicting contracts:', conflictingContracts.length);
+
+    if (conflictingContracts.length > 0) {
+      const conflict = conflictingContracts[0];
+      const startDate = new Date(conflict.start_date).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+      });
+      const endDate = new Date(conflict.end_date).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+      });
+
+      const errorMsg = `Phòng này đã bị đặt bởi ${conflict.full_name} từ ${startDate} đến ${endDate}. Không thể tạo hợp đồng mới trong khoảng thời gian này.`;
+      console.log('[checkRoomAvailability] Overlap detected:', errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
+
+  /**
    * Tạo hợp đồng ngắn hạn + khách mới.
    * INSERT: customers, residents, contracts, contract_members, bills, bill_details, payments?
    */
@@ -589,6 +710,14 @@ class RoomActionServiceClass {
     input: ShortTermCheckInInput,
   ): Promise<{customerId: string; contractId: string; billId: string}> {
     return this.contractSvc.executeTransaction(async () => {
+      // Kiểm tra trùng lịch trước khi tạo hợp đồng
+      await this.checkRoomAvailability(
+        input.variantId,
+        input.checkinDate,
+        input.checkoutDate,
+        input.storeId,
+      );
+
       const now = this.now();
       const contractId = await generateSequentialId(this.contractSvc, 'ctr');
       const depositBillId = await generateSequentialId(this.billSvc, 'bill');
@@ -619,6 +748,9 @@ class RoomActionServiceClass {
       const depositBillNumber = await generateBillNumber(input.storeId);
       const rentBillNumber = this.incrementCode(depositBillNumber);
 
+      // Lấy cycle_id cho ngắn hạn (daily)
+      const cycleId = await this.getCycleId(input.storeId, 'daily');
+
       // Metadata lưu trữ thông tin thời gian checkin/checkout
       const metadata = JSON.stringify({
         checkin_time: input.checkinTime,
@@ -628,10 +760,7 @@ class RoomActionServiceClass {
         price_description: priceResult.description,
       });
 
-      // 3. contracts (dùng chung bảng, end_date = checkout)
-      // Lấy cycle_id cho ngắn hạn (daily)
-      const cycleId = await this.getCycleId(input.storeId, 'daily');
-
+      // 4. contracts
       await this.contractSvc.create({
         id: contractId,
         store_id: input.storeId,
@@ -641,7 +770,7 @@ class RoomActionServiceClass {
         variant_id: input.variantId,
         start_date: input.checkinDate,
         end_date: input.checkoutDate,
-        signed_date: now.split('T')[0], // YYYY-MM-DD
+        signed_date: now.split('T')[0],
         rent_amount: rentAmount,
         deposit_amount: input.depositAmount ?? 0,
         electric_rate: 0,
@@ -650,14 +779,14 @@ class RoomActionServiceClass {
         cycle_id: cycleId,
         electric_reading_init: 0,
         water_reading_init: 0,
-        status: 'active',
-        notes: input.notes ?? '',
-        metadata, // adults, children, checkin_time, checkout_time
+        notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+        // FIX #10: Bỏ status - dùng schema default 'active'
+        metadata,          // adults, children, checkin_time, checkout_time
         created_at: now,
         updated_at: now,
       });
 
-      // 4. contract_members
+      // 5. contract_members
       await this.contractMemberSvc.create({
         id: await generateSequentialId(this.contractMemberSvc, 'cm'),
         store_id: input.storeId,
@@ -665,6 +794,7 @@ class RoomActionServiceClass {
         customer_id: customerId,
         is_primary: true,
         joined_date: input.checkinDate,
+        note: input.notes || null,  // FIX #9: Thêm note từ UI
         created_at: now,
         updated_at: now,
       });
@@ -690,7 +820,12 @@ class RoomActionServiceClass {
           remaining_amount: depositTotal,
           bill_status: 'issued',
           issued_at: now,
-          sync_status: 'local',
+          due_at: input.checkinDate,  // FIX #6: Hạn thanh toán = ngày nhận phòng
+          notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+          // FIX #6: Thêm thông tin session
+          cashier_user_id: input.cashierUserId || null,
+          session_id: input.sessionId || null,
+          sync_status: 'local',  // FIX #11: Luôn là local
           created_at: now,
           updated_at: now,
         });
@@ -725,7 +860,7 @@ class RoomActionServiceClass {
         store_id: input.storeId,
         customer_id: customerId,
         bill_number: rentBillNumber,
-        bill_type: 'rent',
+        bill_type: 'hotel',  // FIX #3: Ngắn hạn dùng 'hotel' thay vì 'rent'
         ref_id: contractId,
         ref_type: 'contract',
         subtotal: totalRentBill,
@@ -734,6 +869,10 @@ class RoomActionServiceClass {
         remaining_amount: totalRentBill,
         bill_status: 'issued',
         issued_at: now,
+        due_at: input.checkinDate,  // FIX #6: Hạn thanh toán = ngày nhận phòng
+        // FIX #6: Thêm thông tin session
+        cashier_user_id: input.cashierUserId || null,
+        session_id: input.sessionId || null,
         sync_status: 'local',
         created_at: now,
         updated_at: now,
@@ -741,6 +880,10 @@ class RoomActionServiceClass {
 
       // 7. bill_details (Tiền phòng)
       const nights = Math.ceil(priceResult.totalHours / 24);
+      // FIX #7: Tính tax_amount cho tiền phòng (giả định tax_rate = 0 cho phòng, có thể thay đổi sau)
+      const roomTaxRate = 0;
+      const roomTaxAmount = rentAmount * roomTaxRate / 100;
+      
       await this.billDetailSvc.create({
         id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: input.storeId,
@@ -749,19 +892,18 @@ class RoomActionServiceClass {
         quantity: nights > 0 ? nights : 1,
         unit_price: rentAmount / (nights > 0 ? nights : 1),
         amount: rentAmount,
+        // FIX #7: Thêm tax_rate và tax_amount
+        tax_rate: roomTaxRate,
+        tax_amount: roomTaxAmount,
+        notes: input.notes || null,  // FIX #9: Thêm notes từ UI
         sort_order: 1,
-        sync_status: 'local',
+        sync_status: 'local',  // FIX #11: Luôn là local
         created_at: now,
         updated_at: now,
       });
 
       // 8. Dịch vụ thêm
-      await this.insertExtraServices(
-        rentBillId,
-        input.storeId,
-        input.extraServices,
-        10,
-      );
+      await this.insertExtraServices(rentBillId, input.storeId, input.extraServices, 10, input.notes);
 
       // 9. Receivable cho tiền phòng
       let receivableCodeRent = await generateReceivableCode(input.storeId);
@@ -795,7 +937,8 @@ class RoomActionServiceClass {
           amount: depositAmount,
           paid_at: now,
           status: 'success',
-          sync_status: 'local',
+          notes: input.notes || null,  // FIX #9: Thêm notes từ UI
+          sync_status: 'local',  // FIX #11: Luôn là local
           created_at: now,
           updated_at: now,
         });
@@ -879,18 +1022,31 @@ class RoomActionServiceClass {
     variantId: string,
     extraMonths: number,
   ): Promise<void> {
-    const contracts = await this.contractSvc.findAll(
-      {variant_id: variantId, status: 'active', store_id: storeId},
-      {columns: ['id', 'end_date']},
-    );
+    // Tìm contract với nhiều status khác nhau (không chỉ 'active')
+    const db = DatabaseManager.get('pos');
+    if (!db) throw new Error('Database not available');
+
+    const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+      .select(['id', 'end_date', 'status'])
+      .where('variant_id', variantId)
+      .where('store_id', storeId)
+      .where('status', '!=', 'cancelled')
+      .where('status', '!=', 'terminated')
+      .orderBy('created_at', 'DESC')
+      .get();
+
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+
+    console.log('[extendContract] Found contract:', { id: contract.id, status: contract.status, end_date: contract.end_date });
 
     const newEndDate = this.calcEndDate(contract.end_date, extraMonths);
     await this.contractSvc.update(contract.id, {
       end_date: newEndDate,
       updated_at: this.now(),
     });
+
+    console.log('[extendContract] Contract extended to:', newEndDate);
   }
 
   // ── Màn hình 3: Đổi phòng ───────────────────
@@ -931,12 +1087,23 @@ class RoomActionServiceClass {
    * UPDATE: contracts (terminated), contract_members (left_date), bills (issued)
    */
   async checkOut(storeId: string, variantId: string): Promise<void> {
-    const contracts = await this.contractSvc.findAll(
-      {variant_id: variantId, status: 'active', store_id: storeId},
-      {columns: ['id', 'customer_id']},
-    );
+    // Tìm contract với nhiều status khác nhau (không chỉ 'active')
+    const db = DatabaseManager.get('pos');
+    if (!db) throw new Error('Database not available');
+
+    const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+      .select(['id', 'customer_id', 'status'])
+      .where('variant_id', variantId)
+      .where('store_id', storeId)
+      .where('status', '!=', 'cancelled')
+      .where('status', '!=', 'terminated')
+      .orderBy('created_at', 'DESC')
+      .get();
+
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+
+    console.log('[checkOut] Found contract:', { id: contract.id, status: contract.status, customer_id: contract.customer_id });
 
     const today = new Date().toISOString().split('T')[0];
     const now = this.now();
@@ -1122,14 +1289,57 @@ class RoomActionServiceClass {
       // 5. Dịch vụ thêm (Nếu có trong input)
       if ((input as any).extraServices) {
         await this.insertExtraServices(
-          billId,
-          input.storeId,
-          (input as any).extraServices,
-          sortOrder,
+          billId, input.storeId, (input as any).extraServices, sortOrder, (input as any).notes,
         );
       }
 
       return {billId, total};
+    });
+  }
+
+  /**
+   * Hủy đặt phòng / Hợp đồng.
+   * UPDATE: contracts (cancelled), bills (cancelled), receivables (cancelled)
+   */
+  async cancelContract(contractId: string): Promise<void> {
+    const now = this.now();
+    const db = DatabaseManager.get('pos');
+    if (!db) throw new Error('Database connection not available');
+
+    await this.contractSvc.executeTransaction(async () => {
+      // 1. Cập nhật trạng thái hợp đồng thành 'cancelled'
+      await this.contractSvc.update(contractId, {
+        status: 'cancelled',
+        updated_at: now,
+      });
+
+      // 2. Hủy các hóa đơn liên quan (nếu chưa thanh toán)
+      const bills = await this.billSvc.findAll({
+        ref_id: contractId,
+        ref_type: 'contract',
+      });
+      
+      for (const bill of bills) {
+        if (['draft', 'issued'].includes(bill.bill_status)) {
+          await this.billSvc.update(bill.id, {
+            bill_status: 'cancelled',
+            updated_at: now,
+          });
+        }
+      }
+
+      // 3. Hủy các khoản phải thu liên quan (nếu đang chờ thanh toán)
+      const receivables = await this.receivableSvc.findAll({
+        contract_id: contractId,
+        status: 'pending',
+      });
+
+      for (const rec of receivables) {
+        await this.receivableSvc.update(rec.id, {
+          status: 'cancelled',
+          updated_at: now,
+        });
+      }
     });
   }
 }

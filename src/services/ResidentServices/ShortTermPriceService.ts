@@ -10,7 +10,6 @@
 
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
-import { UNIT_IDS } from './RoomPriceService';
 
 export interface ShortTermPriceInput {
   checkinDate: string;     // YYYY-MM-DD
@@ -31,7 +30,7 @@ export interface ShortTermPriceResult {
 }
 
 export interface PriceBreakdown {
-  type: 'hour' | 'day' | 'night';
+  type: 'hour' | 'day';
   quantity: number;
   unitPrice: number;
   amount: number;
@@ -54,19 +53,35 @@ class ShortTermPriceServiceClass {
     const totalHours = totalMs / (1000 * 60 * 60);
     const totalDays = totalHours / 24;
 
-    // Lấy giá phòng (theo giờ, đêm, ngày)
+    // Validate: duration > 29 ngày → ERROR
+    if (totalDays > 29) {
+      throw new Error('Duration cannot exceed 29 days');
+    }
+
+    // Lấy giá phòng
     const prices = await this.getRoomPrices(variantId, storeId);
 
-    // Logic tính giá theo yêu cầu
-    if (totalDays < 1) {
-      // TH1: Thời gian < 1 ngày → Tính theo giờ
-      return this.calculateByHour(totalHours, prices.hourPrice);
-    } else if (totalDays === 1 || (totalDays > 1 && totalDays < 2 && this.isSameDay(checkinDateTime, checkoutDateTime))) {
-      // TH2: Thời gian = 1 ngày → Tính ngày + tính theo giờ (nếu có)
-      return this.calculateDayWithHour(totalHours, prices.dayPrice, prices.hourPrice);
+    // Kiểm tra qua đêm
+    const crossMidnight = checkoutDateTime.getDate() !== checkinDateTime.getDate() ||
+                          checkoutDateTime.getMonth() !== checkinDateTime.getMonth() ||
+                          checkoutDateTime.getFullYear() !== checkinDateTime.getFullYear();
+
+    // Logic tính giá
+    if (crossMidnight) {
+      // Qua đêm → tính theo ngày
+      return this.calculateByDayOvernight(checkinDateTime, checkoutDateTime, prices.dayPrice);
     } else {
-      // TH3: Thời gian > 1 ngày → Tính theo ngày (hoặc đêm)
-      return this.calculateByDayOrNight(totalDays, prices.dayPrice, prices.nightPrice);
+      // Không qua đêm
+      if (totalHours < 6) {
+        // HOURLY: < 6h
+        return this.calculateHourly(totalHours, prices.hourFirstPrice, prices.hourPrice);
+      } else if (totalHours <= 8) {
+        // HALF_DAY: 6h-8h
+        return this.calculateHalfDay(prices.dayPrice);
+      } else {
+        // DAY: > 8h
+        return this.calculateByDay(totalDays, prices.dayPrice);
+      }
     }
   }
 
@@ -74,21 +89,28 @@ class ShortTermPriceServiceClass {
    * Lấy giá phòng theo các đơn vị thời gian từ DB
    */
   private async getRoomPrices(variantId: string, storeId: string): Promise<{
+    hourFirstPrice: number;
     hourPrice: number;
-    nightPrice: number;
     dayPrice: number;
     monthPrice: number;
   }> {
     const db = DatabaseManager.get('pos');
     if (!db) {
-      return { hourPrice: 0, nightPrice: 0, dayPrice: 0, monthPrice: 0 };
+      return { hourFirstPrice: 0, hourPrice: 0, dayPrice: 0, monthPrice: 0 };
     }
 
-    // Query prices từ bảng prices
+    // Query prices từ bảng prices với unit_code
     const prices = await QueryBuilder.table('prices', db.getInternalDAO())
-      .select(['variant_id', 'unit_id', 'price', 'price_list_name'])
-      .where('variant_id', variantId)
-      .where('store_id', storeId)
+      .select([
+        'prices.variant_id',
+        'prices.unit_id',
+        'prices.price',
+        'prices.price_list_name',
+        'units.unit_code'
+      ])
+      .innerJoin('units', 'prices.unit_id = units.id')
+      .where('prices.variant_id', variantId)
+      .where('prices.store_id', storeId)
       .get();
 
     // Ưu tiên giá 'default' trước
@@ -97,27 +119,168 @@ class ShortTermPriceServiceClass {
     );
     const pricesToUse = defaultPrices.length > 0 ? defaultPrices : prices;
 
-    // Lấy giá theo đơn vị
-    const hourPrice = pricesToUse.find((p: any) => p.unit_id === UNIT_IDS.HOUR)?.price || 0;
-    const nightPrice = pricesToUse.find((p: any) => p.unit_id === UNIT_IDS.NIGHT)?.price || 0;
-    const dayPrice = pricesToUse.find((p: any) => p.unit_id === UNIT_IDS.DAY)?.price || 0;
-    const monthPrice = pricesToUse.find((p: any) => p.unit_id === UNIT_IDS.MONTH)?.price || 0;
+    // Lấy giá theo unit_code (case-insensitive)
+    let hourFirstPrice = pricesToUse.find((p: any) => p.unit_code?.toUpperCase() === 'HOURFIRST')?.price || 0;
+    const hourPrice = pricesToUse.find((p: any) => p.unit_code?.toUpperCase() === 'HOUR')?.price || 0;
+    const dayPrice = pricesToUse.find((p: any) => p.unit_code?.toUpperCase() === 'DAY')?.price || 0;
+    const monthPrice = pricesToUse.find((p: any) => p.unit_code?.toUpperCase() === 'MONTH')?.price || 0;
 
-    // Nếu không có giá theo ngày, dùng giá theo tháng chia ra
-    const effectiveDayPrice = dayPrice || (monthPrice > 0 ? Math.ceil(monthPrice / 30) : 0);
-    const effectiveNightPrice = nightPrice || effectiveDayPrice || 0;
-    const effectiveHourPrice = hourPrice || (effectiveDayPrice > 0 ? Math.ceil(effectiveDayPrice / 24) : 0);
+    // Debug log
+    console.log('[ShortTermPriceService] Prices for variant', variantId, ':', {
+      hourFirstPrice,
+      hourPrice,
+      dayPrice,
+      monthPrice,
+      foundHOURFIRST: pricesToUse.some((p: any) => p.unit_code?.toUpperCase() === 'HOURFIRST'),
+    });
+
+    // Fallback: nếu không có hourFirstPrice, dùng hourPrice
+    if (hourFirstPrice === 0 && hourPrice > 0) {
+      hourFirstPrice = hourPrice * 2; // Giả sử giá 2h đầu = 2 × giá 1 giờ
+      console.log('[ShortTermPriceService] Using fallback: hourFirstPrice =', hourFirstPrice);
+    }
 
     return {
-      hourPrice: effectiveHourPrice,
-      nightPrice: effectiveNightPrice,
-      dayPrice: effectiveDayPrice,
+      hourFirstPrice,
+      hourPrice,
+      dayPrice,
       monthPrice,
     };
   }
 
   /**
-   * Tính giá theo giờ (khi thời gian < 1 ngày)
+   * Tính giá theo giờ (khi thời gian < 6h)
+   * Formula: price_hour_first + (duration - 1h) × price_hour
+   */
+  private calculateHourly(totalHours: number, hourFirstPrice: number, hourPrice: number): ShortTermPriceResult {
+    // Giờ đầu là 1 giờ
+    const firstHours = 1;
+    const extraHours = Math.max(0, Math.ceil(totalHours - 1));
+
+    const firstAmount = hourFirstPrice;
+    const extraAmount = extraHours * hourPrice;
+    const totalAmount = firstAmount + extraAmount;
+
+    const breakdown: PriceBreakdown[] = [
+      {
+        type: 'hour',
+        quantity: firstHours,
+        unitPrice: hourFirstPrice,
+        amount: firstAmount,
+        description: `${firstHours} giờ đầu x ${this.formatCurrency(hourFirstPrice)}/giờ`,
+      },
+    ];
+
+    if (extraHours > 0) {
+      breakdown.push({
+        type: 'hour',
+        quantity: extraHours,
+        unitPrice: hourPrice,
+        amount: extraAmount,
+        description: `${extraHours} giờ thừa x ${this.formatCurrency(hourPrice)}/giờ`,
+      });
+    }
+
+    return {
+      totalAmount,
+      totalHours,
+      totalDays: totalHours / 24,
+      breakdown,
+      description: `Tính theo giờ: ${Math.ceil(totalHours)} giờ (${firstHours}h đầu + ${extraHours}h thừa)`,
+    };
+  }
+
+  /**
+   * Tính giá nửa ngày (khi 6h <= thời gian <= 8h)
+   * Formula: price_day / 2
+   */
+  private calculateHalfDay(dayPrice: number): ShortTermPriceResult {
+    const halfDayPrice = dayPrice / 2;
+
+    return {
+      totalAmount: halfDayPrice,
+      totalHours: 8,
+      totalDays: 0.5,
+      breakdown: [
+        {
+          type: 'day',
+          quantity: 0.5,
+          unitPrice: dayPrice,
+          amount: halfDayPrice,
+          description: `Nửa ngày x ${this.formatCurrency(halfDayPrice)}`,
+        },
+      ],
+      description: `Tính nửa ngày: 0.5 ngày (giá = ${this.formatCurrency(halfDayPrice)})`,
+    };
+  }
+
+  /**
+   * Tính giá qua đêm (qua 0h)
+   * Formula: days × price_day
+   */
+  private calculateByDayOvernight(checkinDateTime: Date, checkoutDateTime: Date, dayPrice: number): ShortTermPriceResult {
+    // Xác định mốc 12h
+    let anchor = new Date(checkinDateTime);
+    anchor.setHours(12, 0, 0, 0);
+
+    if (checkinDateTime.getHours() >= 12) {
+      // Nếu check-in >= 12h, anchor là 12h ngày hôm sau
+      anchor.setDate(anchor.getDate() + 1);
+    }
+
+    // Tính số ngày
+    let days = 1;
+    while (checkoutDateTime > anchor) {
+      days += 1;
+      anchor.setDate(anchor.getDate() + 1);
+    }
+
+    const totalAmount = days * dayPrice;
+
+    return {
+      totalAmount,
+      totalHours: days * 24,
+      totalDays: days,
+      breakdown: [
+        {
+          type: 'day',
+          quantity: days,
+          unitPrice: dayPrice,
+          amount: totalAmount,
+          description: `${days} ngày x ${this.formatCurrency(dayPrice)}/ngày`,
+        },
+      ],
+      description: `Tính qua đêm: ${days} ngày`,
+    };
+  }
+
+  /**
+   * Tính giá theo ngày (khi thời gian > 1 ngày)
+   */
+  private calculateByDay(totalDays: number, dayPrice: number): ShortTermPriceResult {
+    // Làm tròn số ngày
+    const days = Math.ceil(totalDays);
+    const amount = days * dayPrice;
+
+    return {
+      totalAmount: amount,
+      totalHours: totalDays * 24,
+      totalDays: days,
+      breakdown: [
+        {
+          type: 'day',
+          quantity: days,
+          unitPrice: dayPrice,
+          amount,
+          description: `${days} ngày x ${this.formatCurrency(dayPrice)}/ngày`,
+        },
+      ],
+      description: `Tính theo ngày: ${days} ngày`,
+    };
+  }
+
+  /**
+   * Tính giá theo giờ (khi thời gian < nửa ngày)
    */
   private calculateByHour(totalHours: number, hourPrice: number): ShortTermPriceResult {
     // Làm tròn lên số giờ (tối thiểu 1 giờ)
@@ -139,90 +302,6 @@ class ShortTermPriceServiceClass {
       ],
       description: `Tính theo giờ: ${hours} giờ`,
     };
-  }
-
-  /**
-   * Tính giá khi thời gian = 1 ngày
-   * Logic: Tính 1 ngày + giờ thừa (nếu có)
-   */
-  private calculateDayWithHour(totalHours: number, dayPrice: number, hourPrice: number): ShortTermPriceResult {
-    const breakdown: PriceBreakdown[] = [];
-    let totalAmount = 0;
-
-    // Tính 1 ngày
-    if (dayPrice > 0) {
-      breakdown.push({
-        type: 'day',
-        quantity: 1,
-        unitPrice: dayPrice,
-        amount: dayPrice,
-        description: `1 ngày x ${this.formatCurrency(dayPrice)}/ngày`,
-      });
-      totalAmount += dayPrice;
-    }
-
-    // Tính giờ thừa (nếu có)
-    const extraHours = Math.ceil(totalHours - 24);
-    if (extraHours > 0 && hourPrice > 0) {
-      const extraAmount = extraHours * hourPrice;
-      breakdown.push({
-        type: 'hour',
-        quantity: extraHours,
-        unitPrice: hourPrice,
-        amount: extraAmount,
-        description: `${extraHours} giờ thừa x ${this.formatCurrency(hourPrice)}/giờ`,
-      });
-      totalAmount += extraAmount;
-    }
-
-    return {
-      totalAmount,
-      totalHours,
-      totalDays: 1,
-      breakdown,
-      description: `Tính ngày + giờ: 1 ngày${extraHours > 0 ? ` + ${extraHours} giờ` : ''}`,
-    };
-  }
-
-  /**
-   * Tính giá theo ngày/đêm (khi thời gian > 1 ngày)
-   */
-  private calculateByDayOrNight(totalDays: number, dayPrice: number, nightPrice: number): ShortTermPriceResult {
-    // Làm tròn số ngày/đêm
-    const days = Math.ceil(totalDays);
-
-    // Ưu tiên tính theo đêm nếu có giá đêm, không thì tính theo ngày
-    const useNightPrice = nightPrice > 0 && nightPrice < dayPrice;
-    const unitPrice = useNightPrice ? nightPrice : dayPrice;
-    const unitType = useNightPrice ? 'night' : 'day';
-    const unitLabel = useNightPrice ? 'đêm' : 'ngày';
-
-    const amount = days * unitPrice;
-
-    return {
-      totalAmount: amount,
-      totalHours: totalDays * 24,
-      totalDays: days,
-      breakdown: [
-        {
-          type: unitType,
-          quantity: days,
-          unitPrice,
-          amount,
-          description: `${days} ${unitLabel} x ${this.formatCurrency(unitPrice)}/${unitLabel}`,
-        },
-      ],
-      description: `Tính theo ${unitLabel}: ${days} ${unitLabel}`,
-    };
-  }
-
-  /**
-   * Kiểm tra 2 ngày có phải cùng 1 ngày không
-   */
-  private isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
   }
 
   /**

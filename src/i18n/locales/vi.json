@@ -52,7 +52,8 @@
     "ok": "Đồng ý",
     "error": "Đã xảy ra lỗi",
     "cancel": "Huỷ",
-    "save": "Lưu"
+    "save": "Lưu",
+    "options": "Tùy chọn"
   },
   "dashboard": {
     "overview": "Tổng quan",
@@ -97,6 +98,7 @@
     "floor": "Tầng",
     "status_all": "Tất cả",
     "status_empty": "Phòng trống",
+    "status_booked": "Đã đặt",
     "status_occupied": "Đang ở",
     "status_cleaning": "Đang dọn",
     "status_maintenance": "Bảo trì",
@@ -296,7 +298,6 @@
     },
     "summary": {
       "roomRent": "Tiền phòng",
-      "roomRentNights": "Tiền phòng ({{nights}} đêm)",
       "roomRentMonth": "Tiền thuê tháng đầu",
       "deposit": "Tiền đặt cọc",
       "depositMonth": "Tiền cọc (1 tháng)",

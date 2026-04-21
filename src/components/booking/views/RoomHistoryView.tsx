@@ -57,9 +57,6 @@ export function RoomHistoryView({
           <Icon name="arrow-back" size={22} color={c.textSecondary} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: c.textSecondary }]}>{t('roomDetail.historyTitle')}</Text>
-        <TouchableOpacity style={s.iconBtn}>
-          <Icon name="more-vert" size={22} color={c.textSecondary} />
-        </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={false}>
         {/* Tiêu đề phòng */}

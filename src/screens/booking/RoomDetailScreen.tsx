@@ -65,11 +65,19 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const [loading, setLoading] = useState(true);
   const [showBooking, setShowBooking] = useState(false);
 
-  // Chỉ số điện nước
+  // Chỉ số điện nước (thực tế đang dùng để chốt tiền / cập nhật chỉ số hiện tại)
   const [electricNew, setElectricNew] = useState('');
   const [waterNew, setWaterNew] = useState('');
   const [electricRate, setElectricRate] = useState(3500);
   const [waterRate, setWaterRate] = useState(18000);
+
+  // States dành riêng cho việc Chỉnh sửa thông tin nhanh
+  const [editTenant, setEditTenant] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCccd, setEditCccd] = useState('');
+  const [editRentPrice, setEditRentPrice] = useState('');
+  const [editElectricOld, setEditElectricOld] = useState('');
+  const [editWaterOld, setEditWaterOld] = useState('');
 
   // Dịch vụ thêm — dùng cùng format với BookingScreen (services array)
   const [services, setServices] = useState<any[]>([]);
@@ -285,17 +293,78 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
 
   // ─── Case: Chỉnh sửa ─────────────────────────────────────────────────────
   if (view === 'edit') {
+    // Nếu các state edit chưa có dữ liệu (lần đầu vào màn edit), sync từ details
+    if (editTenant === '' && details?.customer_name) {
+      setEditTenant(details.customer_name);
+      setEditPhone(details.customer_phone || '');
+      setEditCccd(details.cccd || '');
+      setEditRentPrice(String(details.rent_amount || room.monthly_price || 0));
+      setEditElectricOld(String(details.electric_reading_init || 0));
+      setEditWaterOld(String(details.water_reading_init || 0));
+    }
+
     const editData = {
-      tenant: details?.customer_name || '', phone: details?.customer_phone || '',
-      cccd: details?.cccd || '', rentPrice: String(rentAmount),
-      electricOld: String(eOld), electricNew: electricNew, electricRate: String(electricRate),
-      waterOld: String(wOld), waterNew: waterNew, waterRate: String(waterRate),
+      tenant: editTenant, 
+      phone: editPhone,
+      cccd: editCccd, 
+      rentPrice: editRentPrice,
+      electricOld: editElectricOld, 
+      electricNew: electricNew, 
+      electricRate: String(electricRate),
+      waterOld: editWaterOld, 
+      waterNew: waterNew, 
+      waterRate: String(waterRate),
     };
+
+    const handleSetEditData = (newData: any) => {
+      if (newData.tenant !== undefined) setEditTenant(newData.tenant);
+      if (newData.phone !== undefined) setEditPhone(newData.phone);
+      if (newData.cccd !== undefined) setEditCccd(newData.cccd);
+      if (newData.rentPrice !== undefined) setEditRentPrice(newData.rentPrice);
+      if (newData.electricOld !== undefined) setEditElectricOld(newData.electricOld);
+      if (newData.electricNew !== undefined) setElectricNew(newData.electricNew);
+      if (newData.electricRate !== undefined) setElectricRate(Number(newData.electricRate));
+      if (newData.waterOld !== undefined) setEditWaterOld(newData.waterOld);
+      if (newData.waterNew !== undefined) setWaterNew(newData.waterNew);
+      if (newData.waterRate !== undefined) setWaterRate(Number(newData.waterRate));
+    };
+
+    const onSaveEdit = async () => {
+      try {
+        setLoading(true);
+        await RoomActionService.editRoomDetails({
+          storeId: 'store-001',
+          variantId: room.id,
+          fullName: editTenant,
+          phone: editPhone,
+          idNumber: editCccd,
+          rentAmount: Number(editRentPrice),
+          electricRate: electricRate,
+          waterRate: waterRate,
+          electricReadingInit: Number(editElectricOld),
+          waterReadingInit: Number(editWaterOld),
+          // Nếu có nhập số mới thì coi như cập nhật luôn? 
+          // Thực tế editRoomDetails chủ yếu sửa thông tin nền.
+        });
+        Alert.alert(t('common.ok'), t('roomDetail.success.update') || 'Cập nhật thành công');
+        await loadDetails();
+        setView('detail');
+      } catch (err) {
+        Alert.alert(t('common.error'), String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+
     return (
       <RoomEditView
-        setView={setView} handleUpdateEdit={() => setView('detail')} room={room}
-        editData={editData} setEditData={() => { }}
-        themedColors={colors} t={t}
+        setView={setView} 
+        handleUpdateEdit={onSaveEdit} 
+        room={room}
+        editData={editData} 
+        setEditData={handleSetEditData}
+        themedColors={colors} 
+        t={t}
       />
     );
   }
@@ -321,16 +390,6 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
           <Icon name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: colors.text }]}>{t('roomDetail.title')}</Text>
-        <TouchableOpacity style={s.iconBtn} onPress={() =>
-          Alert.alert(t('common.options') || 'Tùy chọn', '', [
-            { text: t('roomDetail.extend'), onPress: handleExtend },
-            { text: t('roomDetail.switchRoom'), onPress: () => setView('switch') },
-            { text: t('roomDetail.btnCheckout'), style: 'destructive', onPress: handleCheckOut },
-            { text: t('common.cancel'), style: 'cancel' },
-          ])
-        }>
-          <Icon name="more-vert" size={22} color={colors.text} />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -685,9 +744,9 @@ function DebtCol({ label, value, valueColor, badge, subLabels }: any) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 14, borderBottomWidth: 1, minWidth: '100%' },
-  headerTitle: { fontSize: 17, fontWeight: '800' },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderBottomWidth: 1, minWidth: '100%' },
+  headerTitle: { fontSize: 17, fontWeight: '800', position: 'absolute', left: 0, right: 0, textAlign: 'center', zIndex: 0 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
 
   card: { borderRadius: 14, borderWidth: 1, marginBottom: 8 },
   roomIcon: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

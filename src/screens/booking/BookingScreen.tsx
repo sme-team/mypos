@@ -619,6 +619,17 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
       if (form.stayType === 'long_term') {
         // Xử lý Check-in Dài hạn
         const duration = parseInt(form.contractDuration, 10) || 12;
+
+        // Tính endDate: nếu 12 tháng thì +365 ngày, nếu không thì + số tháng
+        const startDate = new Date(form.contractStart);
+        const endDate = new Date(startDate);
+        if (duration === 12) {
+          endDate.setDate(startDate.getDate() + 365);
+        } else {
+          endDate.setMonth(startDate.getMonth() + duration);
+        }
+        const endDateStr = endDate.toISOString().split('T')[0];
+
         await RoomActionService.checkInLongTerm({
           storeId,
           variantId: room.id,
@@ -635,6 +646,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           address: form.address,
 
           startDate: form.contractStart,
+          endDate: endDateStr,
           durationMonths: duration,
           rentAmount: form.monthlyPrice,
           depositAmount: form.deposit,
@@ -647,8 +659,12 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             name: s.name,
             quantity: s.qty,
             unitPrice: s.unitPrice,
+            taxRate: s.taxRate || 0, // FIX #8: Thêm taxRate từ sản phẩm
           })),
           notes: form.note,
+          // FIX #8: Thêm thông tin session (có thể lấy từ auth context sau)
+          cashierUserId: undefined,
+          sessionId: undefined,
         });
       } else {
         // Xử lý Check-in Ngắn hạn
@@ -680,8 +696,12 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             name: s.name,
             quantity: s.qty,
             unitPrice: s.unitPrice,
+            taxRate: s.taxRate || 0,  // FIX #8: Thêm taxRate từ sản phẩm
           })),
           notes: form.note,
+          // FIX #8: Thêm thông tin session (có thể lấy từ auth context sau)
+          cashierUserId: undefined,
+          sessionId: undefined,
         });
       }
       Alert.alert('Thành công', 'Đăng ký cư trú đã được ghi nhận.');

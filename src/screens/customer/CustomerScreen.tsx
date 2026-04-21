@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import CustomerCard, {Customer} from '../../components/customer/CustomerCard';
 import CustomerDetail from './CustomerDetail';
 import AddCustomer from './AddCustomer';
-import type {CustomerDetail as CustomerDetailType} from './type';
+import type {CustomerDetail as CustomerDetailType, Bill, Contract} from './type';
 import {useSelectionMode} from '../../hooks/useSelectionMode';
 import {SelectionBar} from '../../components/common/SelectionBar';
 import {ConfirmDeleteModal} from '../../components/common/ConfirmDeleteModal';
@@ -52,6 +52,94 @@ const MOCK_CUSTOMERS: Customer[] = [
     hasKey: true,
   },
 ];
+
+// Mapping bills/contract cho khách hàng cũ (đã từng dùng dịch vụ)
+const MOCK_CUSTOMER_BILLS: Record<string, Bill[]> = {
+  '3': [
+    {
+      id: 'bill-003',
+      bill_number: 'HĐ #AZ-8812',
+      customer_id: '3',
+      bill_type: 'cycle',
+      total_amount: 2100000,
+      paid_amount: 2100000,
+      remaining_amount: 0,
+      bill_status: 'paid',
+      issued_at: '2023-09-28T18:00:00',
+    },
+  ],
+  '5': [
+    {
+      id: 'bill-005',
+      bill_number: 'HĐ #AZ-9021',
+      customer_id: '5',
+      bill_type: 'cycle',
+      total_amount: 1250000,
+      paid_amount: 1250000,
+      remaining_amount: 0,
+      bill_status: 'paid',
+      issued_at: '2023-10-12T14:30:00',
+    },
+  ],
+  '6': [
+    {
+      id: 'bill-006',
+      bill_number: 'HĐ #AZ-8944',
+      customer_id: '6',
+      bill_type: 'pos',
+      total_amount: 450000,
+      paid_amount: 0,
+      remaining_amount: 450000,
+      bill_status: 'issued',
+      issued_at: '2023-10-05T09:15:00',
+    },
+  ],
+};
+
+const MOCK_CUSTOMER_CONTRACTS: Record<string, Contract> = {
+  '3': {
+    id: 'contract-003',
+    contract_number: 'HD-2023-043',
+    customer_id: '3',
+    product_id: 'room-301',
+    start_date: '2023-09-01',
+    end_date: '2023-12-01',
+    rent_amount: 2500000,
+    deposit_amount: 5000000,
+    status: 'active',
+    room_name: 'Phòng Standard',
+    room_code: '301',
+    room_type: 'PHÒNG STANDARD',
+  },
+  '5': {
+    id: 'contract-005',
+    contract_number: 'HD-2023-045',
+    customer_id: '5',
+    product_id: 'room-402a',
+    start_date: '2023-10-10',
+    end_date: '2024-10-10',
+    rent_amount: 3000000,
+    deposit_amount: 6000000,
+    status: 'active',
+    room_name: 'Phòng Deluxe',
+    room_code: '402-A',
+    room_type: 'PHÒNG DELUXE',
+  },
+  '6': {
+    id: 'contract-006',
+    contract_number: 'HD-2023-046',
+    customer_id: '6',
+    product_id: 'room-303',
+    start_date: '2023-09-15',
+    end_date: '2023-11-15',
+    rent_amount: 2000000,
+    deposit_amount: 4000000,
+    status: 'active',
+    room_name: 'Phòng Standard',
+    room_code: '303',
+    room_type: 'PHÒNG STANDARD',
+  },
+};
 
 interface CustomerProps {
   onOpenMenu: () => void;
@@ -148,17 +236,17 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
         id: selectedCustomer.id,
         customer_code: 'KH-' + selectedCustomer.id,
         full_name: selectedCustomer.name,
-        id_number: '038201012345',
-        date_of_birth: '1992-08-15',
-        gender: 'male',
+        id_number: selectedCustomer.id_number || '',
+        date_of_birth: selectedCustomer.date_of_birth || '',
+        gender: selectedCustomer.gender || 'other',
         phone: selectedCustomer.phone,
-        email: 'customer@email.com',
-        address: '123 Đường Láng, Hà Nội',
-        nationality: 'VN',
-        customer_group: 'regular',
-        loyalty_points: 120,
-        total_spent: 3800000,
-        notes: '-',
+        email: selectedCustomer.email || '',
+        address: selectedCustomer.address || '',
+        nationality: selectedCustomer.nationality || 'VN',
+        customer_group: selectedCustomer.customer_group || 'regular',
+        loyalty_points: 0,
+        total_spent: 0,
+        notes: selectedCustomer.notes || '',
         status: 'active',
         imageUri: selectedCustomer.imageUri,
         type: selectedCustomer.type || 'selling',
@@ -177,6 +265,16 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
             name: form.full_name,
             phone: form.phone,
             type: form.type,
+            imageUri: form.imageUri,
+            // Các field từ CCCD
+            id_number: form.id_number,
+            date_of_birth: form.date_of_birth,
+            gender: form.gender,
+            address: form.address,
+            nationality: form.nationality,
+            email: form.email,
+            notes: form.notes,
+            customer_group: form.customer_group,
           };
 
           setCustomers(prev => [newCustomer, ...prev]);
@@ -187,10 +285,19 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
   }
 
   // Hiển thị CustomerDetail nếu đang xem chi tiết
-  if (detailedCustomer) {
+  if (detailedCustomer && selectedCustomer) {
+    // Phân biệt khách hàng mới (id dạng timestamp) và khách hàng cũ (id ngắn)
+    const isNewCustomer = selectedCustomer.id.length > 5;
+
+    // Lấy bills/contract từ mapping cho khách hàng cũ, hoặc rỗng cho khách hàng mới
+    const customerBills = isNewCustomer ? [] : MOCK_CUSTOMER_BILLS[selectedCustomer.id];
+    const customerContract = isNewCustomer ? null : MOCK_CUSTOMER_CONTRACTS[selectedCustomer.id];
+
     return (
       <CustomerDetail
         customer={detailedCustomer}
+        bills={customerBills || []}
+        contract={customerContract || null}
         onBack={() => setSelectedCustomer(null)}
         onUpdateCustomer={updatedCustomer => {
           setCustomers(prev =>
@@ -203,6 +310,15 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
                     type: updatedCustomer.type,
                     hasKey: updatedCustomer.hasKey,
                     imageUri: updatedCustomer.imageUri,
+                    // Các field từ CCCD
+                    id_number: updatedCustomer.id_number,
+                    date_of_birth: updatedCustomer.date_of_birth,
+                    gender: updatedCustomer.gender,
+                    address: updatedCustomer.address,
+                    nationality: updatedCustomer.nationality,
+                    email: updatedCustomer.email,
+                    notes: updatedCustomer.notes,
+                    customer_group: updatedCustomer.customer_group,
                   }
                 : c,
             ),
