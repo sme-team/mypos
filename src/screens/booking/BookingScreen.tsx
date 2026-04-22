@@ -22,6 +22,12 @@ import {useTranslation} from 'react-i18next';
 import {useTheme} from '../../hooks/useTheme';
 import {useResponsive} from '../../hooks/useResponsive';
 
+// ─── Logger Setup ──────────────────────────────────────────────────────────────
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.BOOKING);
+logger.trace('BookingScreen module importing...');
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Các service xử lý dữ liệu và nghiệp vụ
 import {PosQueryService} from '../../services/PosServices/PosQueryService';
 import customerService from '../../services/ResidentServices/CustomerService';
@@ -55,6 +61,8 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   const {isDark} = useTheme();
   const {t} = useTranslation();
   const responsive = useResponsive();
+
+  logger.trace('BookingScreen rendering', {isDark});
 
   // ─── Cấu hình màu sắc theo Theme (Dark/Light) ───────────────────────────
   const themedColors = useMemo(
@@ -410,6 +418,8 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   const onClose = props.onClose || (() => navigation?.goBack());
   const onConfirmProp = props.onConfirm;
 
+  logger.debug('BookingScreen init params', {roomId: room?.id, storeId});
+
   // Khởi tạo trạng thái form mặc định
   const [form, setForm] = useState<BookingForm>({
     stayType: 'long_term',
@@ -477,20 +487,28 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   // Load dữ liệu ban đầu
   useEffect(() => {
     if (!room?.id) {
+      logger.warn('BookingScreen: room info missing, closing screen');
       Alert.alert('Lỗi', t('Room information not found'));
       onClose();
       return;
     }
+    logger.info('BookingScreen: room found, starting initial data load', {
+      roomId: room.id,
+    });
     loadInitialData();
   }, [room?.id]);
 
   const loadInitialData = async () => {
+    logger.info('loadInitialData: fetching customers and services', {storeId});
     setLoading(true);
     try {
       // Lấy danh sách khách hàng và dịch vụ từ Server
       const custs = await customerService.getCustomerPickerList(storeId);
+      logger.debug('loadInitialData: customers loaded', {count: custs.length});
       setCustomers(custs);
+
       const svcs = await PosQueryService.getServices(storeId);
+      logger.debug('loadInitialData: services loaded', {count: svcs.length});
       setAvailableServices(
         svcs.map(s => ({
           ...s,
@@ -498,8 +516,9 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           selected: false,
         })),
       );
+      logger.info('loadInitialData: initial data load completed successfully');
     } catch (err) {
-      console.error('[BookingScreen] Load error:', err);
+      logger.error('[BookingScreen] Load error:', err);
     } finally {
       setLoading(false);
     }
@@ -511,13 +530,29 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
       if (form.stayType !== 'short_term' || !room?.id) return;
 
       // Kiểm tra duration trước khi gọi service
-      const checkinDateTime = new Date(`${form.checkinDate}T${form.checkinTime}`);
-      const checkoutDateTime = new Date(`${form.checkoutDate}T${form.checkoutTime}`);
+      const checkinDateTime = new Date(
+        `${form.checkinDate}T${form.checkinTime}`,
+      );
+      const checkoutDateTime = new Date(
+        `${form.checkoutDate}T${form.checkoutTime}`,
+      );
       const totalMs = checkoutDateTime.getTime() - checkinDateTime.getTime();
       const totalDays = totalMs / (1000 * 60 * 60 * 24);
 
+      logger.debug('calculateShortTermPrice: duration computed', {
+        checkinDate: form.checkinDate,
+        checkinTime: form.checkinTime,
+        checkoutDate: form.checkoutDate,
+        checkoutTime: form.checkoutTime,
+        totalDays,
+      });
+
       // Nếu duration >= 30 ngày, hiển thị thông báo chuyển sang dài hạn
       if (totalDays >= 30) {
+        logger.warn(
+          'calculateShortTermPrice: duration ≥30 days, prompting switch to long-term',
+          {totalDays},
+        );
         setLoadingShortTermPrice(false);
         Alert.alert(
           'Lưu trú dài hạn',
@@ -528,8 +563,16 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
               onPress: () => {
                 // Reset checkout date về ngày mai (ngắn hạn mặc định)
                 const tomorrow = new Date(Date.now() + 86400000);
+                logger.info(
+                  'calculateShortTermPrice: user chose to reset checkout date to tomorrow',
+                );
                 updateForm({
-                  checkoutDate: `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`,
+                  checkoutDate: `${tomorrow.getFullYear()}-${String(
+                    tomorrow.getMonth() + 1,
+                  ).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(
+                    2,
+                    '0',
+                  )}`,
                 });
               },
             },
@@ -537,6 +580,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
               text: 'Có, chuyển dài hạn',
               onPress: () => {
                 // Chuyển sang long_term mode
+                logger.info(
+                  'calculateShortTermPrice: user chose to switch to long_term',
+                  {contractStart: form.checkinDate},
+                );
                 updateForm({
                   stayType: 'long_term',
                   contractStart: form.checkinDate,
@@ -548,6 +595,12 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         return;
       }
 
+      logger.info('calculateShortTermPrice: requesting price from service', {
+        variantId: room.id,
+        productId: room.product_id,
+        storeId,
+        totalDays,
+      });
       setLoadingShortTermPrice(true);
       try {
         const result = await ShortTermPriceService.calculatePrice({
@@ -559,9 +612,13 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           productId: room.product_id,
           storeId: storeId,
         });
+        logger.info('calculateShortTermPrice: price calculated successfully', {
+          totalAmount: result?.totalAmount,
+          breakdownCount: result?.breakdown?.length,
+        });
         setShortTermPrice(result);
       } catch (err) {
-        console.error('[BookingScreen] Short term price error:', err);
+        logger.error('[BookingScreen] Short term price error:', err);
       } finally {
         setLoadingShortTermPrice(false);
       }
@@ -596,10 +653,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     return val.toLocaleString('vi-VN') + 'đ';
   }, []);
 
-  const updateForm = useCallback(
-    (partial: Partial<BookingForm>) => setForm(prev => ({...prev, ...partial})),
-    [],
-  );
+  const updateForm = useCallback((partial: Partial<BookingForm>) => {
+    logger.trace('updateForm called', partial);
+    setForm(prev => ({...prev, ...partial}));
+  }, []);
 
   /**
    * Xử lý dữ liệu sau khi quét CCCD hoặc nhận diện OCR thành công.
@@ -607,6 +664,12 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
    */
   const handleIDScanned = useCallback(
     (data: CCCDData) => {
+      logger.info('handleIDScanned: ID scan data received', {
+        hasFullName: !!data.fullName,
+        hasIdCard: !!data.idCard,
+        hasDateOfBirth: !!data.dateOfBirth,
+        hasGender: !!data.gender,
+      });
       updateForm({
         // Trường hiện trên UI
         fullName: data.fullName || form.fullName,
@@ -625,8 +688,17 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
 
   // ─── Xử lý Gửi thông tin (Final Submission) ─────────────────────────────
   const processFinalSubmission = async () => {
+    logger.info('processFinalSubmission: starting submission', {
+      stayType: form.stayType,
+      tenantTab: form.tenantTab,
+      selectedCustomerId: selectedCustomer?.id,
+    });
+
     // Validate thông tin khách hàng
     if (form.tenantTab === 'existing' && !selectedCustomer) {
+      logger.warn(
+        'processFinalSubmission: validation failed - no customer selected',
+      );
       Alert.alert('Lỗi', 'Vui lòng chọn khách hàng');
       return;
     }
@@ -643,6 +715,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
       ];
       for (const field of requiredFields) {
         if (!form[field.key as keyof typeof form]) {
+          logger.warn(
+            'processFinalSubmission: validation failed - missing required field for new tenant',
+            {field: field.key},
+          );
           Alert.alert(
             'Thiếu thông tin',
             `Vui lòng nhập ${field.name} cho khách mới`,
@@ -657,7 +733,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
       if (form.stayType === 'long_term') {
         // Xử lý Check-in Dài hạn
         const durationValue = parseInt(form.contractDuration, 10) || 12;
-        
+
         // Map giá trị UI sang số tháng thực tế: '1' = 12 tháng (1 năm), '2' = 24 tháng (2 năm), số khác = chính nó
         let durationMonths: number;
         if (durationValue === 1) {
@@ -677,6 +753,18 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           endDate.setMonth(startDate.getMonth() + durationMonths);
         }
         const endDateStr = endDate.toISOString().split('T')[0];
+
+        logger.info('processFinalSubmission: submitting long-term check-in', {
+          storeId,
+          variantId: room.id,
+          productId: room.product_id,
+          durationMonths,
+          contractStart: form.contractStart,
+          endDate: endDateStr,
+          customerId:
+            form.tenantTab === 'existing' ? selectedCustomer.id : 'new',
+          servicesCount: form.services.length,
+        });
 
         await RoomActionService.checkInLongTerm({
           storeId,
@@ -716,6 +804,21 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         });
       } else {
         // Xử lý Check-in Ngắn hạn
+        logger.info('processFinalSubmission: submitting short-term check-in', {
+          storeId,
+          variantId: room.id,
+          productId: room.product_id,
+          checkinDate: form.checkinDate,
+          checkinTime: form.checkinTime,
+          checkoutDate: form.checkoutDate,
+          checkoutTime: form.checkoutTime,
+          adults: form.adults,
+          children: form.children,
+          customerId:
+            form.tenantTab === 'existing' ? selectedCustomer.id : 'new',
+          servicesCount: form.services.length,
+        });
+
         await RoomActionService.checkInShortTerm({
           storeId,
           variantId: room.id,
@@ -744,7 +847,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             name: s.name,
             quantity: s.qty,
             unitPrice: s.unitPrice,
-            taxRate: s.taxRate || 0,  // FIX #8: Thêm taxRate từ sản phẩm
+            taxRate: s.taxRate || 0, // FIX #8: Thêm taxRate từ sản phẩm
           })),
           notes: form.note,
           // FIX #8: Thêm thông tin session (có thể lấy từ auth context sau)
@@ -752,10 +855,14 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           sessionId: undefined,
         });
       }
+      logger.info('processFinalSubmission: check-in completed successfully', {
+        stayType: form.stayType,
+      });
       Alert.alert('Thành công', 'Đăng ký cư trú đã được ghi nhận.');
       if (onConfirmProp) onConfirmProp();
       else onClose();
     } catch (err) {
+      logger.error('processFinalSubmission: check-in failed', err);
       Alert.alert('Lỗi', String(err));
     } finally {
       setConfirming(false);
@@ -763,7 +870,13 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   };
 
   const handleNext = () => {
+    logger.debug('handleNext: validating form before proceeding to summary', {
+      tenantTab: form.tenantTab,
+      stayType: form.stayType,
+    });
+
     if (form.tenantTab === 'existing' && !selectedCustomer) {
+      logger.warn('handleNext: validation failed - no customer selected');
       Alert.alert(
         t('booking.errors.error'),
         t('booking.errors.selectCustomer'),
@@ -790,6 +903,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         }
       }
       if (Object.keys(newErrors).length > 0) {
+        logger.warn(
+          'handleNext: validation failed - missing new tenant fields',
+          {missingFields: Object.keys(newErrors)},
+        );
         setErrors(newErrors);
         return;
       }
@@ -805,6 +922,15 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
       ).getTime();
 
       if (checkoutDateTime <= checkinDateTime) {
+        logger.warn(
+          'handleNext: validation failed - checkout not after checkin',
+          {
+            checkinDate: form.checkinDate,
+            checkinTime: form.checkinTime,
+            checkoutDate: form.checkoutDate,
+            checkoutTime: form.checkoutTime,
+          },
+        );
         Alert.alert(
           t('booking.errors.error'),
           t('booking.errors.checkoutAfterCheckin'),
@@ -814,11 +940,20 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
 
       if (checkoutDateTime - checkinDateTime < 3600000) {
         // 3,600,000 ms = 1 giờ
+        logger.warn(
+          'handleNext: validation failed - stay duration less than 1 hour',
+          {
+            durationMs: checkoutDateTime - checkinDateTime,
+          },
+        );
         Alert.alert(t('booking.errors.error'), t('booking.errors.minStay1h'));
         return;
       }
     }
 
+    logger.info('handleNext: validation passed, switching to summary view', {
+      stayType: form.stayType,
+    });
     setViewMode('summary');
   };
 
@@ -887,7 +1022,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
                 screenStyles.toggleBtn,
                 form.stayType === 'long_term' && screenStyles.toggleBtnActive,
               ]}
-              onPress={() => updateForm({stayType: 'long_term'})}>
+              onPress={() => {
+                logger.debug('stayType toggled to long_term');
+                updateForm({stayType: 'long_term'});
+              }}>
               <Text
                 style={[
                   screenStyles.toggleBtnText,
@@ -910,7 +1048,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
                 screenStyles.toggleBtn,
                 form.stayType === 'short_term' && screenStyles.toggleBtnActive,
               ]}
-              onPress={() => updateForm({stayType: 'short_term'})}>
+              onPress={() => {
+                logger.debug('stayType toggled to short_term');
+                updateForm({stayType: 'short_term'});
+              }}>
               <Text
                 style={[
                   screenStyles.toggleBtnText,

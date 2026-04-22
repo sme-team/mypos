@@ -10,6 +10,7 @@ import {SQLiteModules} from '@dqcai/sqlite';
 const AppModules = {
   ...SQLiteModules,
   API_CLIENT: 'api-client',
+  BOOKING: 'booking',
   TOKEN_MANAGER: 'token-manager',
   STORE_WRAPPER: 'store-wrapper',
   AUTH_STORE: 'auth-store',
@@ -90,10 +91,10 @@ const config = new LoggerConfigBuilder()
   // debug cho các module được khai báo ở đây
   // .addModule(AppModules.SIDE_BAR, false) // hide sidebar all
   // .addModule(AppModules.MAIN_SCREEN, true, ['warn', 'error'], ['console'])
-  // .addModule(SQLiteModules.UNIVERSAL_DAO, false)
-  // .addModule(SQLiteModules.DATABASE_FACTORY, false)
-  // .addModule(SQLiteModules.DATABASE_MANAGER, false)
-  // .addModule(SQLiteModules.BASE_SERVICE, false)
+  .addModule(SQLiteModules.UNIVERSAL_DAO, false)
+  .addModule(SQLiteModules.DATABASE_FACTORY, false)
+  .addModule(SQLiteModules.DATABASE_MANAGER, false)
+  .addModule(SQLiteModules.BASE_SERVICE, false)
   .build();
 
 CommonLoggerConfig.updateConfiguration(config);
