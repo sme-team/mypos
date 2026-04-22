@@ -61,15 +61,24 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'full' | 'partial'>('full');
   const [partialAmount, setPartialAmount] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const [details, setDetails] = useState<RoomDetailInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBooking, setShowBooking] = useState(false);
 
-  // Chỉ số điện nước
+  // Chỉ số điện nước (thực tế đang dùng để chốt tiền / cập nhật chỉ số hiện tại)
   const [electricNew, setElectricNew] = useState('');
   const [waterNew, setWaterNew] = useState('');
   const [electricRate, setElectricRate] = useState(3500);
   const [waterRate, setWaterRate] = useState(18000);
+
+  // States dành riêng cho việc Chỉnh sửa thông tin nhanh
+  const [editTenant, setEditTenant] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCccd, setEditCccd] = useState('');
+  const [editRentPrice, setEditRentPrice] = useState('');
+  const [editElectricOld, setEditElectricOld] = useState('');
+  const [editWaterOld, setEditWaterOld] = useState('');
 
   // Dịch vụ thêm — dùng cùng format với BookingScreen (services array)
   const [services, setServices] = useState<any[]>([]);
@@ -133,23 +142,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
     }
   }, [availableRooms, switchFloor]);
 
-  // ─── Tính toán tiền (Logic mới theo 3 Trường hợp) ────────────────────────
-  const getNextBillDate = (billingDay: number) => {
-    const today = new Date();
-    let year = today.getFullYear();
-    let month = today.getMonth();
-
-    if (today.getDate() >= billingDay) {
-      month++;
-      if (month > 11) { month = 0; year++; }
-    }
-
-    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    const targetDay = Math.min(billingDay, lastDayOfMonth);
-    return new Date(year, month, targetDay).toLocaleDateString('vi-VN');
-  };
-
-  const hasCurrentBill = !!details?.current_bill_id;
+  // ─── Tính toán tiền (Logic mới: Gross Total & Net Debt) ─────────────────
   const rentAmount = details?.rent_amount ?? room.monthly_price ?? 0;
   const extraTotal = services.reduce((sum: number, sv: any) => sum + (sv.unitPrice ?? 0) * (sv.qty ?? 1), 0);
 
@@ -162,34 +155,30 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const wDiff = Math.max(0, wNew - wOld);
   const eAmount = eDiff * electricRate;
   const wAmount = wDiff * waterRate;
-
-  let payableAmount = 0;
-  let payableSubLabels: string[] = [];
-
-  const baseEstimate = rentAmount + (details?.negative_balance ?? 0) + extraTotal;
   const meterEstimate = eAmount + wAmount;
 
-  if (hasCurrentBill) {
-    // Trường hợp A: Có bill kỳ này
-    payableAmount = details?.total_amount ?? 0;
-  } else {
-    // Chưa có bill kỳ này
-    const isMeterEntered = (eNew > 0 || wNew > 0);
-    
-    if (isMeterEntered) {
-      // Trường hợp B: Chưa có bill + Có nhập chỉ số
-      payableAmount = baseEstimate + meterEstimate;
-      payableSubLabels.push(t('roomDetail.estimated'));
-    } else {
-      // Trường hợp C: Chưa có bill + Không chỉ số
-      payableAmount = baseEstimate;
-      payableSubLabels.push(t('roomDetail.estimated'));
-      payableSubLabels.push(t('roomDetail.no_readings'));
-    }
-  }
+  // Gross Total (Phải thu): Tổng tất cả dịch vụ + tiền phòng + nợ cũ
+  // Nếu đã có bill, details.total_amount thường đã gồm rent + negative_balance + prev services.
+  // Nếu chưa có bill, ta phải cộng thủ công rent và negative_balance.
+  const baseAmount = !!details?.current_bill_id 
+    ? (details?.total_amount ?? 0) 
+    : (rentAmount + (details?.negative_balance ?? 0));
+  
+  const grossTotal = baseAmount + meterEstimate + extraTotal;
 
-  // Tổng tiền hiện tại để thanh toán
-  const currentTotal = hasCurrentBill ? payableAmount : (baseEstimate + meterEstimate);
+  // Tiền đã trả (từ bill hiện tại)
+  const paidAmount = details?.paid_amount ?? 0;
+
+  // Số tiền thực sự còn nợ (Net Remaining)
+  const netRemainingDebt = Math.max(0, grossTotal - paidAmount);
+
+  // Hiển thị ở màn hình chính
+  const payableAmount = grossTotal;
+  const remainingAmount = netRemainingDebt;
+  const payableSubLabels: string[] = [];
+  if (eNew > 0 || wNew > 0 || extraTotal > 0) {
+    payableSubLabels.push(t('roomDetail.estimated'));
+  }
 
   const fmt = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -198,7 +187,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
 
   const handleCollect = () => {
     setPaymentMode('full');
-    setPartialAmount(String(currentTotal));
+    setPartialAmount(String(netRemainingDebt));
     setShowPaymentModal(true);
   };
 
@@ -285,17 +274,78 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
 
   // ─── Case: Chỉnh sửa ─────────────────────────────────────────────────────
   if (view === 'edit') {
+    // Nếu các state edit chưa có dữ liệu (lần đầu vào màn edit), sync từ details
+    if (editTenant === '' && details?.customer_name) {
+      setEditTenant(details.customer_name);
+      setEditPhone(details.customer_phone || '');
+      setEditCccd(details.cccd || '');
+      setEditRentPrice(String(details.rent_amount || room.monthly_price || 0));
+      setEditElectricOld(String(details.electric_reading_init || 0));
+      setEditWaterOld(String(details.water_reading_init || 0));
+    }
+
     const editData = {
-      tenant: details?.customer_name || '', phone: details?.customer_phone || '',
-      cccd: details?.cccd || '', rentPrice: String(rentAmount),
-      electricOld: String(eOld), electricNew: electricNew, electricRate: String(electricRate),
-      waterOld: String(wOld), waterNew: waterNew, waterRate: String(waterRate),
+      tenant: editTenant, 
+      phone: editPhone,
+      cccd: editCccd, 
+      rentPrice: editRentPrice,
+      electricOld: editElectricOld, 
+      electricNew: electricNew, 
+      electricRate: String(electricRate),
+      waterOld: editWaterOld, 
+      waterNew: waterNew, 
+      waterRate: String(waterRate),
     };
+
+    const handleSetEditData = (newData: any) => {
+      if (newData.tenant !== undefined) setEditTenant(newData.tenant);
+      if (newData.phone !== undefined) setEditPhone(newData.phone);
+      if (newData.cccd !== undefined) setEditCccd(newData.cccd);
+      if (newData.rentPrice !== undefined) setEditRentPrice(newData.rentPrice);
+      if (newData.electricOld !== undefined) setEditElectricOld(newData.electricOld);
+      if (newData.electricNew !== undefined) setElectricNew(newData.electricNew);
+      if (newData.electricRate !== undefined) setElectricRate(Number(newData.electricRate));
+      if (newData.waterOld !== undefined) setEditWaterOld(newData.waterOld);
+      if (newData.waterNew !== undefined) setWaterNew(newData.waterNew);
+      if (newData.waterRate !== undefined) setWaterRate(Number(newData.waterRate));
+    };
+
+    const onSaveEdit = async () => {
+      try {
+        setLoading(true);
+        await RoomActionService.editRoomDetails({
+          storeId: 'store-001',
+          variantId: room.id,
+          fullName: editTenant,
+          phone: editPhone,
+          idNumber: editCccd,
+          rentAmount: Number(editRentPrice),
+          electricRate: electricRate,
+          waterRate: waterRate,
+          electricReadingInit: Number(editElectricOld),
+          waterReadingInit: Number(editWaterOld),
+          // Nếu có nhập số mới thì coi như cập nhật luôn? 
+          // Thực tế editRoomDetails chủ yếu sửa thông tin nền.
+        });
+        Alert.alert(t('common.ok'), t('roomDetail.success.update') || 'Cập nhật thành công');
+        await loadDetails();
+        setView('detail');
+      } catch (err) {
+        Alert.alert(t('common.error'), String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+
     return (
       <RoomEditView
-        setView={setView} handleUpdateEdit={() => setView('detail')} room={room}
-        editData={editData} setEditData={() => { }}
-        themedColors={colors} t={t}
+        setView={setView} 
+        handleUpdateEdit={onSaveEdit} 
+        room={room}
+        editData={editData} 
+        setEditData={handleSetEditData}
+        themedColors={colors} 
+        t={t}
       />
     );
   }
@@ -316,19 +366,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* ── HEADER ── */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderColor: colors.border, justifyContent: 'space-between' }]}>
         <TouchableOpacity onPress={onBack} style={s.iconBtn}>
           <Icon name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>{t('roomDetail.title')}</Text>
-        <TouchableOpacity style={s.iconBtn} onPress={() =>
-          Alert.alert(t('common.options') || 'Tùy chọn', '', [
-            { text: t('roomDetail.extend'), onPress: handleExtend },
-            { text: t('roomDetail.switchRoom'), onPress: () => setView('switch') },
-            { text: t('roomDetail.btnCheckout'), style: 'destructive', onPress: handleCheckOut },
-            { text: t('common.cancel'), style: 'cancel' },
-          ])
-        }>
+        <Text style={[s.headerTitle, { color: colors.text, position: 'relative' }]}>{t('roomDetail.title')}</Text>
+        <TouchableOpacity onPress={() => setShowMenu(true)} style={s.iconBtn}>
           <Icon name="more-vert" size={22} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -454,10 +497,10 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         <View style={[s.card, s.debtCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.debtRow}>
             <DebtCol label={t('roomDetail.debt.payable')} value={fmt(payableAmount)} valueColor={colors.text} subLabels={payableSubLabels} />
-            <DebtCol label={t('roomDetail.debt.paid')} value="0đ" valueColor={colors.text} />
+            <DebtCol label={t('roomDetail.debt.paid')} value={fmt(paidAmount)} valueColor={colors.success} />
             <DebtCol
               label={t('roomDetail.debt.remaining')}
-              value={isOverdue ? t('roomDetail.debt.overdue') : fmt(payableAmount)}
+              value={isOverdue ? t('roomDetail.debt.overdue') : fmt(remainingAmount)}
               valueColor={isOverdue ? '#fff' : colors.danger}
               badge={isOverdue}
             />
@@ -482,11 +525,35 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         </View>
       </ScrollView>
 
+      {/* ── MENU MODAL ── */}
+      {showMenu && (
+        <Modal visible={showMenu} animationType="fade" transparent onRequestClose={() => setShowMenu(false)}>
+          <TouchableOpacity 
+            style={s.modalOverlay} 
+            activeOpacity={1} 
+            onPress={() => setShowMenu(false)}
+          >
+            <View style={[s.menuContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <TouchableOpacity 
+                style={[s.menuItem, { borderBottomColor: colors.border }]}
+                onPress={() => {
+                  setShowMenu(false);
+                  handleCheckOut();
+                }}
+              >
+                <Icon name="logout" size={20} color={colors.danger} />
+                <Text style={[s.menuItemText, { color: colors.danger }]}>{t('roomDetail.checkout')}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
       {/* ── PAYMENT MODAL ── */}
       {showPaymentModal && (
         <Modal visible={showPaymentModal} animationType="slide" transparent onRequestClose={() => setShowPaymentModal(false)}>
-          <View style={s.modalOverlay}>
-            <View style={[s.paymentModal, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setShowPaymentModal(false)}>
+            <View style={[s.paymentModal, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
               <View style={[s.modalDragIndicator, { backgroundColor: colors.border }]} />
 
               {/* Header */}
@@ -504,15 +571,15 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                 <View style={{ flexDirection: 'row' }}>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRightWidth: 1, borderColor: colors.border }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.payable')}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{fmt(currentTotal)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{fmt(netRemainingDebt)}</Text>
                   </View>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRightWidth: 1, borderColor: colors.border }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.paid')}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>0đ</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.success }}>{fmt(Number(partialAmount || 0))}</Text>
                   </View>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.remaining')}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>{fmt(currentTotal)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>{fmt(Math.max(0, netRemainingDebt - (Number(partialAmount || 0))))}</Text>
                   </View>
                 </View>
                 <View style={{ backgroundColor: colors.primaryLight, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
@@ -527,14 +594,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', borderBottomWidth: 2, borderBottomColor: colors.primary, paddingBottom: 4, minWidth: 200, justifyContent: 'center' }}>
                   <TextInput
                     style={{ fontSize: 32, fontWeight: '800', color: colors.primary, textAlign: 'center', padding: 0, minWidth: 150 }}
-                    value={paymentMode === 'full' ? currentTotal.toLocaleString('vi-VN') : (partialAmount ? Number(partialAmount).toLocaleString('vi-VN') : '')}
+                    value={partialAmount !== '' ? Number(partialAmount).toLocaleString('vi-VN') : ''}
                     onChangeText={(val) => {
                       const numericValue = val.replace(/\D/g, '');
                       setPartialAmount(numericValue);
-                      setPaymentMode('partial');
                     }}
                     keyboardType="numeric"
-                    editable={paymentMode === 'partial'}
                   />
                   <Text style={{ fontSize: 20, fontWeight: '800', color: colors.primary, marginBottom: 4, marginLeft: 4 }}>đ</Text>
                 </View>
@@ -543,29 +608,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               {/* Action Options */}
               <View style={{ marginBottom: 16 }}>
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, backgroundColor: paymentMode === 'full' ? colors.primary : colors.bg, marginBottom: 8 }}
-                  onPress={() => { setPaymentMode('full'); setPartialAmount(String(currentTotal)); }}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, backgroundColor: colors.primaryLight }}
+                  onPress={() => setPartialAmount(String(netRemainingDebt))}
                 >
-                  <Icon name="payments" size={18} color={paymentMode === 'full' ? '#fff' : colors.text} style={{ marginRight: 8 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: paymentMode === 'full' ? '#fff' : colors.text }}>{t('roomDetail.payment.collectFull')}</Text>
+                  <Icon name="refresh" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>Đặt lại số tiền đầy đủ</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, backgroundColor: paymentMode === 'partial' ? colors.primary : colors.bg, marginBottom: 16 }}
-                  onPress={() => setPaymentMode('partial')}
-                >
-                  <Icon name="edit" size={18} color={paymentMode === 'partial' ? '#fff' : colors.text} style={{ marginRight: 8 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: paymentMode === 'partial' ? '#fff' : colors.text }}>{t('roomDetail.payment.collectPartial')}</Text>
-                </TouchableOpacity>
-
-                {paymentMode === 'full' && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, padding: 16, borderRadius: 12 }}>
-                    <Icon name="check-circle" size={16} color={colors.primary} style={{ marginRight: 10 }} />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary, flex: 1, lineHeight: 18 }}>
-                      {t('roomDetail.payment.collectNote')}
-                    </Text>
-                  </View>
-                )}
               </View>
 
               {/* Nút lưu */}
@@ -573,7 +621,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                 style={[s.primaryBtn, { backgroundColor: colors.primary, marginTop: 4, marginBottom: Platform.OS === 'ios' ? 10 : 0 }]}
                 onPress={async () => {
                   try {
-                    const finalAmount = paymentMode === 'full' ? currentTotal : parseFloat(partialAmount || '0');
+                    const finalAmount = parseFloat(partialAmount || String(netRemainingDebt));
                     if (finalAmount <= 0) {
                       Alert.alert(t('roomDetail.error.title'), t('roomDetail.payment.errZero'));
                       return;
@@ -584,6 +632,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                       variantId: room.id,
                       electricNew: eNew,
                       waterNew: wNew,
+                      paymentAmount: finalAmount,
                       extraServices: services.map((s: any) => ({ productId: s.id, name: s.name, quantity: s.qty, unitPrice: s.unitPrice, unitId: s.unitId })),
                     });
                     Alert.alert(t('common.ok'), t('roomDetail.success.collect'));
@@ -594,11 +643,11 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                   }
                 }}
               >
-                <Text style={[s.primaryBtnText, { marginRight: 8 }]}>{t('roomDetail.payment.btnSave')}</Text>
-                <Icon name="save" size={20} color="#fff" />
+                <Text style={[s.primaryBtnText, { marginRight: 8 }]}>Thu tiền</Text>
+                <Icon name="payment" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         </Modal>
       )}
     </SafeAreaView>
@@ -685,9 +734,9 @@ function DebtCol({ label, value, valueColor, badge, subLabels }: any) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 14, borderBottomWidth: 1, minWidth: '100%' },
-  headerTitle: { fontSize: 17, fontWeight: '800' },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderBottomWidth: 1, minWidth: '100%' },
+  headerTitle: { fontSize: 17, fontWeight: '800', position: 'absolute', left: 0, right: 0, textAlign: 'center', zIndex: 0 },
+  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
 
   card: { borderRadius: 14, borderWidth: 1, marginBottom: 8 },
   roomIcon: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -740,4 +789,7 @@ const s = StyleSheet.create({
   modalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '60%' },
   svcPickerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, minWidth: '100%' },
   meterInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 70, fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  menuContainer: { position: 'absolute', top: 60, right: 12, borderRadius: 12, borderWidth: 1, minWidth: 160, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, gap: 12 },
+  menuItemText: { fontSize: 15, fontWeight: '600' },
 });

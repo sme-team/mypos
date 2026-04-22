@@ -115,7 +115,7 @@ export const RoomEditView = React.memo(({
         {/* Tiền điện */}
         <View style={[styles.serviceBox, { borderColor: themedColors.border }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <Icon name="bolt" size={20} color={themedColors.text} style={{ marginRight: 8 }} />
+            <Icon name="bolt" size={20} color="#FFD600" style={{ marginRight: 8 }} />
             <Text style={{ fontWeight: '700', fontSize: 15, color: themedColors.text }}>{t('roomDetail.electric')}</Text>
           </View>
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
@@ -124,7 +124,7 @@ export const RoomEditView = React.memo(({
               <TextInput 
                 style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
                 value={editData.electricOld} 
-                onChangeText={t => setEditData({ ...editData, electricOld: t })} 
+                onChangeText={v => setEditData({ ...editData, electricOld: v })} 
                 keyboardType="numeric" 
               />
             </View>
@@ -133,7 +133,7 @@ export const RoomEditView = React.memo(({
               <TextInput 
                 style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
                 value={editData.electricNew} 
-                onChangeText={t => setEditData({ ...editData, electricNew: t })} 
+                onChangeText={v => setEditData({ ...editData, electricNew: v })} 
                 keyboardType="numeric" 
               />
             </View>
@@ -142,7 +142,42 @@ export const RoomEditView = React.memo(({
           <TextInput 
             style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
             value={editData.electricRate} 
-            onChangeText={t => setEditData({ ...editData, electricRate: t })} 
+            onChangeText={v => setEditData({ ...editData, electricRate: v })} 
+            keyboardType="numeric" 
+          />
+        </View>
+
+        {/* Tiền nước */}
+        <View style={[styles.serviceBox, { borderColor: themedColors.border }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Icon name="water-drop" size={20} color="#03A9F4" style={{ marginRight: 8 }} />
+            <Text style={{ fontWeight: '700', fontSize: 15, color: themedColors.text }}>{t('roomDetail.water')}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.old')}</Text>
+              <TextInput 
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
+                value={editData.waterOld} 
+                onChangeText={v => setEditData({ ...editData, waterOld: v })} 
+                keyboardType="numeric" 
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.new')}</Text>
+              <TextInput 
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
+                value={editData.waterNew} 
+                onChangeText={v => setEditData({ ...editData, waterNew: v })} 
+                keyboardType="numeric" 
+              />
+            </View>
+          </View>
+          <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.unitRate')}</Text>
+          <TextInput 
+            style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
+            value={editData.waterRate} 
+            onChangeText={v => setEditData({ ...editData, waterRate: v })} 
             keyboardType="numeric" 
           />
         </View>

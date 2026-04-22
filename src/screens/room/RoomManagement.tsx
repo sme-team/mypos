@@ -393,6 +393,20 @@ export default function RoomManagement({storeId}: Props) {
         ]);
         setRoomTypes(types);
         setVariants(vars);
+
+        // Create default "Phòng" room type if none exist
+        if (types.length === 0 && !isRefresh) {
+          try {
+            const defaultRoomType = await RoomService.createRoomType({
+              storeId,
+              name: 'Phòng',
+              description: 'Danh mục phòng mặc định',
+            });
+            setRoomTypes([defaultRoomType]);
+          } catch (err) {
+            console.error('[RoomManagement] Failed to create default room type:', err);
+          }
+        }
       } catch (e) {
         console.error('[RoomManagement] loadData:', e);
         setError(t('room.loadError', 'Không thể tải danh sách phòng'));
@@ -515,8 +529,8 @@ export default function RoomManagement({storeId}: Props) {
     typeId: v.productId,
     name: v.name,
     floor: v.attributes?.floor?.toString() ?? '',
-    priceOvernight: '',
-    priceHalfDay: '',
+    priceListed: '',
+    priceHourFirst: '',
     priceHour: '',
     priceMonth: '',
   });

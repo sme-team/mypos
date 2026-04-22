@@ -16,6 +16,11 @@ import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {CalendarModal} from '../../components/DateInput';
+import {
+  IDScannerModal,
+  CCCDData,
+} from '../../components/booking/modals/IDScannerModal';
+import {useTheme} from '../../hooks/useTheme';
 
 import {
   CustomerService,
@@ -187,11 +192,28 @@ export default function AddCustomer({
   const [form, setForm] = useState<AddCustomerForm>(
     isEdit && initialData ? recordToForm(initialData) : INITIAL_FORM,
   );
+
+  const {isDark} = useTheme();
   const [errors, setErrors] = useState<
     Partial<Record<keyof AddCustomerForm, string>>
   >({});
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showIDScanner, setShowIDScanner] = useState(false);
+
+  // Theme colors cho IDScannerModal
+  const themedColors = {
+    primary: '#1E6FD9',
+    primaryLight: isDark ? '#1E3A5F' : '#E8F1FB',
+    text: isDark ? '#F1F5F9' : '#111827',
+    textSecondary: isDark ? '#94A3B8' : '#6B7280',
+    border: isDark ? '#334155' : '#E5E7EB',
+    bg: isDark ? '#0F172A' : '#F4F7FB',
+    surface: isDark ? '#1E293B' : '#FFFFFF',
+    warning: '#F59E0B',
+    warningLight: isDark ? '#78350F' : '#FEF3C7',
+    success: '#16A34A',
+  };
 
   const dateOfBirthObj: Date = form.date_of_birth
     ? new Date(form.date_of_birth)
@@ -272,11 +294,53 @@ export default function AddCustomer({
   };
 
   const handleScanCCCD = () => {
-    launchCamera({mediaType: 'photo', quality: 0.9}, res => {
-      if (res.didCancel || res.errorCode) return;
-      // TODO: gọi OCR service để parse thông tin từ ảnh CCCD
-      console.log('CCCD scanned:', res.assets?.[0]?.uri);
-    });
+    setShowIDScanner(true);
+  };
+
+  const handleIDScanned = (data: CCCDData) => {
+    // Map dữ liệu từ CCCDData sang AddCustomerForm
+    setField('id_number', data.idCard);
+    setField('full_name', data.fullName);
+
+    // Convert ngày từ DD/MM/YYYY sang YYYY-MM-DD
+    if (data.dateOfBirth) {
+      const parts = data.dateOfBirth.split('/');
+      if (parts.length === 3) {
+        const [dd, mm, yyyy] = parts;
+        setField('date_of_birth', `${yyyy}-${mm}-${dd}`);
+      }
+    }
+
+    // Convert giới tính từ tiếng Việt sang enum
+    if (data.gender) {
+      const genderLower = data.gender.toLowerCase();
+      if (genderLower.includes('nam') || genderLower.includes('male')) {
+        setField('gender', 'male');
+      } else if (
+        genderLower.includes('nữ') ||
+        genderLower.includes('female') ||
+        genderLower.includes('nu')
+      ) {
+        setField('gender', 'female');
+      } else {
+        setField('gender', 'other');
+      }
+    }
+
+    // Địa chỉ
+    if (data.address) {
+      setField('address', data.address);
+    }
+
+    // Lưu quê quán vào notes nếu có
+    if (data.placeOfOrigin) {
+      setField(
+        'notes',
+        `Quê quán: ${data.placeOfOrigin}${form.notes ? '\n' + form.notes : ''}`,
+      );
+    }
+
+    setShowIDScanner(false);
   };
 
   // ── Save ────────────────────────────────────────────────────────────────────
@@ -654,6 +718,15 @@ export default function AddCustomer({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── ID Scanner Modal ── */}
+      <IDScannerModal
+        visible={showIDScanner}
+        onClose={() => setShowIDScanner(false)}
+        onScanned={handleIDScanned}
+        themedColors={themedColors}
+        t={t}
+      />
     </SafeAreaView>
   );
 }

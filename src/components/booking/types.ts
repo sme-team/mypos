@@ -21,6 +21,7 @@ export interface Service {
   unit: string;
   qty: number;
   selected: boolean;
+  taxRate?: number;  // FIX #8: Thêm taxRate từ products.tax_rate
 }
 
 export interface BookingForm {

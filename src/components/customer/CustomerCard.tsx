@@ -11,6 +11,15 @@ export interface Customer {
   type?: CustomerType;
   hasKey?: boolean;
   imageUri?: string; //  có thì hiện ảnh, không có thì dùng initials
+  // Các field từ CCCD
+  id_number?: string;
+  date_of_birth?: string;
+  gender?: 'male' | 'female' | 'other';
+  address?: string;
+  nationality?: string;
+  email?: string;
+  notes?: string;
+  customer_group?: 'regular' | 'vip' | 'wholesale' | 'corporate' | 'staff';
 }
 
 interface CustomerCardProps {

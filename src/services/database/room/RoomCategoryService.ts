@@ -12,12 +12,14 @@
  *    → hiển thị trên CARD trong danh sách
  *
  *  prices
- *    → giá của từng variant theo unit (OVNIGHT/HALFDAY/HOUR/MONTH)
+ *    → giá của từng variant theo unit (DAY/HOUR/HOURFIRST/MONTH)
  *    → price_list_name: 'default'
  */
 
 import {BaseService} from '../../BaseService';
 import {generateSequentialId} from '../../../utils';
+import { QueryBuilder } from '@dqcai/sqlite';
+import DatabaseManager from '../../../database/DBManagers';
 
 // ─── Internal base services ───────────────────────────────────────────────────
 
@@ -80,7 +82,7 @@ export interface RoomVariant {
 export interface RoomPrice {
   id: string;
   variantId: string;
-  unitId: string; // unit_id từ bảng units (OVNIGHT / HALFDAY / HOUR / MONTH)
+  unitId: string; // unit_id từ bảng units (DAY / HOUR / HOURFIRST / MONTH)
   price: number;
   priceListName: string;
   effectiveFrom: string;
@@ -105,10 +107,11 @@ export interface CreateRoomVariantInput {
 
 /**
  * Giá khởi tạo khi tạo phòng mới
- * unitId tương ứng với unit_code: OVNIGHT / HALFDAY / HOUR / MONTH
+ * unitCode: DAY / HOUR / HOURFIRST / MONTH
+ * RoomService sẽ tự map unitCode → unitId từ DB
  */
 export interface RoomPriceInput {
-  unitId: string; // FK → units.id
+  unitCode: string; // unit_code từ bảng units (DAY / HOUR / HOURFIRST / MONTH)
   price: number; // giá bán (VND)
   priceListName?: string; // mặc định 'default'
 }
@@ -204,6 +207,21 @@ class RoomServiceClass {
           status: v.status,
         };
       });
+  }
+
+  /**
+   * Lấy unit_id từ unit_code (map từ DB)
+   */
+  private async getUnitByCode(unitCode: string): Promise<string | null> {
+    const db = DatabaseManager.get('pos');
+    if (!db) return null;
+
+    const result = await QueryBuilder.table('units', db.getInternalDAO())
+      .select(['id'])
+      .where('unit_code', unitCode.toUpperCase())
+      .first();
+
+    return result?.id ?? null;
   }
 
   /**
@@ -343,10 +361,17 @@ class RoomServiceClass {
 
       const priceListName = p.priceListName ?? 'default';
 
+      // Map unitCode → unitId từ DB
+      const unitId = await this.getUnitByCode(p.unitCode);
+      if (!unitId) {
+        console.warn(`[RoomService] Unit not found for code: ${p.unitCode}`);
+        continue;
+      }
+
       // Soft-delete bản ghi giá cũ cùng unit + price_list_name
       const existing: any[] = await this.priceSvc.findAll({
         variant_id: variantId,
-        unit_id: p.unitId,
+        unit_id: unitId,
         price_list_name: priceListName,
         status: 'active',
       });
@@ -366,7 +391,7 @@ class RoomServiceClass {
         id: priceId,
         store_id: storeId,
         variant_id: variantId,
-        unit_id: p.unitId,
+        unit_id: unitId,
         price_list_name: priceListName,
         price: p.price,
         cost_price: null,
