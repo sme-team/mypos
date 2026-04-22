@@ -13,6 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useImagePicker} from '../../../hooks/useImagePicker';
 import {UnitPickerModal} from './UnitPickerModal';
+import type {UnitOption} from '../types';
 
 interface Props {
   visible: boolean;
@@ -20,8 +21,8 @@ interface Props {
   variantId: string;
   initialName: string;
   initialPrice: number;
-  initialUnit: string;
-  units: string[];
+  initialUnit: string; // unit name (để hiển thị giá trị ban đầu)
+  units: UnitOption[];
   onClose: () => void;
   onSave: (
     itemId: string,
@@ -49,19 +50,21 @@ export const VariantDetailModal: React.FC<Props> = ({
   const {imageUri, chooseImage} = useImagePicker();
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [unit, setUnit] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<UnitOption | null>(null);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(initialName);
       setPrice(String(initialPrice));
-      setUnit(initialUnit);
+      // Khớp unit ban đầu theo name
+      const matched = units.find(u => u.name === initialUnit) ?? null;
+      setSelectedUnit(matched);
     }
-  }, [visible, initialName, initialPrice, initialUnit]);
+  }, [visible, initialName, initialPrice, initialUnit, units]);
 
   const handleSave = () => {
-    if (!name.trim() || !price.trim() || !unit.trim()) {
+    if (!name.trim() || !price.trim() || !selectedUnit) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
     }
@@ -70,12 +73,19 @@ export const VariantDetailModal: React.FC<Props> = ({
       Alert.alert('Lỗi', 'Giá phải là số hợp lệ');
       return;
     }
-    onSave(itemId, variantId, name.trim(), parsedPrice, unit.trim(), imageUri);
+    onSave(
+      itemId,
+      variantId,
+      name.trim(),
+      parsedPrice,
+      selectedUnit.name,
+      imageUri,
+    );
     onClose();
   };
 
   const handleDelete = () => {
-    Alert.alert('Xóa biến thể', `Bạn có chắc muốn xóa biến thể "${name}"?`, [
+    Alert.alert('Xóa loại', `Bạn có chắc muốn xóa loại "${name}"?`, [
       {text: 'Hủy', style: 'cancel'},
       {
         text: 'Xóa',
@@ -116,7 +126,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                 color: '#111827',
                 flex: 1,
               }}>
-              Chi tiết biến thể
+              Chi tiết loại
             </Text>
             {/* Nút xóa ở header */}
             <TouchableOpacity
@@ -162,7 +172,7 @@ export const VariantDetailModal: React.FC<Props> = ({
               </Text>
             </TouchableOpacity>
 
-            {/* Tên biến thể */}
+            {/* Tên loại */}
             <Text
               style={{
                 fontSize: 13,
@@ -170,7 +180,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                 color: '#374151',
                 marginBottom: 6,
               }}>
-              Tên biến thể
+              Tên loại
             </Text>
             <TextInput
               style={{
@@ -185,7 +195,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                 backgroundColor: '#f9fafb',
                 marginBottom: 20,
               }}
-              placeholder="Nhập tên biến thể"
+              placeholder="Nhập tên loại"
               value={name}
               onChangeText={setName}
             />
@@ -259,10 +269,10 @@ export const VariantDetailModal: React.FC<Props> = ({
                   <Text
                     style={{
                       fontSize: 14,
-                      color: unit ? '#111827' : '#9ca3af',
-                      fontWeight: unit ? '500' : '400',
+                      color: selectedUnit ? '#111827' : '#9ca3af',
+                      fontWeight: selectedUnit ? '500' : '400',
                     }}>
-                    {unit || 'Chọn'}
+                    {selectedUnit ? selectedUnit.name : 'Chọn'}
                   </Text>
                   <Icon name="keyboard-arrow-down" size={20} color="#6b7280" />
                 </TouchableOpacity>
@@ -313,10 +323,10 @@ export const VariantDetailModal: React.FC<Props> = ({
 
       <UnitPickerModal
         visible={showUnitPicker}
-        selected={unit}
+        selected={selectedUnit?.id ?? ''}
         units={units}
         onSelect={u => {
-          setUnit(u);
+          setSelectedUnit(u);
           setShowUnitPicker(false);
         }}
         onClose={() => setShowUnitPicker(false)}

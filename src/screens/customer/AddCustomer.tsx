@@ -9,36 +9,40 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {CalendarModal} from '../../components/DateInput';
 
-// ─── Types (map từ customers table trong MyPOS.ts) ────────────────────────────
+import {
+  CustomerService,
+  CustomerInput,
+  CustomerRecord,
+  CustomerGender,
+  CustomerGroup,
+} from '../../services/database/customer/CustomerService';
 
-type Gender = 'male' | 'female' | 'other';
-type CustomerGroup = 'regular' | 'vip' | 'wholesale' | 'corporate' | 'staff';
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type CustomerType = 'selling' | 'storage';
 
 interface AddCustomerForm {
-  // customers table
-  full_name: string; // NOT NULL
-  id_number: string; // CCCD/CMND/Hộ chiếu
-  date_of_birth: string; // date — YYYY-MM-DD
-  gender: Gender;
+  full_name: string;
+  id_number: string;
+  date_of_birth: string;
+  gender: CustomerGender;
   address: string;
-  nationality: string; // DEFAULT 'VN'
-  phone: string; // NOT NULL
+  nationality: string;
+  phone: string;
   email: string;
   notes: string;
   customer_group: CustomerGroup;
-  // ui only
   type: CustomerType;
   imageUri?: string;
 }
-
-// ─── Mock initial (dùng để test; service sẽ thay thế khi lưu) ────────────────
 
 const INITIAL_FORM: AddCustomerForm = {
   full_name: '',
@@ -55,9 +59,27 @@ const INITIAL_FORM: AddCustomerForm = {
   imageUri: undefined,
 };
 
+/** Map CustomerRecord → form (dùng khi edit) */
+function recordToForm(customer: CustomerRecord): AddCustomerForm {
+  const meta = customer.metadata ?? {};
+  return {
+    full_name: customer.full_name ?? '',
+    id_number: customer.id_number ?? '',
+    date_of_birth: customer.date_of_birth ?? '',
+    gender: customer.gender ?? 'male',
+    address: customer.address ?? '',
+    nationality: customer.nationality ?? 'VN',
+    phone: customer.phone ?? '',
+    email: customer.email ?? '',
+    notes: customer.notes ?? '',
+    customer_group: customer.customer_group ?? 'regular',
+    type: (meta.type as CustomerType) ?? 'selling',
+    imageUri: customer.imageUri ?? undefined,
+  };
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Label với dấu * nếu required */
 const FieldLabel: React.FC<{label: string; required?: boolean}> = ({
   label,
   required,
@@ -68,7 +90,6 @@ const FieldLabel: React.FC<{label: string; required?: boolean}> = ({
   </Text>
 );
 
-/** Input chuẩn */
 const StyledInput: React.FC<{
   placeholder?: string;
   value: string;
@@ -108,7 +129,6 @@ const StyledInput: React.FC<{
   />
 );
 
-/** Section card */
 const SectionCard: React.FC<{children: React.ReactNode}> = ({children}) => (
   <View
     className="bg-white rounded-2xl px-4 pt-4 pb-2 mx-4 mb-4"
@@ -123,11 +143,10 @@ const SectionCard: React.FC<{children: React.ReactNode}> = ({children}) => (
   </View>
 );
 
-/** Section title */
-const SectionTitle: React.FC<{
-  title: string;
-  right?: React.ReactNode;
-}> = ({title, right}) => (
+const SectionTitle: React.FC<{title: string; right?: React.ReactNode}> = ({
+  title,
+  right,
+}) => (
   <View className="flex-row items-center justify-between mb-4">
     <Text className="text-xs font-bold tracking-widest text-gray-400 uppercase">
       {title}
@@ -136,26 +155,44 @@ const SectionTitle: React.FC<{
   </View>
 );
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-interface AddCustomerScreenProps {
+interface AddCustomerProps {
+  storeId: string;
   onCancel: () => void;
-  /** Sau này thay bằng service thật để lưu DB local */
-  onSave?: (form: AddCustomerForm) => void;
+  /** Nhận CustomerRecord đã được lưu/cập nhật vào DB */
+  onSaved: (customer: CustomerRecord) => void;
+  /**
+   * Chế độ hoạt động:
+   *   - 'create' (default): tạo mới khách hàng
+   *   - 'edit': cập nhật khách hàng có sẵn (yêu cầu initialData)
+   */
+  mode?: 'create' | 'edit';
+  /** Dữ liệu khách hàng hiện tại — bắt buộc khi mode = 'edit' */
+  initialData?: CustomerRecord;
 }
 
-export default function AddCustomerScreen({
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+export default function AddCustomer({
+  storeId,
   onCancel,
-  onSave,
-}: AddCustomerScreenProps) {
+  onSaved,
+  mode = 'create',
+  initialData,
+}: AddCustomerProps) {
   const {t} = useTranslation();
-  const [form, setForm] = useState<AddCustomerForm>(INITIAL_FORM);
+  const isEdit = mode === 'edit';
+
+  const [form, setForm] = useState<AddCustomerForm>(
+    isEdit && initialData ? recordToForm(initialData) : INITIAL_FORM,
+  );
   const [errors, setErrors] = useState<
     Partial<Record<keyof AddCustomerForm, string>>
   >({});
+  const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Date object để truyền vào CalendarModal — fallback 25 năm trước
   const dateOfBirthObj: Date = form.date_of_birth
     ? new Date(form.date_of_birth)
     : new Date(new Date().getFullYear() - 25, 0, 1);
@@ -176,8 +213,6 @@ export default function AddCustomerScreen({
     setShowDatePicker(false);
   };
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
   const setField = <K extends keyof AddCustomerForm>(
     key: K,
     value: AddCustomerForm[K],
@@ -186,10 +221,11 @@ export default function AddCustomerScreen({
     if (errors[key]) setErrors(prev => ({...prev, [key]: undefined}));
   };
 
-  // ── Validation ───────────────────────────────────────────────────────────
+  // ── Validation ──────────────────────────────────────────────────────────────
 
-  const validate = (): boolean => {
+  const validate = async (): Promise<boolean> => {
     const newErrors: typeof errors = {};
+
     if (!form.full_name.trim()) {
       newErrors.full_name = t('validation.required', {
         defaultValue: 'Trường này là bắt buộc',
@@ -203,12 +239,26 @@ export default function AddCustomerScreen({
       newErrors.phone = t('validation.phone_invalid', {
         defaultValue: 'Số điện thoại không hợp lệ',
       });
+    } else {
+      // Khi edit: chỉ check trùng nếu số điện thoại thực sự thay đổi
+      const phoneChanged =
+        !isEdit || form.phone.trim() !== initialData?.phone?.trim();
+
+      if (phoneChanged) {
+        const dup = await CustomerService.findByPhone(form.phone, storeId);
+        if (dup) {
+          newErrors.phone = t('validation.phone_duplicate', {
+            defaultValue: 'Số điện thoại đã tồn tại trong hệ thống',
+          });
+        }
+      }
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── Chọn ảnh ─────────────────────────────────────────────────────────────
+  // ── Chọn ảnh ────────────────────────────────────────────────────────────────
 
   const handlePickImage = () => {
     launchImageLibrary(
@@ -221,8 +271,6 @@ export default function AddCustomerScreen({
     );
   };
 
-  // ── Quét CCCD (camera) ───────────────────────────────────────────────────
-
   const handleScanCCCD = () => {
     launchCamera({mediaType: 'photo', quality: 0.9}, res => {
       if (res.didCancel || res.errorCode) return;
@@ -231,45 +279,111 @@ export default function AddCustomerScreen({
     });
   };
 
-  // ── Save ─────────────────────────────────────────────────────────────────
+  // ── Save ────────────────────────────────────────────────────────────────────
 
-  const handleSave = () => {
-    if (!validate()) return;
-    // TODO: thay bằng service lưu local DB
-    onSave?.(form);
-    console.log('Save customer:', form);
+  const handleSave = async () => {
+    const valid = await validate();
+    if (!valid) return;
+
+    setSaving(true);
+    try {
+      let result: CustomerRecord;
+
+      if (isEdit && initialData) {
+        // ── UPDATE ──
+        result = await CustomerService.update(initialData.id, {
+          full_name: form.full_name,
+          phone: form.phone,
+          id_number: form.id_number || null,
+          date_of_birth: form.date_of_birth || null,
+          gender: form.gender,
+          email: form.email || null,
+          address: form.address || null,
+          nationality: form.nationality,
+          customer_group: form.customer_group,
+          notes: form.notes || null,
+          imageUri: form.imageUri ?? null,
+          metadata: {
+            ...(initialData.metadata ?? {}),
+            type: form.type,
+          },
+        });
+      } else {
+        // ── CREATE ──
+        const input: CustomerInput = {
+          store_id: storeId,
+          full_name: form.full_name,
+          phone: form.phone,
+          id_number: form.id_number || null,
+          date_of_birth: form.date_of_birth || null,
+          gender: form.gender,
+          email: form.email || null,
+          address: form.address || null,
+          nationality: form.nationality,
+          customer_group: form.customer_group,
+          notes: form.notes || null,
+          imageUri: form.imageUri ?? null,
+          metadata: {
+            type: form.type,
+            hasKey: false,
+          },
+        };
+        result = await CustomerService.create(input);
+      }
+
+      onSaved(result);
+    } catch (err: any) {
+      console.error('[AddCustomer] save error:', err);
+      Alert.alert(
+        t('common.error', {defaultValue: 'Lỗi'}),
+        err?.message ??
+          t('customer.add.save_error', {
+            defaultValue: 'Không thể lưu khách hàng. Vui lòng thử lại.',
+          }),
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // ── Gender options ───────────────────────────────────────────────────────
-
-  const GENDERS: {key: Gender; label: string}[] = [
+  const GENDERS: {key: CustomerGender; label: string}[] = [
     {key: 'male', label: t('gender.male', {defaultValue: 'Nam'})},
     {key: 'female', label: t('gender.female', {defaultValue: 'Nữ'})},
     {key: 'other', label: t('gender.other', {defaultValue: 'Khác'})},
   ];
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const screenTitle = isEdit
+    ? t('customer.edit.title', {defaultValue: 'Sửa khách hàng'})
+    : t('customer.add.title', {defaultValue: 'Thêm khách hàng'});
+
+  const saveLabel = isEdit
+    ? t('customer.edit.save_btn', {defaultValue: 'Cập nhật'})
+    : t('customer.add.save_btn', {defaultValue: 'Lưu khách hàng'});
+
+  const savingLabel = t('common.saving', {defaultValue: 'Đang lưu...'});
 
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
       <StatusBar barStyle="dark-content" backgroundColor="#f3f4f6" />
 
-      {/* ── Header ── */}
+      {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100">
-        <TouchableOpacity onPress={onCancel}>
+        <TouchableOpacity onPress={onCancel} disabled={saving}>
           <Text className="text-gray-500 font-medium text-[15px]">
             {t('common.cancel', {defaultValue: 'Hủy'})}
           </Text>
         </TouchableOpacity>
-
-        <Text className="text-base font-bold text-gray-900">
-          {t('customer.add.title', {defaultValue: 'Thêm khách hàng'})}
-        </Text>
-
-        <TouchableOpacity onPress={handleSave}>
-          <Text className="text-blue-500 font-bold text-[15px]">
-            {t('common.save', {defaultValue: 'Lưu'})}
-          </Text>
+        <Text className="text-base font-bold text-gray-900">{screenTitle}</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="#3b82f6" />
+          ) : (
+            <Text className="text-blue-500 font-bold text-[15px]">
+              {t('common.save', {defaultValue: 'Lưu'})}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -280,7 +394,7 @@ export default function AddCustomerScreen({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{paddingTop: 12, paddingBottom: 120}}
           keyboardShouldPersistTaps="handled">
-          {/* ── THÔNG TIN CÁ NHÂN ── */}
+          {/* ── Thông tin cá nhân ── */}
           <SectionCard>
             <SectionTitle
               title={t('customer.add.personal_info', {
@@ -324,7 +438,7 @@ export default function AddCustomerScreen({
               )}
             </View>
 
-            {/* Số CCCD/ID */}
+            {/* Số CCCD */}
             <View className="mb-4">
               <FieldLabel
                 label={t('customer.add.id_number', {
@@ -374,7 +488,6 @@ export default function AddCustomerScreen({
                   </TouchableOpacity>
                 )}
               </TouchableOpacity>
-
               <CalendarModal
                 visible={showDatePicker}
                 selectedDate={dateOfBirthObj}
@@ -391,7 +504,7 @@ export default function AddCustomerScreen({
                 label={t('customer.add.gender', {defaultValue: 'Giới tính'})}
               />
               <View className="flex-row bg-gray-100 rounded-xl overflow-hidden">
-                {GENDERS.map((g, idx) => (
+                {GENDERS.map(g => (
                   <TouchableOpacity
                     key={g.key}
                     className="flex-1 items-center py-3"
@@ -457,7 +570,7 @@ export default function AddCustomerScreen({
             </View>
           </SectionCard>
 
-          {/* ── THÔNG TIN LIÊN LẠC ── */}
+          {/* ── Thông tin liên lạc ── */}
           <SectionCard>
             <SectionTitle
               title={t('customer.add.contact_info', {
@@ -511,7 +624,7 @@ export default function AddCustomerScreen({
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ── Bottom CTA ── */}
+      {/* Bottom CTA */}
       <View
         className="absolute bottom-0 left-0 right-0 bg-white px-4 pb-4 pt-2"
         style={{
@@ -522,13 +635,22 @@ export default function AddCustomerScreen({
           shadowOffset: {width: 0, height: -2},
         }}>
         <TouchableOpacity
-          className="flex-row items-center justify-center rounded-2xl py-4 "
-          style={{backgroundColor: '#3b82f6'}}
+          className="flex-row items-center justify-center rounded-2xl py-4"
+          style={{backgroundColor: saving ? '#93c5fd' : '#3b82f6'}}
           onPress={handleSave}
+          disabled={saving}
           activeOpacity={0.85}>
-          <Icon name="save" size={20} color="#fff" />
-          <Text className="text-white font-bold text-[16px]">
-            {t('customer.add.save_btn', {defaultValue: 'Lưu khách hàng'})}
+          {saving ? (
+            <ActivityIndicator
+              size="small"
+              color="#fff"
+              style={{marginRight: 8}}
+            />
+          ) : (
+            <Icon name={isEdit ? 'edit' : 'save'} size={20} color="#fff" />
+          )}
+          <Text className="text-white font-bold text-[16px] ml-2">
+            {saving ? savingLabel : saveLabel}
           </Text>
         </TouchableOpacity>
       </View>

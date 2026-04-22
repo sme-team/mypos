@@ -8,6 +8,7 @@ import type {
   CategoryGroup,
   CategoryItem,
   Variant,
+  UnitOption,
 } from '../../../screens/category/types';
 
 const logger = createModuleLogger(AppModules.DATABASE);
@@ -233,22 +234,25 @@ class CategoryServiceClass {
   }
 
   /**
-   * Load danh sách tên đơn vị tính từ bảng units
+   * Load danh sách đơn vị tính từ bảng units, chỉ lấy unit_type = 'count' hoặc 'weight'
    */
-  async loadUnits(storeId: string): Promise<string[]> {
+  async loadUnits(storeId: string): Promise<UnitOption[]> {
     try {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
       const rows = await QueryBuilder.table('units', db.getInternalDAO())
-        .select(['name'])
+        .select(['id', 'name', 'unit_type'])
         .where('store_id', storeId)
         .where('status', 'active')
         .whereNull('deleted_at')
+        .whereIn('unit_type', ['count', 'weight'])
         .orderBy('sort_order', 'ASC')
         .get();
 
-      return rows.map(r => r.name as string).filter(Boolean);
+      return rows
+        .filter((r: any) => r.id && r.name)
+        .map((r: any) => ({id: r.id as string, name: r.name as string}));
     } catch (err) {
       logger.error('[CategoryService] loadUnits error:', err);
       return [];

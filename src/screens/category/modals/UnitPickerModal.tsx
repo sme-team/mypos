@@ -1,12 +1,13 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Modal, ScrollView} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import type {UnitOption} from '../types';
 
 interface Props {
   visible: boolean;
-  selected: string;
-  units: string[];
-  onSelect: (unit: string) => void;
+  selected: string; // unit id
+  units: UnitOption[];
+  onSelect: (unit: UnitOption) => void;
   onClose: () => void;
 }
 
@@ -65,10 +66,10 @@ export const UnitPickerModal: React.FC<Props> = ({
         ) : (
           <ScrollView>
             {units.map((unit, idx) => {
-              const isSelected = selected === unit;
+              const isSelected = selected === unit.id;
               return (
                 <TouchableOpacity
-                  key={unit}
+                  key={unit.id}
                   onPress={() => onSelect(unit)}
                   style={{
                     flexDirection: 'row',
@@ -86,7 +87,7 @@ export const UnitPickerModal: React.FC<Props> = ({
                       color: isSelected ? '#3b82f6' : '#374151',
                       fontWeight: isSelected ? '600' : '400',
                     }}>
-                    {unit}
+                    {unit.name}
                   </Text>
                   {isSelected && (
                     <Icon name="check" size={18} color="#3b82f6" />

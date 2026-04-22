@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -7,71 +7,325 @@ import {
   FlatList,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+
 import CustomerCard, {Customer} from '../../components/customer/CustomerCard';
 import CustomerDetail from './CustomerDetail';
 import AddCustomer from './AddCustomer';
-import type {CustomerDetail as CustomerDetailType} from './type';
 import {useSelectionMode} from '../../hooks/useSelectionMode';
 import {SelectionBar} from '../../components/common/SelectionBar';
 import {ConfirmDeleteModal} from '../../components/common/ConfirmDeleteModal';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-type TabType = 'selling' | 'storage';
-type FilterTab = 'all' | TabType;
+import {
+  CustomerService,
+  CustomerRecord,
+} from '../../services/database/customer/CustomerService';
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-// hasKey = true chỉ dành cho khách lưu trú (đang giữ chìa khóa phòng)
-const MOCK_CUSTOMERS: Customer[] = [
-  {id: '1', name: 'Nguyễn Văn Lộc', phone: '0901234567', type: 'selling'},
-  {id: '2', name: 'Trần Minh Hiếu', phone: '0918889999', type: 'selling'},
-  {
-    id: '3',
-    name: 'Phạm',
-    phone: '0987654321',
-    type: 'storage',
-    hasKey: true,
-  },
-  {id: '4', name: 'Lê Hoàng Nam', phone: '0934445555', type: 'selling'},
-  {
-    id: '5',
-    name: 'Võ Mạnh Dũng',
-    phone: '0971112222',
-    type: 'storage',
-    hasKey: true,
-    imageUri:
-      'https://tse4.mm.bing.net/th/id/OIP.BLeREgByNXuncHDUim3eMAHaJ3?pid=Api&P=0&h=180',
-  },
-  {
-    id: '6',
-    name: 'Mai Thị Tuyết',
-    phone: '0909990000',
-    type: 'storage',
-    hasKey: true,
-  },
-];
+import {BaseService} from '../../services/BaseService';
 
-interface CustomerProps {
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+// TODO: lấy từ auth context / store context thực tế
+const CURRENT_STORE_ID = 'store-001';
+
+/** Số khách hàng hiển thị mỗi trang */
+const PAGE_SIZE = 20;
+
+// ─── DAO phụ để truy vấn bảng residents ──────────────────────────────────────
+
+class ResidentDAO extends BaseService {
+  constructor() {
+    super('pos', 'residents');
+  }
+}
+
+const residentDAO = new ResidentDAO();
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type FilterTab = 'all' | 'selling' | 'storage';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Map CustomerRecord (DB) → Customer (UI Card component) */
+function toCardCustomer(r: CustomerRecord): Customer {
+  return {
+    id: r.id,
+    name: r.full_name,
+    phone: r.phone,
+    hasKey: r.metadata?.hasKey ?? false,
+    imageUri: r.imageUri ?? undefined,
+  };
+}
+
+// ─── Sub-component: Pagination ────────────────────────────────────────────────
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+const Pagination: React.FC<PaginationProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
+  if (totalPages <= 1) return null;
+
+  /**
+   * Tính danh sách trang hiển thị (tối đa 5 trang xung quanh trang hiện tại)
+   * Giống ảnh mẫu: 1 2 3 4 5  /  3 4 [5] 6 7
+   */
+  const getPageNumbers = (): number[] => {
+    const delta = 2; // số trang hiển thị mỗi bên
+    const range: number[] = [];
+    const left = Math.max(1, currentPage - delta);
+    const right = Math.min(totalPages, currentPage + delta);
+    for (let i = left; i <= right; i++) {
+      range.push(i);
+    }
+    return range;
+  };
+
+  const pages = getPageNumbers();
+  const isFirst = currentPage === 1;
+  const isLast = currentPage === totalPages;
+
+  return (
+    <View
+      className="flex-row items-center justify-center py-4 px-2"
+      style={{gap: 4}}>
+      {/* Trước */}
+      <TouchableOpacity
+        onPress={() => !isFirst && onPageChange(currentPage - 1)}
+        disabled={isFirst}
+        className="px-3 py-2 rounded-lg"
+        style={{opacity: isFirst ? 0.35 : 1}}>
+        <Text className="text-gray-500 text-sm font-medium">‹ Trước</Text>
+      </TouchableOpacity>
+
+      {/* Số trang */}
+      {pages.map(page => {
+        const isActive = page === currentPage;
+        return (
+          <TouchableOpacity
+            key={page}
+            onPress={() => onPageChange(page)}
+            className="w-9 h-9 items-center justify-center rounded-lg"
+            style={{
+              backgroundColor: isActive ? 'transparent' : 'transparent',
+              borderBottomWidth: isActive ? 2 : 0,
+              borderBottomColor: isActive ? '#1d4ed8' : 'transparent',
+            }}>
+            <Text
+              className="text-sm font-semibold"
+              style={{color: isActive ? '#1d4ed8' : '#6b7280'}}>
+              {page}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+
+      {/* Tiếp theo */}
+      <TouchableOpacity
+        onPress={() => !isLast && onPageChange(currentPage + 1)}
+        disabled={isLast}
+        className="px-3 py-2 rounded-lg"
+        style={{opacity: isLast ? 0.35 : 1}}>
+        <Text className="text-gray-500 text-sm font-medium">Tiếp theo ›</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface CustomerScreenProps {
   onOpenMenu: () => void;
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
-export default function CustomerScreen({onOpenMenu}: CustomerProps) {
+
+export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
   const {t} = useTranslation();
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
+  /**
+   * Set customer_id của những khách hàng có bản ghi trong bảng residents.
+   * Tab "Lưu trú" = customer CÓ trong set này.
+   * Tab "Bán hàng" = customer KHÔNG có trong set này.
+   */
+  const [residentIds, setResidentIds] = useState<Set<string>>(new Set());
+
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [sortAZ, setSortAZ] = useState(true);
-  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null,
-  );
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerRecord | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
+  /** Trang hiện tại – reset về 1 khi đổi tab / search */
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ── Load danh sách ─────────────────────────────────────────────────────────
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Load song song customers + residents
+      const [customerList, residentList] = await Promise.all([
+        CustomerService.getAll({
+          store_id: CURRENT_STORE_ID,
+          status: 'active',
+        }),
+        residentDAO.findAll(
+          {store_id: CURRENT_STORE_ID},
+          {columns: ['customer_id']},
+        ),
+      ]);
+
+      setAllCustomers(customerList);
+      setResidentIds(new Set(residentList.map((r: any) => r.customer_id)));
+    } catch (err) {
+      console.error('[CustomerScreen] loadData error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // ── Reset trang khi thay đổi tab / search ─────────────────────────────────
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, search, sortAZ]);
+
+  // ── Filter / sort (toàn bộ danh sách đã lọc) ──────────────────────────────
+
+  const filtered = useMemo(() => {
+    let list: CustomerRecord[];
+
+    if (activeTab === 'all') {
+      list = [...allCustomers];
+    } else if (activeTab === 'storage') {
+      // Lưu trú: khách hàng CÓ trong bảng residents
+      list = allCustomers.filter(c => residentIds.has(c.id));
+    } else {
+      // Bán hàng: khách hàng KHÔNG có trong bảng residents
+      list = allCustomers.filter(c => !residentIds.has(c.id));
+    }
+
+    // Tìm kiếm
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        c =>
+          c.full_name.toLowerCase().includes(q) ||
+          c.phone.replace(/\s/g, '').includes(q.replace(/\s/g, '')),
+      );
+    }
+
+    // Sắp xếp A-Z theo tên cuối
+    if (sortAZ) {
+      list = [...list].sort((a, b) => {
+        const lastA = a.full_name.trim().split(' ').pop() ?? '';
+        const lastB = b.full_name.trim().split(' ').pop() ?? '';
+        return lastA.localeCompare(lastB, 'vi', {sensitivity: 'base'});
+      });
+    }
+
+    return list;
+  }, [allCustomers, residentIds, activeTab, search, sortAZ]);
+
+  // ── Pagination ─────────────────────────────────────────────────────────────
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  /** Danh sách đã phân trang – đây là data thực sự render ra FlatList */
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
+  // ── Selection mode ─────────────────────────────────────────────────────────
+
+  const flatGroups = useMemo(
+    () => filtered.map(c => ({id: c.id, items: [] as {id: string}[]})),
+    [filtered],
+  );
+
+  const {
+    selectionMode,
+    selectedGroups: selectedIds,
+    totalSelected,
+    isAllSelected,
+    enterSelectionMode,
+    exitSelectionMode,
+    toggleSelectAll,
+    toggleSelectGroup: toggleSelectCustomer,
+  } = useSelectionMode(flatGroups);
+
+  const isSelected = (c: CustomerRecord) => selectedIds.has(c.id);
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
+  const handleConfirmDelete = async () => {
+    try {
+      const ids = [...selectedIds];
+      const {success} = await CustomerService.bulkSoftDelete(ids);
+      setAllCustomers(prev => prev.filter(c => !success.includes(c.id)));
+    } catch (err) {
+      console.error('[CustomerScreen] bulkSoftDelete error:', err);
+    } finally {
+      setShowDeleteModal(false);
+      exitSelectionMode();
+    }
+  };
+
+  const selectedCount = useMemo(
+    () => filtered.filter(c => selectedIds.has(c.id)).length,
+    [selectedIds, filtered],
+  );
+
+  const deleteTargetLabel =
+    selectedCount === 1
+      ? 'khách hàng đã chọn'
+      : `${selectedCount} khách hàng đã chọn`;
+
+  // ── Add customer ───────────────────────────────────────────────────────────
+
+  const handleSaveNewCustomer = (created: CustomerRecord) => {
+    setAllCustomers(prev => [created, ...prev]);
+    setShowAddCustomer(false);
+  };
+
+  // ── Update customer (từ CustomerDetail) ───────────────────────────────────
+
+  const handleUpdateCustomer = (updated: CustomerRecord) => {
+    setAllCustomers(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+    if (selectedCustomer?.id === updated.id) {
+      setSelectedCustomer(updated);
+    }
+  };
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+
   const tabs: {key: FilterTab; label: string}[] = [
-    {key: 'all', label: t('customer.tab.all', {defaultValue: 'Tất cả'})},
+    {
+      key: 'all',
+      label: t('customer.tab.all', {defaultValue: 'Tất cả'}),
+    },
     {
       key: 'selling',
       label: t('customer.tab.sales', {defaultValue: 'Bán hàng'}),
@@ -82,135 +336,30 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
     },
   ];
 
-  const filtered = useMemo(() => {
-    let list = customers;
-    if (activeTab !== 'all') {
-      list = list.filter(c => c.type === activeTab);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        c =>
-          c.name.toLowerCase().includes(q) ||
-          c.phone.replace(/\s/g, '').includes(q.replace(/\s/g, '')),
-      );
-    }
-    if (sortAZ) {
-      list = [...list].sort((a, b) => {
-        const lastNameA = a.name.trim().split(' ').pop() ?? '';
-        const lastNameB = b.name.trim().split(' ').pop() ?? '';
-        return lastNameA.localeCompare(lastNameB, 'vi', {sensitivity: 'base'});
-      });
-    }
-    return list;
-  }, [search, activeTab, sortAZ, customers]);
+  // ── Sub-screens ────────────────────────────────────────────────────────────
 
-  // Dùng flat list thay vì group để tránh conflict giữa selectedGroups và selectedItems
-  // Mỗi customer là 1 group không có items con → toggleSelectGroup = toggle customer
-  const flatGroups = useMemo(
-    () => filtered.map(c => ({id: c.id, items: [] as {id: string}[]})),
-    [filtered],
-  );
-
-  const {
-    selectionMode,
-    selectedGroups: selectedIds, // group.id = customer.id
-    totalSelected,
-    isAllSelected,
-    enterSelectionMode,
-    exitSelectionMode,
-    toggleSelectAll,
-    toggleSelectGroup: toggleSelectCustomer,
-  } = useSelectionMode(flatGroups);
-
-  const isCustomerSelected = (customer: Customer): boolean =>
-    selectedIds.has(customer.id);
-
-  const handleConfirmDelete = () => {
-    setCustomers(prev => prev.filter(c => !selectedIds.has(c.id)));
-    setShowDeleteModal(false);
-    exitSelectionMode();
-  };
-
-  const selectedCustomerCount = useMemo(
-    () => filtered.filter(c => selectedIds.has(c.id)).length,
-    [selectedIds, filtered],
-  );
-
-  const deleteTargetLabel =
-    selectedCustomerCount === 1
-      ? 'khách hàng đã chọn'
-      : `${selectedCustomerCount} khách hàng đã chọn`;
-
-  // Tạo detailedCustomer object nếu cần
-  const detailedCustomer: CustomerDetailType | null = selectedCustomer
-    ? {
-        id: selectedCustomer.id,
-        customer_code: 'KH-' + selectedCustomer.id,
-        full_name: selectedCustomer.name,
-        id_number: '038201012345',
-        date_of_birth: '1992-08-15',
-        gender: 'male',
-        phone: selectedCustomer.phone,
-        email: 'customer@email.com',
-        address: '123 Đường Láng, Hà Nội',
-        nationality: 'VN',
-        customer_group: 'regular',
-        loyalty_points: 120,
-        total_spent: 3800000,
-        notes: '-',
-        status: 'active',
-        imageUri: selectedCustomer.imageUri,
-        type: selectedCustomer.type || 'selling',
-        hasKey: selectedCustomer.hasKey,
-      }
-    : null;
-
-  // Hiển thị AddCustomerScreen khi nhấn FAB
   if (showAddCustomer) {
     return (
       <AddCustomer
+        storeId={CURRENT_STORE_ID}
         onCancel={() => setShowAddCustomer(false)}
-        onSave={form => {
-          const newCustomer: Customer = {
-            id: Date.now().toString(),
-            name: form.full_name,
-            phone: form.phone,
-            type: form.type,
-          };
-
-          setCustomers(prev => [newCustomer, ...prev]);
-          setShowAddCustomer(false);
-        }}
+        onSaved={handleSaveNewCustomer}
       />
     );
   }
 
-  // Hiển thị CustomerDetail nếu đang xem chi tiết
-  if (detailedCustomer) {
+  if (selectedCustomer) {
     return (
       <CustomerDetail
-        customer={detailedCustomer}
+        customer={selectedCustomer}
+        storeId={CURRENT_STORE_ID}
         onBack={() => setSelectedCustomer(null)}
-        onUpdateCustomer={updatedCustomer => {
-          setCustomers(prev =>
-            prev.map(c =>
-              c.id === updatedCustomer.id
-                ? {
-                    ...c,
-                    name: updatedCustomer.full_name,
-                    phone: updatedCustomer.phone,
-                    type: updatedCustomer.type,
-                    hasKey: updatedCustomer.hasKey,
-                    imageUri: updatedCustomer.imageUri,
-                  }
-                : c,
-            ),
-          );
-        }}
+        onUpdateCustomer={handleUpdateCustomer}
       />
     );
   }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -225,7 +374,6 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
               onPress={exitSelectionMode}>
               <Icon name="close" size={24} color="#374151" />
             </TouchableOpacity>
-
             <TouchableOpacity onPress={toggleSelectAll}>
               <Text className="text-blue-500 font-semibold text-[15px]">
                 {isAllSelected
@@ -233,26 +381,21 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
                   : t('customer.select_all', {defaultValue: 'Chọn tất cả'})}
               </Text>
             </TouchableOpacity>
-
-            {/* Spacer giữ layout cân */}
             <View className="w-9 h-9" />
           </>
         ) : (
           <>
-            <View className="flex-row item-center">
+            <View className="flex-row items-center">
               <TouchableOpacity
                 className="w-9 h-9 items-center justify-center"
                 onPress={onOpenMenu}>
                 <Icon name="menu" size={24} color="#374151" />
               </TouchableOpacity>
               <Text className="text-2xl font-bold text-gray-900 mt-1">
-                {t('customer.hub.title', {defaultValue: 'Customer Hub'})}
+                {t('customer.hub.title')}
               </Text>
             </View>
-
-            <TouchableOpacity
-              className="items-center  justify-center"
-              onPress={enterSelectionMode}>
+            <TouchableOpacity onPress={enterSelectionMode}>
               <Text className="text-blue-500 font-bold">Chọn</Text>
             </TouchableOpacity>
           </>
@@ -264,11 +407,10 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
         <View
           className="flex-row items-center bg-white rounded-2xl px-3 py-1"
           style={{
+            elevation: 1,
             shadowColor: '#000',
-            shadowOffset: {width: 0, height: 1},
             shadowOpacity: 0.05,
             shadowRadius: 3,
-            elevation: 1,
           }}>
           <Icon name="search" size={20} color="#9ca3af" />
           <TextInput
@@ -312,41 +454,70 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
         ))}
       </View>
 
-      {/* List */}
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingBottom: selectionMode ? 120 : 100,
-        }}
-        renderItem={({item}) => (
-          <CustomerCard
-            customer={item}
-            selectionMode={selectionMode}
-            isSelected={isCustomerSelected(item)}
-            onToggleSelect={id => toggleSelectCustomer(id)}
-            onPress={customer => setSelectedCustomer(customer)}
-            onLongPress={() => {
-              if (!selectionMode) {
-                enterSelectionMode();
-                toggleSelectCustomer(item.id);
-              }
-            }}
-          />
-        )}
-        ListEmptyComponent={
-          <View className="items-center mt-16">
-            <Icon name="person-search" size={48} color="#d1d5db" />
-            <Text className="text-gray-400 mt-3 text-sm">
-              {t('customer.empty', {defaultValue: 'Không tìm thấy khách hàng'})}
-            </Text>
-          </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Đếm tổng kết quả */}
+      {!loading && filtered.length > 0 && (
+        <View className="px-4 mb-2 flex-row items-center justify-between">
+          <Text className="text-gray-400 text-xs">
+            {filtered.length} khách hàng
+            {totalPages > 1 ? ` · Trang ${currentPage}/${totalPages}` : ''}
+          </Text>
+        </View>
+      )}
 
-      {/* FAB - ẩn khi selection mode */}
+      {/* List */}
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#3b82f6" />
+        </View>
+      ) : (
+        <FlatList
+          data={paginatedList}
+          keyExtractor={item => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: selectionMode ? 120 : 16,
+          }}
+          renderItem={({item}) => (
+            <CustomerCard
+              customer={toCardCustomer(item)}
+              selectionMode={selectionMode}
+              isSelected={isSelected(item)}
+              onToggleSelect={id => toggleSelectCustomer(id)}
+              onPress={() => setSelectedCustomer(item)}
+              onLongPress={() => {
+                if (!selectionMode) {
+                  enterSelectionMode();
+                  toggleSelectCustomer(item.id);
+                }
+              }}
+            />
+          )}
+          ListEmptyComponent={
+            <View className="items-center mt-16">
+              <Icon name="person-search" size={48} color="#d1d5db" />
+              <Text className="text-gray-400 mt-3 text-sm">
+                {t('customer.empty', {
+                  defaultValue: 'Không tìm thấy khách hàng',
+                })}
+              </Text>
+            </View>
+          }
+          ListFooterComponent={
+            !selectionMode ? (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={page => {
+                  setCurrentPage(page);
+                }}
+              />
+            ) : null
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* FAB */}
       {!selectionMode && (
         <TouchableOpacity
           className="absolute bottom-8 right-5 w-14 h-14 bg-blue-500 rounded-full items-center justify-center"
@@ -362,7 +533,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
         </TouchableOpacity>
       )}
 
-      {/* SelectionBar - hiện khi selection mode */}
+      {/* SelectionBar */}
       {selectionMode && (
         <SelectionBar
           totalSelected={totalSelected}
@@ -371,8 +542,8 @@ export default function CustomerScreen({onOpenMenu}: CustomerProps) {
           }}
           labelSelected={() =>
             t('customer.delete_selected', {
-              defaultValue: `Xóa ${selectedCustomerCount} khách hàng đã chọn`,
-              count: selectedCustomerCount,
+              defaultValue: `Xóa ${selectedCount} khách hàng đã chọn`,
+              count: selectedCount,
             })
           }
           labelEmpty={t('customer.select_hint', {

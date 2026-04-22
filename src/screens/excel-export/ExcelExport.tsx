@@ -6,14 +6,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useTranslation} from 'react-i18next';
 import {useTheme} from '../../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {SheetCard, SheetConfig} from '../../components/excel-export/SheetCard';
-import {ExcelExportService} from '../../services/database/execlexport/ExcelexportService';
-import {useAuth} from '../../store/authStore';
+import ExcelExportService, {
+  BillType,
+} from '../../services/excel-export-service/ExcelExportService';
 import {
   ExcelExportScreenProps,
   ConfirmDeleteModalProps,
@@ -21,6 +23,47 @@ import {
 } from '../../screens/excel-export/type';
 
 const SHEETS_STORAGE_KEY = 'excel_export_sheets';
+
+// ─── Mapping ──────────────────────────────────────────────
+
+/**
+ * 2 dimension độc lập:
+ *   billType  → lấy từ reportType UI (sales/accommodation)
+ *   reportType Excel (S1a/S2a) → lấy từ template mà user chọn
+ *
+ * Kết quả:
+ *   sales         + s1a_hkd → { reportType: 'S1a', billType: 'pos'  }
+ *   sales         + s2a_hkd → { reportType: 'S2a', billType: 'pos'  }
+ *   accommodation + s1a_hkd → { reportType: 'S1a', billType: 'rent' }
+ *   accommodation + s2a_hkd → { reportType: 'S2a', billType: 'rent' }
+ */
+
+/** Loại báo cáo UI → billType SQLite */
+const BILL_TYPE_MAP: Record<string, BillType> = {
+  sales: 'pos',
+  accommodation: 'rent',
+};
+
+/** Template UI → reportType Excel */
+const REPORT_EXCEL_MAP: Record<string, 'S1a' | 'S2a'> = {
+  s1a_hkd: 'S1a',
+  s2a_hkd: 'S2a',
+  s1a: 'S1a',
+  s2a: 'S2a',
+  S1a: 'S1a',
+  S2a: 'S2a',
+};
+
+function resolveSheetConfig(
+  sheet: SheetConfig,
+): {reportType: 'S1a' | 'S2a'; billType: BillType} | null {
+  const billType = BILL_TYPE_MAP[sheet.reportType];
+  const reportType =
+    REPORT_EXCEL_MAP[sheet.template] ??
+    REPORT_EXCEL_MAP[sheet.template?.toLowerCase()];
+  if (!billType || !reportType) return null;
+  return {reportType, billType};
+}
 
 // ─── ConfirmDeleteModal ────────────────────────────────────────────────────────
 
@@ -31,7 +74,6 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 }) => {
   const {t} = useTranslation();
   const {isDark} = useTheme();
-
   return (
     <Modal
       transparent
@@ -98,7 +140,7 @@ const createDefaultSheet = (): SheetConfig => {
   };
 };
 
-// ─── AddSheetButton ────────────────────────────────────────────────────────────
+// ─── AddSheetButton ───────────────────────────────────────────────────────────
 
 const AddSheetButton: React.FC<AddSheetButtonProps> = ({
   onPress,
@@ -145,11 +187,10 @@ export default function ReportExport({
   onBack,
 }: ExcelExportScreenProps) {
   const [sheets, setSheets] = useState<SheetConfig[]>([]);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModal] = useState(false);
   const [sheetToDelete, setSheetToDelete] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const {state: auth} = useAuth();
-  const storeId = storeIdProp ?? auth.user?.store_id ?? 'store-001'; // Fallback to mock storeId
+  const storeId = storeIdProp ?? 'store-001';
   const {t} = useTranslation();
   const {isDark} = useTheme();
 
@@ -187,48 +228,87 @@ export default function ReportExport({
   const handleAddSheet = useCallback(() => {
     setSheets(prev => [...prev, createDefaultSheet()]);
   }, []);
+
   const handleUpdateSheet = useCallback((updated: SheetConfig) => {
     setSheets(prev => prev.map(s => (s.id === updated.id ? updated : s)));
   }, []);
+
   const handleRemoveSheet = useCallback((id: string) => {
     setSheetToDelete(id);
-    setDeleteModalVisible(true);
+    setDeleteModal(true);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
     if (sheetToDelete)
       setSheets(prev => prev.filter(s => s.id !== sheetToDelete));
-    setDeleteModalVisible(false);
+    setDeleteModal(false);
     setSheetToDelete(null);
   }, [sheetToDelete]);
 
   const handleCancelDelete = useCallback(() => {
-    setDeleteModalVisible(false);
+    setDeleteModal(false);
     setSheetToDelete(null);
   }, []);
 
+  /**
+   * Export tất cả sheets → 1 file Excel duy nhất.
+   *
+   * Mỗi SheetConfig được resolve sang:
+   *  - reportType: 'S1a' | 'S2a'  → chọn template và cấu trúc cột
+   *  - billType:   'pos' | 'rent'  → lọc đúng loại bill trong SQLite
+   *
+   * Ánh xạ:
+   *  S1a (bán hàng) → bill_type = 'pos'
+   *  S2a (lưu trú)  → bill_type = 'rent'
+   */
   const handleExport = useCallback(async () => {
     if (!canExport || exporting) return;
     setExporting(true);
+
     try {
       const validSheets = sheets.filter(s => s.reportType && s.template);
-      const allData = await ExcelExportService.fetchAllSheets(
-        storeId,
-        validSheets.map(s => ({
-          reportType: s.reportType,
-          template: s.template,
-          fromDate: s.fromDate,
-          toDate: s.toDate,
-        })),
-      );
-      // TODO: Truyền allData vào thư viện xuất file Excel
-      console.log('[ExcelExport] Data ready:', allData);
-    } catch (err) {
+      console.log('[ExcelExport] Sheets to export:', validSheets.length);
+
+      const sheetsForExport = validSheets.map((sheet, index) => {
+        const resolved = resolveSheetConfig(sheet);
+        if (!resolved) {
+          throw new Error(
+            `Không nhận dạng được loại báo cáo: "${sheet.reportType}" / "${sheet.template}"`,
+          );
+        }
+
+        const sheetLabel = `${resolved.reportType}-${
+          resolved.billType === 'rent' ? 'LT' : 'BH'
+        }`;
+
+        console.log(`[ExcelExport] Sheet ${index + 1}:`, {
+          reportType: resolved.reportType,
+          billType: resolved.billType,
+          fromDate: sheet.fromDate.toLocaleDateString('vi-VN'),
+          toDate: sheet.toDate.toLocaleDateString('vi-VN'),
+          sheetLabel,
+        });
+
+        return {
+          reportType: resolved.reportType,
+          billType: resolved.billType,
+          fromDate: sheet.fromDate,
+          toDate: sheet.toDate,
+          sheetLabel,
+        };
+      });
+
+      await ExcelExportService.exportAllInOne(storeId, sheetsForExport);
+
+      console.log('[ExcelExport] ✓ Export completed');
+      Alert.alert(t('common.success'), t('report.export.success'));
+    } catch (err: any) {
       console.error('[ExcelExport] Export error:', err);
+      Alert.alert(t('report.export.error'), err?.message ?? 'Unable to export');
     } finally {
       setExporting(false);
     }
-  }, [sheets, storeId, exporting]);
+  }, [sheets, storeId, exporting, t]);
 
   const canExport =
     sheets.length > 0 && sheets.every(s => s.reportType && s.template);

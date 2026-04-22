@@ -155,7 +155,23 @@ export default function Report({
   today.setHours(0, 0, 0, 0);
 
   const [fromDate, setFromDate] = useState<Date>(today);
-  const [toDate, setToDate] = useState<Date>(new Date());
+  const handleFromDateChange = useCallback((date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0); // đầu ngày
+    setFromDate(d);
+  }, []);
+
+  const handleToDateChange = useCallback((date: Date) => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999); // ✅ cuối ngày — bao phủ toàn bộ ngày được chọn
+    setToDate(d);
+  }, []);
+
+  const [toDate, setToDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+  });
   const [displayMode, setDisplayMode] = useState<DisplayMode>('day');
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<ReportReportSummary | null>(null);
@@ -232,8 +248,8 @@ export default function Report({
           <DateInput
             fromDate={fromDate}
             toDate={toDate}
-            onFromDateChange={setFromDate}
-            onToDateChange={setToDate}
+            onFromDateChange={handleFromDateChange}
+            onToDateChange={handleToDateChange}
             isDark={isDark}
           />
           <View className="mt-3">
@@ -259,7 +275,6 @@ export default function Report({
             <View className="mx-4 mt-3">
               <RevenueCard
                 total={summary?.totalRevenue ?? 0}
-                growthPercent={summary?.growthPercent ?? 0}
                 isPositive={summary?.isPositive ?? true}
                 isDark={isDark}
               />
