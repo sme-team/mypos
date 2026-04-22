@@ -192,6 +192,7 @@ export interface CollectMonthlyPaymentInput {
   variantId: string;
   electricNew: number;
   waterNew: number;
+  paymentAmount: number; // Số tiền thực tế user muốn trả
   notes?: string;
   adults?: number;
   children?: number;
@@ -450,8 +451,8 @@ class RoomActionServiceClass {
         water_reading_init: input.waterReadingInit ?? 0,
         billing_day: input.billingDay ?? 1,
         cycle_id: cycleId,
+        status: 'active',
         notes: input.notes || null,  // FIX #9: Thêm notes từ UI
-        // FIX #10: Bỏ status - dùng schema default 'active'
         created_at: now,
         updated_at: now,
       });
@@ -779,8 +780,8 @@ class RoomActionServiceClass {
         cycle_id: cycleId,
         electric_reading_init: 0,
         water_reading_init: 0,
+        status: 'active',
         notes: input.notes || null,  // FIX #9: Thêm notes từ UI
-        // FIX #10: Bỏ status - dùng schema default 'active'
         metadata,          // adults, children, checkin_time, checkout_time
         created_at: now,
         updated_at: now,
@@ -1156,10 +1157,13 @@ class RoomActionServiceClass {
   ): Promise<{billId: string; total: number}> {
     const contracts = await this.contractSvc.findAll({
       variant_id: input.variantId,
-      status: 'active',
       store_id: input.storeId,
     });
-    const contract = contracts.length > 0 ? contracts[0] : null;
+    // Filter out cancelled/terminated contracts, but allow contracts without status (old contracts)
+    const activeContracts = contracts.filter(c => 
+      c.status !== 'cancelled' && c.status !== 'terminated'
+    );
+    const contract = activeContracts.length > 0 ? activeContracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
 
     // Chỉ số điện nước kỳ trước (lấy từ bill_details gần nhất)
@@ -1201,96 +1205,177 @@ class RoomActionServiceClass {
 
     return this.billSvc.executeTransaction(async () => {
       const now = this.now();
-      const billId = await generateSequentialId(this.billSvc, 'bill');
+      const today = now.split('T')[0];
 
-      // 0. Update Contract Metadata (optional but recommended for persistence)
-      const newMeta = JSON.stringify({
-        adults: input.adults ?? 1,
-        children: input.children ?? 0,
-        notes: input.notes ?? '',
-      });
-      await this.contractSvc.update(contract.id, {
-        metadata: newMeta,
-        updated_at: now,
-      });
+      // Kiểm tra xem đã có bill cho kỳ này chưa
+      const db = DatabaseManager.get('pos');
+      const existingBillRows = await QueryBuilder.table('bills', db!.getInternalDAO())
+        .where('ref_id', contract.id)
+        .where('ref_type', 'contract')
+        .where('bill_type', '!=', 'deposit')
+        .whereIn('bill_type', ['rent', 'cycle', 'hotel'])
+        .whereIn('bill_status', ['draft', 'partial', 'overdue', 'issued', 'paid'])
+        .orderBy('created_at', 'DESC')
+        .limit(1)
+        .get();
 
-      // 1. Tạo bill
-      await this.billSvc.create({
-        id: billId,
-        store_id: input.storeId,
-        customer_id: contract.customer_id,
-        bill_number: `HD-CYC-${Date.now()}`,
-        bill_type: 'cycle',
-        ref_id: contract.id,
-        ref_type: 'contract',
-        subtotal: total,
-        total_amount: total,
-        paid_amount: 0,
-        remaining_amount: total,
-        bill_status: 'issued',
-        issued_at: now,
-        notes: input.notes, // Save user notes to bill
-        sync_status: 'local',
-        created_at: now,
-        updated_at: now,
-      });
+      const existingBill = existingBillRows.length > 0 ? existingBillRows[0] : null;
 
-      let sortOrder = 1;
+      let billId: string;
 
-      // 2. Dòng tiền phòng
-      await this.billDetailSvc.create({
-        id: await generateSequentialId(this.billDetailSvc, 'bdt'),
-        store_id: input.storeId,
-        bill_id: billId,
-        line_description: 'Tiền phòng',
-        quantity: 1,
-        unit_price: contract.rent_amount ?? 0,
-        amount: contract.rent_amount ?? 0,
-        sort_order: sortOrder++,
-        sync_status: 'local',
-        created_at: now,
-        updated_at: now,
-      });
+      if (existingBill) {
+        // Cập nhật bill hiện tại
+        billId = existingBill.id;
+        
+        // Tính lại total_amount bao gồm điện nước mới
+        const recalculatedTotal = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount;
+        const currentPaid = existingBill.paid_amount ?? 0;
+        const newPaid = currentPaid + input.paymentAmount;
+        const newRemaining = recalculatedTotal - newPaid;
 
-      // 3. Dòng tiền điện
-      await this.billDetailSvc.create({
-        id: await generateSequentialId(this.billDetailSvc, 'bdt'),
-        store_id: input.storeId,
-        bill_id: billId,
-        line_description: `Tiền điện (Cũ: ${prevElectric} / Mới: ${input.electricNew})`,
-        quantity: eUsage,
-        unit_price: contract.electric_rate ?? 0,
-        reading_from: prevElectric,
-        reading_to: input.electricNew,
-        amount: eAmount,
-        sort_order: sortOrder++,
-        sync_status: 'local',
-        created_at: now,
-        updated_at: now,
-      });
+        // Tạo payment record
+        const paymentId = await generateSequentialId(this.paymentSvc, 'pay');
+        await this.paymentSvc.create({
+          id: paymentId,
+          store_id: input.storeId,
+          bill_id: billId,
+          payment_method: 'cash',
+          amount: input.paymentAmount,
+          paid_at: now,
+          status: 'success',
+          notes: input.notes || null,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
 
-      // 4. Dòng tiền nước
-      await this.billDetailSvc.create({
-        id: await generateSequentialId(this.billDetailSvc, 'bdt'),
-        store_id: input.storeId,
-        bill_id: billId,
-        line_description: `Tiền nước (Cũ: ${prevWater} / Mới: ${input.waterNew})`,
-        quantity: wUsage,
-        unit_price: contract.water_rate ?? 0,
-        reading_from: prevWater,
-        reading_to: input.waterNew,
-        amount: wAmount,
-        sort_order: sortOrder++,
-        sync_status: 'local',
-        created_at: now,
-        updated_at: now,
-      });
+        // Cập nhật bill với total_amount mới và paid_amount mới
+        const newStatus = newRemaining <= 0 ? 'paid' : 'partial';
+        await this.billSvc.update(billId, {
+          total_amount: recalculatedTotal,
+          paid_amount: newPaid,
+          remaining_amount: Math.max(0, newRemaining),
+          bill_status: newStatus,
+          updated_at: now,
+        });
+      } else {
+        // Tạo bill mới
+        billId = await generateSequentialId(this.billSvc, 'bill');
 
-      // 5. Dịch vụ thêm (Nếu có trong input)
-      if ((input as any).extraServices) {
-        await this.insertExtraServices(
-          billId, input.storeId, (input as any).extraServices, sortOrder, (input as any).notes,
-        );
+        // Tính cycle_period_to cho bill = start_date + 1 tháng
+        const d = new Date(contract.start_date);
+        d.setMonth(d.getMonth() + 1);
+        const cyclePeriodTo = d.toISOString().split('T')[0];
+
+        // 0. Update Contract Metadata (optional but recommended for persistence)
+        const newMeta = JSON.stringify({
+          adults: input.adults ?? 1,
+          children: input.children ?? 0,
+          notes: input.notes ?? '',
+        });
+        await this.contractSvc.update(contract.id, {
+          metadata: newMeta,
+          updated_at: now,
+        });
+
+        // 1. Tạo bill
+        await this.billSvc.create({
+          id: billId,
+          store_id: input.storeId,
+          customer_id: contract.customer_id,
+          bill_number: `HD-CYC-${Date.now()}`,
+          bill_type: 'cycle',
+          ref_id: contract.id,
+          ref_type: 'contract',
+          cycle_id: contract.cycle_id,
+          cycle_period_from: contract.start_date,
+          cycle_period_to: cyclePeriodTo,
+          subtotal: total,
+          total_amount: total,
+          paid_amount: total,
+          remaining_amount: 0,
+          bill_status: 'paid',
+          issued_at: now,
+          due_at: contract.start_date,
+          notes: input.notes,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        let sortOrder = 1;
+
+        // 2. Dòng tiền phòng
+        await this.billDetailSvc.create({
+          id: await generateSequentialId(this.billDetailSvc, 'bdt'),
+          store_id: input.storeId,
+          bill_id: billId,
+          line_description: 'Tiền phòng',
+          quantity: 1,
+          unit_price: contract.rent_amount ?? 0,
+          amount: contract.rent_amount ?? 0,
+          sort_order: sortOrder++,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        // 3. Dòng tiền điện
+        await this.billDetailSvc.create({
+          id: await generateSequentialId(this.billDetailSvc, 'bdt'),
+          store_id: input.storeId,
+          bill_id: billId,
+          line_description: `Tiền điện (Cũ: ${prevElectric} / Mới: ${input.electricNew})`,
+          quantity: eUsage,
+          unit_price: contract.electric_rate ?? 0,
+          reading_from: prevElectric,
+          reading_to: input.electricNew,
+          amount: eAmount,
+          sort_order: sortOrder++,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        // 4. Dòng tiền nước
+        await this.billDetailSvc.create({
+          id: await generateSequentialId(this.billDetailSvc, 'bdt'),
+          store_id: input.storeId,
+          bill_id: billId,
+          line_description: `Tiền nước (Cũ: ${prevWater} / Mới: ${input.waterNew})`,
+          quantity: wUsage,
+          unit_price: contract.water_rate ?? 0,
+          reading_from: prevWater,
+          reading_to: input.waterNew,
+          amount: wAmount,
+          sort_order: sortOrder++,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        // 5. Dịch vụ thêm (Nếu có trong input)
+        if ((input as any).extraServices) {
+          await this.insertExtraServices(
+            billId, input.storeId, (input as any).extraServices, sortOrder, (input as any).notes,
+          );
+        }
+
+        // 6. Tạo payment record
+        const paymentId = await generateSequentialId(this.paymentSvc, 'pay');
+        await this.paymentSvc.create({
+          id: paymentId,
+          store_id: input.storeId,
+          bill_id: billId,
+          payment_method: 'cash',
+          amount: total,
+          paid_at: now,
+          status: 'success',
+          notes: input.notes || null,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
       }
 
       return {billId, total};

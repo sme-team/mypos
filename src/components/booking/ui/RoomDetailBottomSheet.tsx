@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../../../hooks/useTheme';
@@ -57,6 +58,9 @@ export default function RoomDetailBottomSheet({
   const [days, setDays] = useState<DayInfo[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showEarlyCheckInDetails, setShowEarlyCheckInDetails] = useState(false);
+  const [surchargeMode, setSurchargeMode] = useState<'percentage' | 'price'>('percentage');
+  const [surchargeValue, setSurchargeValue] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -374,31 +378,85 @@ export default function RoomDetailBottomSheet({
     );
   };
 
-  const handleEarlyCheckIn = async (bookingId: string) => {
-    Alert.alert(
-      'Xác nhận check-in sớm',
-      'Bạn có chắc chắn muốn check-in sớm cho khách này không?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Check-in sớm',
-          style: 'default',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              // TODO: Implement early check-in logic
-              Alert.alert('Thông báo', 'Tính năng check-in sớm đang được phát triển.');
-              setSelectedBooking(null);
-            } catch (error) {
-              console.error('[RoomDetailBottomSheet] Early check-in error:', error);
-              Alert.alert('Lỗi', 'Không thể check-in sớm. Vui lòng thử lại.');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+  const handleEarlyCheckIn = () => {
+    setShowEarlyCheckInDetails(!showEarlyCheckInDetails);
+  };
+
+  const calculateEarlyCheckInFee = () => {
+    if (!selectedBooking) return null;
+
+    const now = new Date();
+    const checkInDateTime = new Date(`${selectedBooking.startDate}T${selectedBooking.checkInTime || '14:00'}`);
+    const hoursUntilCheckIn = Math.max(0, (checkInDateTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+    let surchargeAmount = 0;
+    let surchargePercent = 0;
+
+    if (surchargeMode === 'percentage') {
+      // Use user input percentage
+      const percent = parseFloat(surchargeValue) || 0;
+      surchargePercent = percent;
+      const roomPrice = room?.monthly_price || 0;
+      surchargeAmount = (roomPrice * percent) / 100;
+    } else {
+      // Use user input price directly
+      surchargeAmount = parseFloat(surchargeValue) || 0;
+      // Calculate equivalent percentage for display
+      const roomPrice = room?.monthly_price || 0;
+      surchargePercent = roomPrice > 0 ? (surchargeAmount / roomPrice) * 100 : 0;
+    }
+
+    return {
+      hoursUntilCheckIn: Math.floor(hoursUntilCheckIn),
+      surchargePercent: Math.round(surchargePercent),
+      surchargeAmount,
+      totalFee: surchargeAmount,
+    };
+  };
+
+  const handleConfirmEarlyCheckIn = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      setLoading(true);
+
+      // Calculate fee info
+      const feeInfo = calculateEarlyCheckInFee();
+      if (!feeInfo) {
+        Alert.alert('Lỗi', 'Không thể tính phí phụ thu.');
+        return;
+      }
+
+      // TODO: Call RoomActionService to update contract status
+      // For now, simulate the check-in by updating local state
+      const updatedBookings = bookings.map(b =>
+        b.id === selectedBooking.id
+          ? { ...b, status: 'occupied' as const }
+          : b
+      );
+      setBookings(updatedBookings);
+
+      // Close tooltip and reset state
+      setSelectedBooking(null);
+      setShowEarlyCheckInDetails(false);
+      setSurchargeMode('percentage');
+      setSurchargeValue('');
+
+      Alert.alert(
+        'Thành công',
+        `Đã check-in sớm cho khách ${selectedBooking.customerName}. Phụ thu: ${feeInfo.surchargeAmount.toLocaleString('vi-VN')}đ`
+      );
+
+      // Refresh room contracts to get updated data
+      if (room) {
+        await fetchRoomContracts(room.id);
+      }
+    } catch (error) {
+      console.error('[RoomDetailBottomSheet] Early check-in error:', error);
+      Alert.alert('Lỗi', 'Không thể check-in sớm. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderBookingTooltip = () => {
@@ -422,6 +480,13 @@ export default function RoomDetailBottomSheet({
           onPress={() => setSelectedBooking(null)}>
           <View style={styles.tooltip}>
             <View style={styles.tooltipHeader}>
+              {showEarlyCheckInDetails && (
+                <TouchableOpacity
+                  onPress={() => setShowEarlyCheckInDetails(false)}
+                  style={styles.tooltipCloseButton}>
+                  <Icon name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity>
+              )}
               <Icon
                 name="person"
                 size={24}
@@ -488,11 +553,98 @@ export default function RoomDetailBottomSheet({
                 <Text style={styles.tooltipValue}>{nights} đêm</Text>
               </View>
             </View>
-            {selectedBooking.status === 'booked' && (
+
+            {/* Early Check-in Details */}
+            {showEarlyCheckInDetails && selectedBooking.status === 'booked' && (() => {
+              const feeInfo = calculateEarlyCheckInFee();
+              if (!feeInfo) return null;
+              return (
+                <View style={styles.earlyCheckInDetails}>
+                  <View style={styles.earlyCheckInRow}>
+                    <Icon name="schedule" size={16} color="#185FA5" />
+                    <Text style={styles.earlyCheckInLabel}>
+                      Còn {feeInfo.hoursUntilCheckIn} giờ nữa đến giờ check-in chuẩn
+                    </Text>
+                  </View>
+
+                  {/* Surcharge Mode Selector */}
+                  <View style={styles.surchargeModeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.surchargeModeBtn,
+                        surchargeMode === 'percentage' && styles.surchargeModeBtnActive,
+                      ]}
+                      onPress={() => {
+                        setSurchargeMode('percentage');
+                        setSurchargeValue('');
+                      }}>
+                      <Text style={[
+                        styles.surchargeModeText,
+                        surchargeMode === 'percentage' && styles.surchargeModeTextActive,
+                      ]}>
+                        Nhập %
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.surchargeModeBtn,
+                        surchargeMode === 'price' && styles.surchargeModeBtnActive,
+                      ]}
+                      onPress={() => {
+                        setSurchargeMode('price');
+                        setSurchargeValue('');
+                      }}>
+                      <Text style={[
+                        styles.surchargeModeText,
+                        surchargeMode === 'price' && styles.surchargeModeTextActive,
+                      ]}>
+                        Nhập giá
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Surcharge Input */}
+                  <View style={styles.surchargeInputContainer}>
+                    <Text style={styles.surchargeInputLabel}>
+                      {surchargeMode === 'percentage' ? 'Phụ thu (% giá phòng):' : 'Phụ thu (số tiền):'}
+                    </Text>
+                    <View style={styles.surchargeInputRow}>
+                      <TextInput
+                        style={styles.surchargeInput}
+                        value={surchargeValue}
+                        onChangeText={setSurchargeValue}
+                        keyboardType="numeric"
+                        placeholder={surchargeMode === 'percentage' ? 'Nhập %' : 'Nhập số tiền'}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                      <Text style={styles.surchargeInputSuffix}>
+                        {surchargeMode === 'percentage' ? '%' : 'đ'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.earlyCheckInRow, styles.earlyCheckInTotalRow]}>
+                    <Text style={styles.earlyCheckInTotalLabel}>Tổng phí phụ thu:</Text>
+                    <Text style={styles.earlyCheckInTotalValue}>
+                      {feeInfo.surchargeAmount.toLocaleString('vi-VN')}đ
+                    </Text>
+                  </View>
+                  <View style={styles.earlyCheckInActions}>
+                    <TouchableOpacity
+                      style={[styles.tooltipBtn, styles.tooltipPrimaryBtn]}
+                      onPress={() => handleConfirmEarlyCheckIn()}>
+                      <Text style={[styles.tooltipPrimaryBtnText, { color: '#FFFFFF', fontSize: 16 }]}>Xác nhận</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {selectedBooking.status === 'booked' && !showEarlyCheckInDetails && (
               <View style={styles.tooltipFooter}>
                 <TouchableOpacity
                   style={[styles.tooltipBtn, styles.tooltipPrimaryBtn]}
-                  onPress={() => handleEarlyCheckIn(selectedBooking.id)}>
+                  onPress={() => handleEarlyCheckIn()}>
                   <Text style={styles.tooltipPrimaryBtnText}>Check-in sớm</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -944,6 +1096,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 48,
   },
   tooltipPrimaryBtn: {
     backgroundColor: '#185FA5',
@@ -952,6 +1105,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  confirmBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   tooltipCloseBtn: {
     backgroundColor: '#185FA5',
@@ -970,6 +1128,101 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  earlyCheckInDetails: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: 12,
+  },
+  earlyCheckInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  earlyCheckInLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  earlyCheckInTotalRow: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    justifyContent: 'space-between',
+  },
+  earlyCheckInTotalLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A2E',
+  },
+  earlyCheckInTotalValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#185FA5',
+  },
+  earlyCheckInActions: {
+    marginTop: 16,
+  },
+  surchargeModeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  surchargeModeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  surchargeModeBtnActive: {
+    backgroundColor: '#185FA5',
+    borderColor: '#185FA5',
+  },
+  surchargeModeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  surchargeModeTextActive: {
+    color: '#fff',
+  },
+  surchargeInputContainer: {
+    marginBottom: 12,
+  },
+  surchargeInputLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  surchargeInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  surchargeInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1A1A2E',
+  },
+  surchargeInputSuffix: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    borderLeftWidth: 1,
+    borderLeftColor: '#E5E7EB',
   },
   loadingContainer: {
     padding: 40,

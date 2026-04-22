@@ -510,6 +510,44 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     const calculateShortTermPrice = async () => {
       if (form.stayType !== 'short_term' || !room?.id) return;
 
+      // Kiểm tra duration trước khi gọi service
+      const checkinDateTime = new Date(`${form.checkinDate}T${form.checkinTime}`);
+      const checkoutDateTime = new Date(`${form.checkoutDate}T${form.checkoutTime}`);
+      const totalMs = checkoutDateTime.getTime() - checkinDateTime.getTime();
+      const totalDays = totalMs / (1000 * 60 * 60 * 24);
+
+      // Nếu duration >= 30 ngày, hiển thị thông báo chuyển sang dài hạn
+      if (totalDays >= 30) {
+        setLoadingShortTermPrice(false);
+        Alert.alert(
+          'Lưu trú dài hạn',
+          'Thời gian bạn chọn thuộc loại lưu trú dài hạn (≥30 ngày). Giá và điều khoản sẽ khác với lưu trú ngắn hạn.\n\nBạn có muốn chuyển sang hình thức lưu trú dài hạn không?',
+          [
+            {
+              text: 'Không, chọn lại ngày',
+              onPress: () => {
+                // Reset checkout date về ngày mai (ngắn hạn mặc định)
+                const tomorrow = new Date(Date.now() + 86400000);
+                updateForm({
+                  checkoutDate: `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`,
+                });
+              },
+            },
+            {
+              text: 'Có, chuyển dài hạn',
+              onPress: () => {
+                // Chuyển sang long_term mode
+                updateForm({
+                  stayType: 'long_term',
+                  contractStart: form.checkinDate,
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
+
       setLoadingShortTermPrice(true);
       try {
         const result = await ShortTermPriceService.calculatePrice({
@@ -618,15 +656,25 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     try {
       if (form.stayType === 'long_term') {
         // Xử lý Check-in Dài hạn
-        const duration = parseInt(form.contractDuration, 10) || 12;
+        const durationValue = parseInt(form.contractDuration, 10) || 12;
+        
+        // Map giá trị UI sang số tháng thực tế: '1' = 12 tháng (1 năm), '2' = 24 tháng (2 năm), số khác = chính nó
+        let durationMonths: number;
+        if (durationValue === 1) {
+          durationMonths = 12; // 1 năm = 12 tháng
+        } else if (durationValue === 2) {
+          durationMonths = 24; // 2 năm = 24 tháng
+        } else {
+          durationMonths = durationValue; // 3, 6 tháng giữ nguyên
+        }
 
         // Tính endDate: nếu 12 tháng thì +365 ngày, nếu không thì + số tháng
         const startDate = new Date(form.contractStart);
         const endDate = new Date(startDate);
-        if (duration === 12) {
+        if (durationMonths === 12) {
           endDate.setDate(startDate.getDate() + 365);
         } else {
-          endDate.setMonth(startDate.getMonth() + duration);
+          endDate.setMonth(startDate.getMonth() + durationMonths);
         }
         const endDateStr = endDate.toISOString().split('T')[0];
 
@@ -647,7 +695,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
 
           startDate: form.contractStart,
           endDate: endDateStr,
-          durationMonths: duration,
+          durationMonths: durationMonths,
           rentAmount: form.monthlyPrice,
           depositAmount: form.deposit,
           electricReadingInit: parseInt(form.electricStart, 10) || 0,

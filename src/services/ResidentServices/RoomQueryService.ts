@@ -62,6 +62,8 @@ export interface RoomDetailInfo {
   // services từ bill_details
   bill_items?: BillDetailItem[];
   total_amount?: number;
+  paid_amount?: number;
+  remaining_amount?: number;
   metadata?: string; // contracts.metadata
   check_in_time?: string;
   check_out_time?: string;
@@ -194,7 +196,10 @@ class RoomQueryServiceClass {
     const checkOutMinute = checkOutTime ? parseInt(checkOutTime.split(':')[1]) : 0;
     const checkOutTimeInMinutes = checkOutHour * 60 + checkOutMinute;
 
-    console.log('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`);
+    // Determine if this is a long-term contract (no check-in/check-out times in metadata)
+    const isLongTerm = !checkInTime && !checkOutTime;
+
+    console.log('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`, 'isLongTerm:', isLongTerm);
 
     if (variantStatus === 'inactive') return 'maintenance';
     if (attrStatus === 'cleaning') return 'cleaning';
@@ -203,16 +208,19 @@ class RoomQueryServiceClass {
       const start = contractStartDate;
       const end = contractEndDate;
 
-      // Check-in day: before check-in time
-      if (today === start && currentTimeInMinutes < checkInTimeInMinutes) {
-        console.log('[resolveStatus] Returning booked (check-in day, before time)');
-        return 'booked';
-      }
+      // For short-term contracts: apply time-based check-in logic
+      if (!isLongTerm) {
+        // Check-in day: before check-in time
+        if (today === start && currentTimeInMinutes < checkInTimeInMinutes) {
+          console.log('[resolveStatus] Returning booked (check-in day, before time)');
+          return 'booked';
+        }
 
-      // Check-out day: after check-out time
-      if (today === end && currentTimeInMinutes >= checkOutTimeInMinutes) {
-        console.log('[resolveStatus] Returning available (check-out day, after time)');
-        return 'available';
+        // Check-out day: after check-out time
+        if (today === end && currentTimeInMinutes >= checkOutTimeInMinutes) {
+          console.log('[resolveStatus] Returning available (check-out day, after time)');
+          return 'available';
+        }
       }
 
       // Within contract period (including check-in day after time, check-out day before time)
@@ -577,9 +585,9 @@ class RoomQueryServiceClass {
       const billRows = await QueryBuilder.table('bills', db!.getInternalDAO())
         .where('ref_id', contract.id)
         .where('ref_type', 'contract')
-        .where('cycle_period_from', '<=', today)
-        .where('cycle_period_to', '>=', today)
-        .whereIn('bill_status', ['draft', 'partial', 'overdue', 'issued'])
+        .where('bill_type', '!=', 'deposit')
+        .whereIn('bill_type', ['rent', 'cycle', 'hotel'])
+        .whereIn('bill_status', ['draft', 'partial', 'overdue', 'issued', 'paid'])
         .orderBy('created_at', 'DESC')
         .limit(1)
         .get();
@@ -690,6 +698,8 @@ class RoomQueryServiceClass {
       current_bill_status: currentBill?.bill_status,
       bill_items: billItems,
       total_amount: currentBill?.total_amount,
+      paid_amount: currentBill?.paid_amount ?? 0,
+      remaining_amount: currentBill?.remaining_amount ?? 0,
       metadata: contract?.metadata,
       check_in_time: metaDataObj.checkin_time,
       check_out_time: metaDataObj.checkout_time,
