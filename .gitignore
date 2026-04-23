@@ -154,3 +154,5 @@ android/.gradle/
 *.jks
 *.p12
 *.key
+
+.claude/

@@ -12,7 +12,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   SafeAreaView,
   ActivityIndicator,
   Alert,
@@ -401,13 +400,17 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           color: themedColors.primary,
         },
       }),
-    [themedColors],
+    [themedColors, responsive],
   );
 
   // ─── State & Dữ liệu ────────────────────────────────────────────────────
   const room = route?.params?.room || props.room;
   const storeId = route?.params?.storeId || props.storeId || 'store-001';
-  const onClose = props.onClose || (() => navigation?.goBack());
+  const onClose = useCallback(
+    () => (props.onClose ? props.onClose() : navigation?.goBack()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   const onConfirmProp = props.onConfirm;
 
   // Khởi tạo trạng thái form mặc định
@@ -474,20 +477,16 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     });
   }, []);
 
-  // Load dữ liệu ban đầu
-  useEffect(() => {
-    if (!room?.id) {
-      Alert.alert('Lỗi', t('Room information not found'));
-      onClose();
-      return;
-    }
-    loadInitialData();
-  }, [room?.id]);
+  // Khai báo updateForm trước các useEffect để tránh stale closure
+  const updateForm = useCallback(
+    (partial: Partial<BookingForm>) => setForm(prev => ({...prev, ...partial})),
+    [],
+  );
 
-  const loadInitialData = async () => {
+  // Khai báo loadInitialData trước useEffect gọi nó, wrap trong useCallback([storeId])
+  const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
-      // Lấy danh sách khách hàng và dịch vụ từ Server
       const custs = await customerService.getCustomerPickerList(storeId);
       setCustomers(custs);
       const svcs = await PosQueryService.getServices(storeId);
@@ -503,14 +502,25 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId]);
+
+  // Load dữ liệu ban đầu — chỉ chạy lại khi room.id hoặc storeId thay đổi
+  useEffect(() => {
+    if (!room?.id) {
+      Alert.alert('Lỗi', t('Room information not found'));
+      onClose();
+      return;
+    }
+    loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Bỏ qua t, onClose — chúng stable và không ảnh hưởng đến việc load data
+  }, [room?.id, loadInitialData, t, onClose, storeId]);
 
   // Tính giá ngắn hạn khi form thay đổi
   useEffect(() => {
     const calculateShortTermPrice = async () => {
       if (form.stayType !== 'short_term' || !room?.id) return;
 
-      // Kiểm tra duration trước khi gọi service
       const checkinDateTime = new Date(
         `${form.checkinDate}T${form.checkinTime}`,
       );
@@ -530,7 +540,6 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             {
               text: 'Không, chọn lại ngày',
               onPress: () => {
-                // Reset checkout date về ngày mai (ngắn hạn mặc định)
                 const tomorrow = new Date(Date.now() + 86400000);
                 updateForm({
                   checkoutDate: `${tomorrow.getFullYear()}-${String(
@@ -545,7 +554,6 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             {
               text: 'Có, chuyển dài hạn',
               onPress: () => {
-                // Chuyển sang long_term mode
                 updateForm({
                   stayType: 'long_term',
                   contractStart: form.checkinDate,
@@ -586,6 +594,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     room?.id,
     room?.product_id,
     storeId,
+    updateForm,
   ]);
 
   // Logic lọc tìm kiếm khách hàng
@@ -605,32 +614,21 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     return val.toLocaleString('vi-VN') + 'đ';
   }, []);
 
-  const updateForm = useCallback(
-    (partial: Partial<BookingForm>) => setForm(prev => ({...prev, ...partial})),
-    [],
-  );
-
-  /**
-   * Xử lý dữ liệu sau khi quét CCCD hoặc nhận diện OCR thành công.
-   * Dữ liệu trả về từ Modal sẽ được map vào các trường tương ứng của form.
-   */
-  const handleIDScanned = useCallback(
-    (data: CCCDData) => {
-      updateForm({
-        // Trường hiện trên UI
-        fullName: data.fullName || form.fullName,
-        idCard: data.idCard || form.idCard,
-        // Trường ẩn — chỉ lưu vào DB khi submit
-        dateOfBirth: data.dateOfBirth || '',
-        gender: data.gender || '',
-        address: data.address || '',
-        placeOfOrigin: data.placeOfOrigin || '',
-        oldIdNumber: data.oldIdNumber || '',
-      });
-      setScannerVisible(false);
-    },
-    [form.fullName, form.idCard],
-  );
+  // Dùng setForm(prev => ...) thay vì form.fullName/idCard trong closure
+  // để tránh stale state và loại bỏ các deps không cần thiết
+  const handleIDScanned = useCallback((data: CCCDData) => {
+    setForm(prev => ({
+      ...prev,
+      fullName: data.fullName || prev.fullName,
+      idCard: data.idCard || prev.idCard,
+      dateOfBirth: data.dateOfBirth || '',
+      gender: data.gender || '',
+      address: data.address || '',
+      placeOfOrigin: data.placeOfOrigin || '',
+      oldIdNumber: data.oldIdNumber || '',
+    }));
+    setScannerVisible(false);
+  }, []);
 
   // ─── Xử lý Gửi thông tin (Final Submission) ─────────────────────────────
   const processFinalSubmission = async () => {
@@ -1159,6 +1157,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           confirming={confirming}
           themedColors={themedColors}
           t={t}
+          storeId={storeId}
         />
       )}
 

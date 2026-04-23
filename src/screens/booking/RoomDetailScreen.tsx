@@ -129,8 +129,8 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [selectedNewRoom, setSelectedNewRoom] = useState<any>(null);
 
-  useEffect(() => { loadDetails(); }, [room.id]);
-  useEffect(() => { if (view === 'switch') loadAvailableRoomsForSwitch(); }, [view]);
+  useEffect(() => { loadDetails(); }, [loadDetails, room.id]);
+  useEffect(() => { if (view === 'switch') loadAvailableRoomsForSwitch(); }, [loadAvailableRoomsForSwitch, view]);
 
   // Auto-select first floor when availableRooms loads
   useEffect(() => {
