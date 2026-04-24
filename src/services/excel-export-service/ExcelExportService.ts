@@ -4,6 +4,9 @@ import Share from 'react-native-share';
 import {Platform, PermissionsAndroid} from 'react-native';
 import {BaseService} from '../BaseService';
 import {QueryBuilder} from '@dqcai/sqlite';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.EXCEL_EXPORT_SERVICE);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,9 +88,9 @@ async function saveAndShare(
     await RNFS.writeFile(downloadPath, base64Data, 'base64');
     try {
       await RNFS.scanFile(downloadPath);
-      console.log('[saveAndShare] ✓ MediaStore notified');
+      logger.debug('[saveAndShare] ✓ MediaStore notified');
     } catch (e) {
-      console.warn('[saveAndShare] ⚠️ scanFile failed:', e);
+      logger.warn('[saveAndShare] ⚠️ scanFile failed:', e);
     }
     await Share.open({
       url: `file://${downloadPath}`,
@@ -240,7 +243,7 @@ async function fetchAggregated(
   const from = toLocalDateStr(fromDate);
   const to = toLocalDateStr(toDate);
 
-  console.log('[fetchAggregated] Params:', {from, to, billType, storeId});
+  logger.debug('[fetchAggregated] Params:', {from, to, billType, storeId});
 
   // ── Lấy bills đúng loại + đúng khoảng ngày ──────────────────────
   const bills: any[] = await billService.findAll(
@@ -252,7 +255,7 @@ async function fetchAggregated(
     {orderBy: [{name: 'issued_at', order: 'ASC'}]},
   );
 
-  console.log(`[fetchAggregated] Total paid ${billType} bills:`, bills.length);
+  logger.debug(`[fetchAggregated] Total paid ${billType} bills:`, bills.length);
 
   // ── Bước 2: Filter issued_at trong khoảng [from, to] ─────────────────────
   const filteredBills = bills.filter(b => {
@@ -261,13 +264,13 @@ async function fetchAggregated(
     return dateStr >= from && dateStr <= to;
   });
 
-  console.log(
+  logger.debug(
     '[fetchAggregated] Filtered bills (in range):',
     filteredBills.length,
   );
 
   if (filteredBills.length === 0) {
-    console.warn('[fetchAggregated] ⚠️ No bills in range.');
+    logger.warn('[fetchAggregated] ⚠️ No bills in range.');
     return [];
   }
 
@@ -291,13 +294,13 @@ async function fetchAggregated(
     billIdSet.has(d.bill_id as string),
   );
 
-  console.log(
+  logger.debug(
     '[fetchAggregated] bill_details fetched:',
     relevantDetails.length,
   );
 
   if (relevantDetails.length === 0) {
-    console.warn('[fetchAggregated] ⚠️ No bill_details for filtered bills');
+    logger.warn('[fetchAggregated] ⚠️ No bill_details for filtered bills');
     return [];
   }
 
@@ -346,7 +349,7 @@ async function fetchAggregated(
     .sort((a, b) => a._date.getTime() - b._date.getTime())
     .map(({_date: _d, _qty: _q, ...rest}) => rest);
 
-  console.log('[fetchAggregated] Final rows:', result.length);
+  logger.debug('[fetchAggregated] Final rows:', result.length);
   return result;
 }
 // ─── Template loading ─────────────────────────────────────────────────────────
@@ -365,7 +368,7 @@ async function loadTemplate(templateName: string): Promise<WorkBook> {
         const binary = atob(base64);
         const buf = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
-        console.log('[loadTemplate] ✓ Android asset:', p);
+        logger.debug('[loadTemplate] ✓ Android asset:', p);
         return XLSX.read(buf, {type: 'array', cellStyles: true});
       } catch (err) {
         lastError = err;
@@ -380,7 +383,7 @@ async function loadTemplate(templateName: string): Promise<WorkBook> {
       const binary = atob(base64);
       const buf = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
-      console.log('[loadTemplate] ✓ Loaded from:', basePath);
+      logger.debug('[loadTemplate] ✓ Loaded from:', basePath);
       return XLSX.read(buf, {type: 'array', cellStyles: true});
     } catch (err) {
       lastError = err;
@@ -484,7 +487,7 @@ function writeS1aData(ws: WorkSheet, rows: AggregatedRow[]): void {
   );
 
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
-  console.log('[S1a] Total:', total);
+  logger.debug('[S1a] Total:', total);
 
   ws[addr(2, totalRow)] = {
     t: 'n',
@@ -564,7 +567,7 @@ function writeS2aData(ws: WorkSheet, rows: AggregatedRow[]): void {
   );
 
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
-  console.log('[S2a] Total:', total);
+  logger.debug('[S2a] Total:', total);
 
   ws[addr(3, r)] = {
     t: 'n',
@@ -677,7 +680,7 @@ async function buildWorksheet(
     params.toDate,
     params.billType ?? 'pos',
   );
-  console.log(
+  logger.debug(
     `[buildWorksheet] ${params.reportType} (${params.billType}) rows:`,
     rows.length,
   );
@@ -694,7 +697,7 @@ async function buildWorksheet(
 // ─── Export 1 sheet → 1 file ─────────────────────────────────────────────────
 
 export async function exportToFile(params: ExportParams): Promise<void> {
-  console.log('[exportToFile] Starting:', {
+  logger.debug('[exportToFile] Starting:', {
     reportType: params.reportType,
     billType: params.billType,
     storeId: params.storeId,
@@ -717,9 +720,9 @@ export async function exportToFile(params: ExportParams): Promise<void> {
       params.fromDate,
     )}_${formatDateFile(params.toDate)}.xlsx`;
     await saveAndShare(bufferToBase64(wbout), fileName, params.reportType);
-    console.log('[exportToFile] ✓ Done:', fileName);
+    logger.debug('[exportToFile] ✓ Done:', fileName);
   } catch (err: any) {
-    console.error('[exportToFile] ❌ Error:', err);
+    logger.error('[exportToFile] ❌ Error:', err);
     throw err;
   }
 }
@@ -741,7 +744,7 @@ export async function exportAllSheetsToOneFile(params: {
   location?: string;
 }): Promise<void> {
   if (params.sheets.length === 0) return;
-  console.log(
+  logger.debug(
     '[exportAllSheetsToOneFile] Exporting',
     params.sheets.length,
     'sheets',
@@ -782,7 +785,7 @@ export async function exportAllSheetsToOneFile(params: {
     usedSheetNames.add(uniqueName);
 
     XLSX.utils.book_append_sheet(wb, ws, uniqueName);
-    console.log(`[exportAllSheetsToOneFile] ✓ Sheet ${i + 1}: "${uniqueName}"`);
+    logger.debug(`[exportAllSheetsToOneFile] ✓ Sheet ${i + 1}: "${uniqueName}"`);
   }
 
   const wbout: Uint8Array = XLSX.write(wb, {
@@ -790,7 +793,7 @@ export async function exportAllSheetsToOneFile(params: {
     type: 'buffer',
     cellStyles: true,
   });
-  console.log('[exportAllSheetsToOneFile] Buffer size:', wbout.length);
+  logger.debug('[exportAllSheetsToOneFile] Buffer size:', wbout.length);
 
   const first = params.sheets[0];
   const last = params.sheets[params.sheets.length - 1];
@@ -798,7 +801,7 @@ export async function exportAllSheetsToOneFile(params: {
     last.toDate,
   )}.xlsx`;
   await saveAndShare(bufferToBase64(wbout), fileName, 'BaoCao');
-  console.log('[exportAllSheetsToOneFile] ✓ Done:', fileName);
+  logger.debug('[exportAllSheetsToOneFile] ✓ Done:', fileName);
 }
 
 // ─── ExcelExportService (public API) ─────────────────────────────────────────

@@ -2,6 +2,9 @@ import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
 import { BaseService } from '../BaseService';
 import { RoomPriceService } from './RoomPriceService';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.ROOM_QUERY_SERVICE);
 
 // ─────────────────────────────────────────────
 //  Types
@@ -199,7 +202,7 @@ class RoomQueryServiceClass {
     // Determine if this is a long-term contract (no check-in/check-out times in metadata)
     const isLongTerm = !checkInTime && !checkOutTime;
 
-    console.log('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`, 'isLongTerm:', isLongTerm);
+    logger.debug('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`, 'isLongTerm:', isLongTerm);
 
     if (variantStatus === 'inactive') return 'maintenance';
     if (attrStatus === 'cleaning') return 'cleaning';
@@ -212,28 +215,28 @@ class RoomQueryServiceClass {
       if (!isLongTerm) {
         // Check-in day: before check-in time
         if (today === start && currentTimeInMinutes < checkInTimeInMinutes) {
-          console.log('[resolveStatus] Returning booked (check-in day, before time)');
+          logger.debug('[resolveStatus] Returning booked (check-in day, before time)');
           return 'booked';
         }
 
         // Check-out day: after check-out time
         if (today === end && currentTimeInMinutes >= checkOutTimeInMinutes) {
-          console.log('[resolveStatus] Returning available (check-out day, after time)');
+          logger.debug('[resolveStatus] Returning available (check-out day, after time)');
           return 'available';
         }
       }
 
       // Within contract period (including check-in day after time, check-out day before time)
       if (today >= start && today <= end) {
-        console.log('[resolveStatus] Returning occupied');
+        logger.debug('[resolveStatus] Returning occupied');
         return 'occupied';
       } else if (today < start) {
-        console.log('[resolveStatus] Returning booked');
+        logger.debug('[resolveStatus] Returning booked');
         return 'booked';
       }
     }
 
-    console.log('[resolveStatus] Returning available');
+    logger.debug('[resolveStatus] Returning available');
     return 'available';
   }
 
@@ -277,7 +280,7 @@ class RoomQueryServiceClass {
           checkInTime = meta.checkin_time || '';
           checkOutTime = meta.checkout_time || '';
         } catch (e) {
-          console.warn('[RoomQueryService] Error parsing metadata for contract:', r.id);
+          logger.warn('[RoomQueryService] Error parsing metadata for contract:', r.id);
         }
       }
 
@@ -429,9 +432,9 @@ class RoomQueryServiceClass {
           .whereIn('prices.variant_id', variantIds)
           .get();
 
-        console.log(`[RoomQueryService] Fetched ${allPrices.length} total prices for ${variantIds.length} variants`);
+        logger.debug(`[RoomQueryService] Fetched ${allPrices.length} total prices for ${variantIds.length} variants`);
         if (allPrices.length > 0) {
-          console.log('[RoomQueryService] Sample price record:', JSON.stringify(allPrices[0]));
+          logger.debug('[RoomQueryService] Sample price record:', JSON.stringify(allPrices[0]));
         }
       }
 
@@ -450,7 +453,7 @@ class RoomQueryServiceClass {
             checkInTime = meta.checkin_time;
             checkOutTime = meta.checkout_time;
           } catch (e) {
-            console.warn('[RoomQueryService] Error parsing metadata for contract:', contract.id);
+            logger.warn('[RoomQueryService] Error parsing metadata for contract:', contract.id);
           }
         }
 
@@ -472,22 +475,22 @@ class RoomQueryServiceClass {
         );
         const pricesToUse = defaultPrices.length > 0 ? defaultPrices : variantPrices;
 
-        console.log(`[RoomQueryService] Room ${r.name}: variantPrices=${variantPrices.length}, defaultPrices=${defaultPrices.length}, pricesToUse=${pricesToUse.length}`);
+        logger.debug(`[RoomQueryService] Room ${r.name}: variantPrices=${variantPrices.length}, defaultPrices=${defaultPrices.length}, pricesToUse=${pricesToUse.length}`);
         if (pricesToUse.length > 0) {
-          console.log(`[RoomQueryService] Room ${r.name}: First price unit_code=${pricesToUse[0].unit_code}, price=${pricesToUse[0].price}`);
+          logger.debug(`[RoomQueryService] Room ${r.name}: First price unit_code=${pricesToUse[0].unit_code}, price=${pricesToUse[0].price}`);
         }
 
         const priorityPrice = await RoomPriceService.getPriorityPrice(pricesToUse);
-        console.log(`[RoomQueryService] Room ${r.name}: priorityPrice=${JSON.stringify(priorityPrice)}`);
+        logger.debug(`[RoomQueryService] Room ${r.name}: priorityPrice=${JSON.stringify(priorityPrice)}`);
 
         const displayPriceText = priorityPrice
           ? await RoomPriceService.formatPriceDisplay(priorityPrice.price, priorityPrice.unit_id)
           : '';
 
-        console.log(`[RoomQueryService] Room ${r.name}: displayPriceText="${displayPriceText}"`);
+        logger.debug(`[RoomQueryService] Room ${r.name}: displayPriceText="${displayPriceText}"`);
 
         if (!displayPriceText) {
-          console.log(`[RoomQueryService] Room ${r.name} has NO display price. Total prices for variant: ${variantPrices.length}`);
+          logger.debug(`[RoomQueryService] Room ${r.name} has NO display price. Total prices for variant: ${variantPrices.length}`);
         }
 
         const mPrice = variantPrices.find(p => p.unit_code?.toUpperCase() === 'MONTH')?.price;
@@ -515,7 +518,7 @@ class RoomQueryServiceClass {
 
       return roomItems;
     } catch (err) {
-      console.error('[RoomQueryService] getRoomsFlatList error:', err);
+      logger.error('[RoomQueryService] getRoomsFlatList error:', err);
       return [];
     }
   }
@@ -667,7 +670,7 @@ class RoomQueryServiceClass {
       try {
         metaDataObj = JSON.parse(contract.metadata);
       } catch (e) {
-        console.warn('[RoomQueryService] Parse metadata error:', e);
+        logger.warn('[RoomQueryService] Parse metadata error:', e);
       }
     }
 
@@ -807,7 +810,7 @@ class RoomQueryServiceClass {
         })
         .map(title => ({ title, data: byFloor[title] }));
     } catch (err) {
-      console.error('[RoomQueryService] getAvailableRooms error:', err);
+      logger.error('[RoomQueryService] getAvailableRooms error:', err);
       return [];
     }
   }

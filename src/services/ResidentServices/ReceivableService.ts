@@ -2,6 +2,9 @@ import {BaseService} from '../BaseService';
 import {generateSequentialId} from '../../utils';
 import {QueryBuilder} from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.RECEIVABLE_SERVICE);
 
 // Interface cho receivables
 export interface Receivable {

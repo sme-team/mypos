@@ -3,7 +3,7 @@ import DatabaseManager from '../DBManagers';
 import { googleSheetService } from '../../services/GooglesheetServices/GoogleSheetToJson';
 import { createModuleLogger, AppModules } from '../../logger';
 
-const logger = createModuleLogger(AppModules.DATABASE);
+const logger = createModuleLogger(AppModules.DB_SEEDER);
 
 export interface SeedResult {
   success: boolean;
@@ -111,11 +111,11 @@ export class DatabaseSeeder {
     // 1. Strip common prefixes (pos_, res_) for comparison
     const stripped = normalized.replace(/^(pos_|res_)/, '');
 
-    console.log(`[MAPPING] Analyzing sheet: "${sheetName}" (normalized: "${normalized}", stripped: "${stripped}")`);
+    logger.debug(`[MAPPING] Analyzing sheet: "${sheetName}" (normalized: "${normalized}", stripped: "${stripped}")`);
 
     // Strategy 1: Explicit mapping check (use normalized name first)
     if (this.SHEET_TO_TABLE_MAP[normalized]) {
-      console.log(`[MAPPING] Found explicit map: "${normalized}" -> "${this.SHEET_TO_TABLE_MAP[normalized]}"`);
+      logger.debug(`[MAPPING] Found explicit map: "${normalized}" -> "${this.SHEET_TO_TABLE_MAP[normalized]}"`);
       return this.SHEET_TO_TABLE_MAP[normalized];
     }
 
@@ -124,7 +124,7 @@ export class DatabaseSeeder {
       table === normalized || table === stripped
     );
     if (exactMatch) {
-      console.log(`[MAPPING] Found exact match: "${sheetName}" -> "${exactMatch}"`);
+      logger.debug(`[MAPPING] Found exact match: "${sheetName}" -> "${exactMatch}"`);
       return exactMatch;
     }
 
@@ -159,7 +159,7 @@ export class DatabaseSeeder {
     };
 
     if (vietnameseMap[stripped]) {
-      console.log(`[MAPPING] Found Vietnamese match: "${sheetName}" -> "${vietnameseMap[stripped]}"`);
+      logger.debug(`[MAPPING] Found Vietnamese match: "${sheetName}" -> "${vietnameseMap[stripped]}"`);
       return vietnameseMap[stripped];
     }
 
@@ -185,11 +185,11 @@ export class DatabaseSeeder {
     // Return match if score is below threshold (max 3 character differences)
     const bestMatch = scores[0];
     if (bestMatch && bestMatch.score <= 3) {
-      console.log(`[MAPPING] Found fuzzy match: "${sheetName}" -> "${bestMatch.table}" (distance: ${bestMatch.score})`);
+      logger.debug(`[MAPPING] Found fuzzy match: "${sheetName}" -> "${bestMatch.table}" (distance: ${bestMatch.score})`);
       return bestMatch.table;
     }
 
-    console.log(`[MAPPING] No match found for sheet: "${sheetName}"`);
+    logger.debug(`[MAPPING] No match found for sheet: "${sheetName}"`);
     return null;
   }
 
@@ -229,7 +229,7 @@ export class DatabaseSeeder {
   ): Promise<any> {
     const schema = this.TABLE_SCHEMA_MAP[tableName];
     if (!schema) {
-      console.warn(`No schema defined for table: ${tableName}`);
+      logger.warn(`No schema defined for table: ${tableName}`);
       return null;
     }
 
@@ -258,7 +258,7 @@ export class DatabaseSeeder {
         this.productIsRoomMap.set(mappedRow.id, true);
         mappedRow.product_type = rawType;   // giữ nguyên giá trị từ sheet
 
-        console.log(`[ROOM-TYPE] Product ${mappedRow.id} được nhận diện là room-type: ${rawType}`);
+        logger.debug(`[ROOM-TYPE] Product ${mappedRow.id} được nhận diện là room-type: ${rawType}`);
       }
       else if (rawType) {
         mappedRow.product_type = rawType;   // các loại khác vẫn giữ nguyên
@@ -449,7 +449,7 @@ export class DatabaseSeeder {
         const rowKeys = Object.keys(row).map(k => k.toLowerCase());
         const hasCustomerRef = rowKeys.some(k => k.includes('customer') || k.includes('khách') || k.includes('họ và tên'));
         if (!hasCustomerRef) {
-          console.log(`[SKIP] ${tableName}: No customer reference found in row: ${Object.keys(row).slice(0, 3).join(', ')}`);
+          logger.debug(`[SKIP] ${tableName}: No customer reference found in row: ${Object.keys(row).slice(0, 3).join(', ')}`);
           return false;
         }
       }
@@ -472,7 +472,7 @@ export class DatabaseSeeder {
       ];
 
       if (JUNK_ID_PATTERNS.some(p => p.test(idVal))) {
-        console.log(`[SKIP-JUNK] ${tableName}: id="${idVal.slice(0, 30)}"`);
+        logger.debug(`[SKIP-JUNK] ${tableName}: id="${idVal.slice(0, 30)}"`);
         return false;
       }
 
@@ -497,7 +497,7 @@ export class DatabaseSeeder {
         } else {
           invalidCount++;
           if (mapped) {
-            console.warn(`[INVALID] ${tableName}: Row validation failed -`, {
+            logger.warn(`[INVALID] ${tableName}: Row validation failed -`, {
               id: mapped.id,
               hasData: Object.values(mapped).some(v => v != null && String(v).trim() !== ''),
               keys: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
@@ -506,11 +506,11 @@ export class DatabaseSeeder {
         }
       } catch (error) {
         invalidCount++;
-        console.error(`[ERROR] ${tableName}: Failed to map row -`, error);
+        logger.error(`[ERROR] ${tableName}: Failed to map row -`, error);
       }
     }
 
-    console.log(`[CLEAN] ${tableName}: ${validCount} valid, ${invalidCount} invalid from ${dataRows.length} total rows`);
+    logger.debug(`[CLEAN] ${tableName}: ${validCount} valid, ${invalidCount} invalid from ${dataRows.length} total rows`);
     return mappedRows;
   }
 
@@ -546,7 +546,7 @@ export class DatabaseSeeder {
         mapped[field] && String(mapped[field]).trim() !== ''
       );
       if (!hasRequired) {
-        console.warn(`[VALIDATION] ${tableName}: Missing required fields`, {
+        logger.warn(`[VALIDATION] ${tableName}: Missing required fields`, {
           required: tableRequired,
           present: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
         });
@@ -562,30 +562,30 @@ export class DatabaseSeeder {
     const cleanedData = await this.cleanData(tableName, sheetName, rawData);
 
     if (cleanedData.length === 0) {
-      console.log(`[SKIP] ${tableName}: No valid data after cleaning`);
+      logger.debug(`[SKIP] ${tableName}: No valid data after cleaning`);
       return { success: 0, failed: 0, tableErrors: 0 };
     }
 
     const schema = this.TABLE_SCHEMA_MAP[tableName];
     if (!schema) {
-      console.error(`[ERROR] ${tableName}: No schema defined, skipping`);
+      logger.error(`[ERROR] ${tableName}: No schema defined, skipping`);
       return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
     }
 
     let success = 0, failed = 0, tableErrCount = 0;
 
     if (dryRun) {
-      console.log(`[DRY-RUN] ${tableName}: Would import ${cleanedData.length} rows`);
+      logger.debug(`[DRY-RUN] ${tableName}: Would import ${cleanedData.length} rows`);
       return { success: cleanedData.length, failed: 0, tableErrors: 0 };
     }
 
     const db = DatabaseManager.get('pos');
     if (!db) {
-      console.error(`[ERROR] ${tableName}: No database connection`);
+      logger.error(`[ERROR] ${tableName}: No database connection`);
       return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
     }
 
-    console.log(`[IMPORT] ${tableName}: Starting import of ${cleanedData.length} rows`);
+    logger.debug(`[IMPORT] ${tableName}: Starting import of ${cleanedData.length} rows`);
 
     const BATCH_SIZE = 50;
 
@@ -607,7 +607,7 @@ export class DatabaseSeeder {
 
           if (columns.length === 0) {
             failed++;
-            console.warn(`[SKIP-ROW] ${tableName}[${row.id || globalIndex + 1}]: No valid columns`);
+            logger.warn(`[SKIP-ROW] ${tableName}[${row.id || globalIndex + 1}]: No valid columns`);
             continue;
           }
 
@@ -624,7 +624,7 @@ export class DatabaseSeeder {
               message: validationResult.error || 'Data validation failed',
               skippedColumns: validationResult.skippedColumns
             });
-            console.warn(`[VALIDATION-ERROR] ${tableName}[${rowId}]: ${validationResult.error}`);
+            logger.warn(`[VALIDATION-ERROR] ${tableName}[${rowId}]: ${validationResult.error}`);
             continue;
           }
 
@@ -636,7 +636,7 @@ export class DatabaseSeeder {
             success++;
 
             if (success <= 3 || success % 10 === 0) {
-              console.log(`[SUCCESS] ${tableName}[${row.id || globalIndex + 1}]: Inserted (${success}/${cleanedData.length})`);
+              logger.debug(`[SUCCESS] ${tableName}[${row.id || globalIndex + 1}]: Inserted (${success}/${cleanedData.length})`);
             }
           } catch (err: any) {
             failed++;
@@ -649,17 +649,17 @@ export class DatabaseSeeder {
               rowId,
               message: await this.formatDatabaseError(err, row, columns),
             });
-            console.error(`[DB-ERROR] ${tableName}[${rowId}]:`, err.message);
+            logger.error(`[DB-ERROR] ${tableName}[${rowId}]:`, err.message);
           }
         }
 
         await db.commitTransaction();
-        console.log(`[BATCH] ${tableName}: batch ${batchNum}/${totalBatches} committed (${batch.length} rows)`);
+        logger.debug(`[BATCH] ${tableName}: batch ${batchNum}/${totalBatches} committed (${batch.length} rows)`);
 
       } catch (e: any) {
         // Chỉ rollback batch hiện tại, không ảnh hưởng batch đã commit trước đó
         await db.rollbackTransaction();
-        console.error(`[BATCH-FAILED] ${tableName} batch ${batchNum}/${totalBatches}:`, e.message);
+        logger.error(`[BATCH-FAILED] ${tableName} batch ${batchNum}/${totalBatches}:`, e.message);
         failed += batch.length;
       }
     }
@@ -785,15 +785,15 @@ export class DatabaseSeeder {
       const availableSheets = await googleSheetService.getAvailableSheets(sheetLink);
       logger.info(`    Sheets found: ${availableSheets.length} (${availableSheets.slice(0, 3).join(', ')}${availableSheets.length > 3 ? '...' : ''})\n`);
 
-      console.log('Available sheets:', availableSheets);
+      logger.debug('Available sheets:', availableSheets);
 
       // DEBUG: Log all sheet mappings
-      console.log('\n=== SHEET MAPPING DEBUG ===');
+      logger.debug('\n=== SHEET MAPPING DEBUG ===');
       for (const sheet of availableSheets) {
         const mappedTable = this.fuzzyMatchSheetToTable(sheet);
-        console.log(`Sheet: "${sheet}" -> Table: ${mappedTable || 'NULL (no match)'}`);
+        logger.debug(`Sheet: "${sheet}" -> Table: ${mappedTable || 'NULL (no match)'}`);
       }
-      console.log('=== END SHEET MAPPING DEBUG ===\n');
+      logger.debug('=== END SHEET MAPPING DEBUG ===\n');
 
       const jsonData = await googleSheetService.getDataDirect({
         googleSheetLink: sheetLink,
@@ -839,9 +839,9 @@ export class DatabaseSeeder {
         processedTables.add(tableName);
 
         if (result.tableErrors > 0) {
-          console.log(`    ${tableName}: ${result.tableErrors} errors`);
+          logger.debug(`    ${tableName}: ${result.tableErrors} errors`);
         } else if (result.success > 0) {
-          console.log(`   ${tableName}: ${result.success} rows imported`);
+          logger.debug(`   ${tableName}: ${result.success} rows imported`);
         }
       }
 

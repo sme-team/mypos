@@ -20,6 +20,9 @@ import {BaseService} from '../../BaseService';
 import {generateSequentialId} from '../../../utils';
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../../logger';
+
+const logger = createModuleLogger(AppModules.ROOM_CATEGORY_SERVICE);
 
 // ─── Internal base services ───────────────────────────────────────────────────
 
@@ -364,7 +367,7 @@ class RoomServiceClass {
       // Map unitCode → unitId từ DB
       const unitId = await this.getUnitByCode(p.unitCode);
       if (!unitId) {
-        console.warn(`[RoomService] Unit not found for code: ${p.unitCode}`);
+        logger.warn(`[RoomService] Unit not found for code: ${p.unitCode}`);
         continue;
       }
 

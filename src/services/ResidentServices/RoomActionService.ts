@@ -10,6 +10,9 @@ import {
 } from '../../utils/codeGenerator';
 import {QueryBuilder} from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.ROOM_ACTION_SERVICE);
 
 // ─────────────────────────────────────────────
 //  Base services (mỗi bảng 1 class)
@@ -671,7 +674,7 @@ class RoomActionServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) return;
 
-    console.log('[checkRoomAvailability] Checking availability for room:', variantId, 'from', checkinDate, 'to', checkoutDate);
+    logger.debug('[checkRoomAvailability] Checking availability for room:', variantId, 'from', checkinDate, 'to', checkoutDate);
 
     const conflictingContracts = await QueryBuilder.table('contracts', db)
       .select(['contracts.id', 'contracts.start_date', 'contracts.end_date', 'customers.full_name'])
@@ -684,7 +687,7 @@ class RoomActionServiceClass {
       .where('contracts.end_date', '>', checkinDate)
       .get();
 
-    console.log('[checkRoomAvailability] Found conflicting contracts:', conflictingContracts.length);
+    logger.debug('[checkRoomAvailability] Found conflicting contracts:', conflictingContracts.length);
 
     if (conflictingContracts.length > 0) {
       const conflict = conflictingContracts[0];
@@ -698,7 +701,7 @@ class RoomActionServiceClass {
       });
 
       const errorMsg = `Phòng này đã bị đặt bởi ${conflict.full_name} từ ${startDate} đến ${endDate}. Không thể tạo hợp đồng mới trong khoảng thời gian này.`;
-      console.log('[checkRoomAvailability] Overlap detected:', errorMsg);
+      logger.debug('[checkRoomAvailability] Overlap detected:', errorMsg);
       throw new Error(errorMsg);
     }
   }
@@ -1039,7 +1042,7 @@ class RoomActionServiceClass {
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
 
-    console.log('[extendContract] Found contract:', { id: contract.id, status: contract.status, end_date: contract.end_date });
+    logger.debug('[extendContract] Found contract:', { id: contract.id, status: contract.status, end_date: contract.end_date });
 
     const newEndDate = this.calcEndDate(contract.end_date, extraMonths);
     await this.contractSvc.update(contract.id, {
@@ -1047,7 +1050,7 @@ class RoomActionServiceClass {
       updated_at: this.now(),
     });
 
-    console.log('[extendContract] Contract extended to:', newEndDate);
+    logger.debug('[extendContract] Contract extended to:', newEndDate);
   }
 
   // ── Màn hình 3: Đổi phòng ───────────────────
@@ -1104,7 +1107,7 @@ class RoomActionServiceClass {
     const contract = contracts.length > 0 ? contracts[0] : null;
     if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
 
-    console.log('[checkOut] Found contract:', { id: contract.id, status: contract.status, customer_id: contract.customer_id });
+    logger.debug('[checkOut] Found contract:', { id: contract.id, status: contract.status, customer_id: contract.customer_id });
 
     const today = new Date().toISOString().split('T')[0];
     const now = this.now();

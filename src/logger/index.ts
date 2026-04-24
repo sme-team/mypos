@@ -83,6 +83,30 @@ const AppModules = {
   USE_ARTICLE_REACTIONS_SERVICE: 'use-article-reactions-service',
   USE_ARTICLE_REACTIONS_ROUTE: 'use-article-reactions-route',
   USE_LOGIN: 'use-login',
+
+  // ─── Database layer (app-level wrappers) ─────────────────────────
+  DB_MANAGER: 'db-manager',
+  DB_SEEDER: 'db-seeder',
+  APP_BASE_SERVICE: 'app-base-service',
+
+  // ─── POS / database services ─────────────────────────────────────
+  CUSTOMER_DB_SERVICE: 'customer-db-service',
+  PAYMENT_SERVICE: 'payment-service',
+  REPORT_SERVICE: 'report-service',
+  ROOM_CATEGORY_SERVICE: 'room-category-service',
+  EXCEL_EXPORT_SERVICE: 'excel-export-service',
+
+  // ─── Resident services ───────────────────────────────────────────
+  ROOM_ACTION_SERVICE: 'room-action-service',
+  ROOM_QUERY_SERVICE: 'room-query-service',
+  RECEIVABLE_SERVICE: 'receivable-service',
+  ROOM_PRICE_SERVICE: 'room-price-service',
+  SHORT_TERM_PRICE_SERVICE: 'short-term-price-service',
+  RESIDENT_CUSTOMER_SERVICE: 'resident-customer-service',
+
+  // ─── Utilities ───────────────────────────────────────────────────
+  CODE_GENERATOR: 'code-generator',
+  USE_EXCEL_EXPORT: 'use-excel-export',
 };
 
 const config = new LoggerConfigBuilder()

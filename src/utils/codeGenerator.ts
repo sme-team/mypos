@@ -1,5 +1,8 @@
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../database/DBManagers';
+import {createModuleLogger, AppModules} from '../logger';
+
+const logger = createModuleLogger(AppModules.CODE_GENERATOR);
 
 /**
  * Tạo mã khách hàng tăng dần

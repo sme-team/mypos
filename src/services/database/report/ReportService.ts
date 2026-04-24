@@ -1,6 +1,9 @@
 import {BaseService, FindOptions} from '../../BaseService';
 import {QueryBuilder} from '@dqcai/sqlite';
 import DatabaseManager from '../../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../../logger';
+
+const logger = createModuleLogger(AppModules.REPORT_SERVICE);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -440,7 +443,7 @@ class ReportServiceClass {
 
       return result;
     } catch (error) {
-      console.error('[ReportService] getApplyToGroups error:', error);
+      logger.error('[ReportService] getApplyToGroups error:', error);
       return [];
     }
   }

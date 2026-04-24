@@ -1,5 +1,8 @@
 import { createAxiosInstance, AxiosInstance, AxiosResponse, handleAxiosError } from '../ServicesConfig/axiosConfig';
-import GoogleSheetFetcher, { FetchResult, SheetData, ProgressCallback } from './GoogleSheetFetcher'; // Import class đã tạo trước đó
+import GoogleSheetFetcher, { FetchResult, SheetData, ProgressCallback } from './GoogleSheetFetcher';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.GOOGLE_SHEET_TO_JSON);
 
 // Định nghĩa các interface và type
 export interface GoogleSheetParams {
@@ -100,19 +103,13 @@ export class GoogleSheetToJson {
 
       // Check if response is successful
       if (response.status === 200 && response.data && response.data.data) {
-        console.log(
-          'Response.data',
-          response,
-          response.data,
-          response.data.totalSheets,
-          response.data.data,
-        );
+        logger.debug('API response received', { totalSheets: response.data.totalSheets });
 
         const processedData: ProcessedData = this.processData(
           response.data,
           startFromRow,
         );
-        console.log('Successfully fetched Google Sheet data', processedData);
+        logger.info('Successfully fetched Google Sheet data', { sheets: Object.keys(processedData) });
         return processedData;
       } else {
         throw new GoogleSheetServiceError(
@@ -121,7 +118,7 @@ export class GoogleSheetToJson {
         );
       }
     } catch (error) {
-      console.error('Error fetching Google Sheet data:', error);
+      logger.error('Error fetching Google Sheet data', { error: (error as Error).message });
       throw this.handleError(error);
     }
   }
@@ -138,7 +135,7 @@ export class GoogleSheetToJson {
 
       const { googleSheetLink, sheets, startFromRow = 1, timeout, retries, onProgress } = params;
 
-      console.log('🚀 Starting direct Google Sheet fetch:', {
+      logger.info('Starting direct Google Sheet fetch', {
         link: googleSheetLink,
         tables: sheets,
         startRow: startFromRow,
@@ -156,7 +153,7 @@ export class GoogleSheetToJson {
         throw new GoogleSheetServiceError('No valid sheets specified in tableList');
       }
 
-      console.log('📋 Sheets to fetch:', sheetsArray);
+      logger.debug('Sheets to fetch', { sheets: sheetsArray });
 
       // Use GoogleSheetFetcher to get data
       const fetchOptions = {
@@ -179,7 +176,7 @@ export class GoogleSheetToJson {
         );
       }
 
-      console.log('✅ Direct fetch successful:', {
+      logger.info('Direct fetch successful', {
         sheetId: fetchResult.sheetId,
         totalSheets: fetchResult.totalSheets,
         summary: fetchResult.summary,
@@ -188,12 +185,12 @@ export class GoogleSheetToJson {
       // Convert FetchResult to ProcessedData format and apply row filtering
       const processedData = this.processDirectData(fetchResult, startFromRow);
 
-      console.log('🔄 Data processed and filtered from row', startFromRow);
+      logger.debug('Data processed and filtered from row', { startFromRow });
 
       return processedData;
 
     } catch (error) {
-      console.error('❌ Error in direct Google Sheet fetch:', error);
+      logger.error('Error in direct Google Sheet fetch', { error: (error as Error).message });
       throw this.handleError(error);
     }
   }
@@ -260,13 +257,11 @@ export class GoogleSheetToJson {
         const filteredData = sheetData;
         processedData[sheetName] = filteredData;
 
-        console.log(
-          `📊 Sheet "${sheetName}": Processed ${filteredData.length} rows (metadata automatically skipped)`
-        );
+        logger.debug(`Sheet "${sheetName}": Processed ${filteredData.length} rows`);
       } else {
         // Empty array if no data
         processedData[sheetName] = [];
-        console.log(`📊 Sheet "${sheetName}": No data found`);
+        logger.debug(`Sheet "${sheetName}": No data found`);
       }
     });
 
@@ -326,9 +321,7 @@ export class GoogleSheetToJson {
         const filteredData = sheetData.slice(startFromRow - 1);
         processedData[sheetName] = filteredData;
 
-        console.log(
-          `Sheet "${sheetName}": Filtered ${filteredData.length} rows starting from row ${startFromRow}`,
-        );
+        logger.debug(`Sheet "${sheetName}": Filtered ${filteredData.length} rows starting from row ${startFromRow}`);
       } else {
         // Nếu không phải mảng, trả về mảng rỗng
         processedData[sheetName] = [];
@@ -408,7 +401,7 @@ export class GoogleSheetToJson {
 
       return { spreadsheetId, gid };
     } catch (error) {
-      console.error('Error parsing Google Sheet link:', error);
+      logger.error('Error parsing Google Sheet link', { error: (error as Error).message });
       return { spreadsheetId: null, gid: null };
     }
   }
@@ -459,7 +452,7 @@ export class GoogleSheetToJson {
     try {
       return await this.directFetcher.getSheetNames(googleSheetLink);
     } catch (error) {
-      console.error('Error getting available sheets:', error);
+      logger.error('Error getting available sheets', { error: (error as Error).message });
       throw this.handleError(error);
     }
   }
@@ -483,20 +476,20 @@ export const exampleUsage = {
 
       const result: ProcessedData = await googleSheetService.getData(params);
 
-      console.log('Categories:', result.categories);
-      console.log('Products:', result.products);
+      logger.info('Categories:', result.categories);
+      logger.info('Products:', result.products);
 
       return result;
     } catch (error) {
       if (error instanceof GoogleSheetServiceError) {
-        console.error(
+        logger.error(
           'Service Error:',
           error.message,
           'Status:',
           error.statusCode,
         );
       } else {
-        console.error('Unexpected Error:', error);
+        logger.error('Unexpected Error:', error);
       }
       return null;
     }
@@ -513,26 +506,26 @@ export const exampleUsage = {
         timeout: 45000, // 45 seconds
         retries: 3,
         onProgress: (progress) => {
-          console.log(`Download progress: ${progress.percent}% (${progress.loaded}/${progress.total})`);
+          logger.info(`Download progress: ${progress.percent}% (${progress.loaded}/${progress.total})`);
         },
       };
 
       const result: ProcessedData = await googleSheetService.getDataDirect(params);
 
-      console.log('Direct fetch result:', result);
-      console.log('Categories:', result.categories);
-      console.log('Products:', result.products);
+      logger.info('Direct fetch result:', result);
+      logger.info('Categories:', result.categories);
+      logger.info('Products:', result.products);
 
       return result;
     } catch (error) {
       if (error instanceof GoogleSheetServiceError) {
-        console.error('Direct Fetch Error:', {
+        logger.error('Direct Fetch Error:', {
           message: error.message,
           statusCode: error.statusCode,
           originalError: error.originalError,
         });
       } else {
-        console.error('Unexpected Error:', error);
+        logger.error('Unexpected Error:', error);
       }
       return null;
     }
@@ -557,7 +550,7 @@ export const exampleUsage = {
 
       // Get available sheets
       const availableSheets = await googleSheetService.getAvailableSheets(googleSheetLink);
-      console.log('Available sheets:', availableSheets);
+      logger.info('Available sheets:', availableSheets);
 
       // Use direct method
       const params: DirectGoogleSheetParams = {
@@ -572,13 +565,13 @@ export const exampleUsage = {
       return result;
     } catch (error) {
       if (error instanceof GoogleSheetServiceError) {
-        console.error('Service Error:', {
+        logger.error('Service Error:', {
           message: error.message,
           statusCode: error.statusCode,
           originalError: error.originalError,
         });
       } else {
-        console.error('Unexpected Error:', error);
+        logger.error('Unexpected Error:', error);
       }
       return null;
     }
@@ -591,7 +584,7 @@ export const exampleUsage = {
     const parsed: ParsedSheetLink =
       GoogleSheetToJson.parseGoogleSheetLink(link);
 
-    console.log('Parsed link:', parsed);
+    logger.info('Parsed link:', parsed);
     return parsed;
   },
 
@@ -600,7 +593,7 @@ export const exampleUsage = {
     const googleSheetLink = 'https://docs.google.com/spreadsheets/d/1VPQgrDqbvVhxbjYp5Vv2Korvh2fYCubB/edit';
     const sheetList = 'categories, products';
 
-    console.log('🔄 Testing backend method...');
+    logger.info('🔄 Testing backend method...');
     const start1 = Date.now();
     try {
       const result1 = await googleSheetService.getData({
@@ -608,13 +601,13 @@ export const exampleUsage = {
         sheets: sheetList,
         startFromRow: 1,
       });
-      console.log(`✅ Backend method completed in ${Date.now() - start1}ms`);
-      console.log('Backend result keys:', Object.keys(result1));
+      logger.info(`✅ Backend method completed in ${Date.now() - start1}ms`);
+      logger.info('Backend result keys:', Object.keys(result1));
     } catch (error) {
-      console.log(`❌ Backend method failed after ${Date.now() - start1}ms`);
+      logger.info(`❌ Backend method failed after ${Date.now() - start1}ms`);
     }
 
-    console.log('🔄 Testing direct method...');
+    logger.info('🔄 Testing direct method...');
     const start2 = Date.now();
     try {
       const result2 = await googleSheetService.getDataDirect({
@@ -622,10 +615,10 @@ export const exampleUsage = {
         sheets: sheetList,
         startFromRow: 2,
       });
-      console.log(`✅ Direct method completed in ${Date.now() - start2}ms`);
-      console.log('Direct result keys:', Object.keys(result2));
+      logger.info(`✅ Direct method completed in ${Date.now() - start2}ms`);
+      logger.info('Direct result keys:', Object.keys(result2));
     } catch (error) {
-      console.log(`❌ Direct method failed after ${Date.now() - start2}ms`);
+      logger.info(`❌ Direct method failed after ${Date.now() - start2}ms`);
     }
   },
 };
