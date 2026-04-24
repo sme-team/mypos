@@ -2,7 +2,7 @@
   "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
     "strict": true,
-    "baseUrl": ".",
+    "baseUrl": "./", 
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "paths": {

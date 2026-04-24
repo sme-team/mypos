@@ -125,7 +125,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
     try {
       const allRooms = await RoomQueryService.getAvailableRooms('store-001', room.id);
       setAvailableRooms(allRooms);
-    } catch (err) { logger.error(err); }
+    } catch (err:any) { logger.error(err); }
   }, [room.id]);
 
   const [switchFloor, setSwitchFloor] = useState('');
@@ -234,7 +234,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               await RoomActionService.swapRoom('store-001', room.id, selectedNewRoom.id, selectedNewRoom.product_id, selectedNewRoom.monthly_price || 0);
               Alert.alert(t('common.ok'), t('roomDetail.success.swap', { name: selectedNewRoom.name }));
               onBack();
-            } catch (err) { logger.error(err); }
+            } catch (err:any) { logger.error(err); }
           }
         }
       ]
