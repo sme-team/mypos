@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.POS_CATEGORY_MANAGEMENT);
+
 import React, {useState, useMemo, useCallback, useEffect} from 'react';
 import {
   View,
@@ -97,7 +100,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       await CategoryService.createGroup(storeId, name, ['selling']);
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -111,7 +114,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       );
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -120,7 +123,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       await CategoryService.softDeleteGroup(groupId);
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -129,7 +132,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       await CategoryService.createProduct(storeId, categoryId, name);
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -138,7 +141,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       await CategoryService.softDeleteProduct(itemId);
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -160,7 +163,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       );
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -183,7 +186,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       );
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 
@@ -192,7 +195,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       await CategoryService.softDeleteVariant(variantId);
       await loadData();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 

@@ -5,6 +5,9 @@
  * Bao gồm: Chọn khách hàng, chọn dịch vụ, thiết lập hợp đồng và chốt cọc.
  */
 
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.BOOKING_SCREEN);
+
 import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {
   View,
@@ -498,7 +501,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         })),
       );
     } catch (err) {
-      console.error('[BookingScreen] Load error:', err);
+      logger.error('[BookingScreen] Load error:', err);
     } finally {
       setLoading(false);
     }
@@ -578,7 +581,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         });
         setShortTermPrice(result);
       } catch (err) {
-        console.error('[BookingScreen] Short term price error:', err);
+        logger.error('[BookingScreen] Short term price error:', err);
       } finally {
         setLoadingShortTermPrice(false);
       }

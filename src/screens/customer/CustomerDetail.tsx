@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.CUSTOMER_DETAIL_SCREEN);
+
 import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
@@ -161,7 +164,7 @@ export default function CustomerDetailScreen({
       setBills(fetchedBills);
       setContract(fetchedContract);
     } catch (err) {
-      console.error('[CustomerDetail] loadData error:', err);
+      logger.error('[CustomerDetail] loadData error:', err);
     } finally {
       setLoadingData(false);
     }
@@ -181,7 +184,7 @@ export default function CustomerDetailScreen({
         setCustomer(updated);
         onUpdateCustomer?.(updated);
       } catch (err) {
-        console.error('[CustomerDetail] updateAvatar error:', err);
+        logger.error('[CustomerDetail] updateAvatar error:', err);
       }
     },
   });

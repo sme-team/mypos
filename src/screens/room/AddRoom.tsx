@@ -9,6 +9,9 @@
  *  4. Lưu giá vào bảng prices qua RoomService.saveVariantPrices
  *  5. Cho phép tạo mới Danh mục phòng (RoomType) ngay trong form
  */
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.ADD_ROOM_SCREEN);
+
 import React, {useState, useCallback, memo} from 'react';
 import {
   View,
@@ -264,7 +267,7 @@ export default function AddRoom({
         priceMonth,
       });
     } catch (err) {
-      console.error('[AddRoom] save error:', err);
+      logger.error('[AddRoom] save error:', err);
       Alert.alert(
         t('common.error', 'Lỗi'),
         t('room.saveError', 'Không thể lưu phòng.'),
@@ -293,7 +296,7 @@ export default function AddRoom({
       setSelectedTypeId(newType.id);
       onRoomTypeCreated?.(newType);
     } catch (err) {
-      console.error('[AddRoom] createCategory error:', err);
+      logger.error('[AddRoom] createCategory error:', err);
       Alert.alert('Lỗi', 'Không thể tạo hạng mục phòng.');
     } finally {
       setCreatingCategory(false);

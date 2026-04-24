@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.SETTING_SCREEN);
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -48,7 +51,7 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
 
     setIsSyncing(true);
     // Save the link for future use
-    AsyncStorage.setItem(SHEET_LINK_KEY, sheetLink).catch(err => console.error('Failed to save sheetLink', err));
+    AsyncStorage.setItem(SHEET_LINK_KEY, sheetLink).catch(err => logger.error('Failed to save sheetLink', err));
 
     databaseSeeder.seedRunner(sheetLink, strategy)
       .then(() => {

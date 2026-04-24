@@ -4,6 +4,9 @@
  * Style hiện đại, tối giản, cao cấp
  */
 
+import {createModuleLogger, AppModules} from '../../../logger';
+const logger = createModuleLogger(AppModules.ROOM_DETAIL_BOTTOM_SHEET);
+
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -52,7 +55,7 @@ export default function RoomDetailBottomSheet({
   room,
   onClose,
 }: RoomDetailBottomSheetProps) {
-  console.log('[RoomDetailBottomSheet] Render - visible:', visible, 'room:', room);
+  logger.debug('[RoomDetailBottomSheet] Render - visible:', visible, 'room:', room);
   const { isDark } = useTheme();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [days, setDays] = useState<DayInfo[]>([]);
@@ -64,7 +67,7 @@ export default function RoomDetailBottomSheet({
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    console.log('[RoomDetailBottomSheet] useEffect - room:', room, 'visible:', visible);
+    logger.debug('[RoomDetailBottomSheet] useEffect - room:', room, 'visible:', visible);
     if (room && visible) {
       fetchRoomContracts(room.id);
       generateDays();
@@ -97,7 +100,7 @@ export default function RoomDetailBottomSheet({
       const contracts = await RoomQueryService.getRoomContracts(variantId);
       setBookings(contracts);
     } catch (error) {
-      console.error('[RoomDetailBottomSheet] Error fetching contracts:', error);
+      logger.error('[RoomDetailBottomSheet] Error fetching contracts:', error);
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,7 @@ export default function RoomDetailBottomSheet({
               setSelectedBooking(null);
               Alert.alert('Thành công', 'Đã hủy đặt phòng thành công.');
             } catch (error) {
-              console.error('[RoomDetailBottomSheet] Cancel error:', error);
+              logger.error('[RoomDetailBottomSheet] Cancel error:', error);
               Alert.alert('Lỗi', 'Không thể hủy đặt phòng. Vui lòng thử lại.');
             } finally {
               setLoading(false);
@@ -452,7 +455,7 @@ export default function RoomDetailBottomSheet({
         await fetchRoomContracts(room.id);
       }
     } catch (error) {
-      console.error('[RoomDetailBottomSheet] Early check-in error:', error);
+      logger.error('[RoomDetailBottomSheet] Early check-in error:', error);
       Alert.alert('Lỗi', 'Không thể check-in sớm. Vui lòng thử lại.');
     } finally {
       setLoading(false);

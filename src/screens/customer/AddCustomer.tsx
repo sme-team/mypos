@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.ADD_CUSTOMER_SCREEN);
+
 import React, {useState} from 'react';
 import {
   View,
@@ -397,7 +400,7 @@ export default function AddCustomer({
 
       onSaved(result);
     } catch (err: any) {
-      console.error('[AddCustomer] save error:', err);
+      logger.error('[AddCustomer] save error:', err);
       Alert.alert(
         t('common.error', {defaultValue: 'Lỗi'}),
         err?.message ??

@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.PLACE_SCREEN);
+
 import React, {useState, useCallback, useEffect} from 'react';
 import {
   View,
@@ -45,13 +48,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<any | null>(null);
 
   const loadRooms = async () => {
-    console.log('[PlaceScreen] loadRooms called');
+    logger.debug('[PlaceScreen] loadRooms called');
     setLoading(true);
     try {
       const dbRooms = await RoomQueryService.getRoomsFlatList('store-001');
-      console.log(`[PlaceScreen] Received ${dbRooms.length} rooms from service`);
+      logger.debug(`[PlaceScreen] Received ${dbRooms.length} rooms from service`);
       if (dbRooms.length > 0) {
-        console.log('[PlaceScreen] Sample room price data:', {
+        logger.debug('[PlaceScreen] Sample room price data:', {
           id: dbRooms[0].id,
           name: dbRooms[0].name,
           displayPriceText: dbRooms[0].displayPriceText
@@ -59,7 +62,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
       }
       setRooms(dbRooms);
     } catch (err) {
-      console.error('[PlaceScreen] loadRooms error:', err);
+      logger.error('[PlaceScreen] loadRooms error:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +78,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     loadRooms();
   }, []);
 
-  console.log('[PlaceScreen] Render state:', {
+  logger.debug('[PlaceScreen] Render state:', {
     roomsCount: rooms.length,
     activeFloor,
     loading
@@ -579,19 +582,19 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
           <View style={styles.roomGrid}>
             {filteredRooms.map(room => {
               const occupied = room.contract_status === 'active';
-              console.log(`[PlaceScreen] Rendering room ${room.name}: displayPriceText="${room.displayPriceText}"`);
+              logger.debug(`[PlaceScreen] Rendering room ${room.name}: displayPriceText="${room.displayPriceText}"`);
               return (
                 <TouchableOpacity
                   key={room.id}
                   activeOpacity={0.8}
                   onPress={() => {
-                    console.log('[PlaceScreen] Clicked room:', { id: room.id, name: room.name, status: room.status });
+                    logger.debug('[PlaceScreen] Clicked room:', { id: room.id, name: room.name, status: room.status });
                     if (room.status === 'occupied') {
                       setSelectedRoom(room);
                     } else if (room.status === 'available' || room.status === 'booked') {
                       setBookingRoom(room);
                     } else {
-                      console.log('[PlaceScreen] Room status is not occupied, available or booked, doing nothing.');
+                      logger.debug('[PlaceScreen] Room status is not occupied, available or booked, doing nothing.');
                     }
                   }}
                   style={[

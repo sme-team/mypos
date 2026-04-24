@@ -4,6 +4,9 @@
  * Thiết kế: Dịch vụ dạng dòng item, chốt tiền điện/nước, công nợ kỳ này.
  */
 
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.ROOM_DETAIL_SCREEN);
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
@@ -112,7 +115,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         unit: s.unit ?? 'lần',
       })));
     } catch (err) {
-      console.error('[RoomDetail] Load error:', err);
+      logger.error('[RoomDetail] Load error:', err);
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
     try {
       const allRooms = await RoomQueryService.getAvailableRooms('store-001', room.id);
       setAvailableRooms(allRooms);
-    } catch (err) { console.error(err); }
+    } catch (err) { logger.error(err); }
   }, [room.id]);
 
   const [switchFloor, setSwitchFloor] = useState('');
@@ -231,7 +234,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               await RoomActionService.swapRoom('store-001', room.id, selectedNewRoom.id, selectedNewRoom.product_id, selectedNewRoom.monthly_price || 0);
               Alert.alert(t('common.ok'), t('roomDetail.success.swap', { name: selectedNewRoom.name }));
               onBack();
-            } catch (err) { console.error(err); }
+            } catch (err) { logger.error(err); }
           }
         }
       ]

@@ -107,6 +107,31 @@ const AppModules = {
   // ─── Utilities ───────────────────────────────────────────────────
   CODE_GENERATOR: 'code-generator',
   USE_EXCEL_EXPORT: 'use-excel-export',
+
+  // ─── UI Screens & Components ─────────────────────────────────────
+  // Components
+  ID_SCANNER_MODAL: 'id-scanner-modal',
+  SHORT_TERM_SUMMARY: 'short-term-summary',
+  ROOM_DETAIL_BOTTOM_SHEET: 'room-detail-bottom-sheet',
+  ROOM_SWITCH_VIEW: 'room-switch-view',
+  ROOM_CARD: 'room-card',
+  // Screens – booking
+  PLACE_SCREEN: 'place-screen',
+  ROOM_DETAIL_SCREEN: 'room-detail-screen',
+  BOOKING_SCREEN: 'booking-screen',
+  // Screens – customer
+  CUSTOMER_SCREEN: 'customer-screen',
+  ADD_CUSTOMER_SCREEN: 'add-customer-screen',
+  CUSTOMER_DETAIL_SCREEN: 'customer-detail-screen',
+  // Screens – pos / room
+  POS_RESIDENT_SCREEN: 'pos-resident-screen',
+  POS_CATEGORY_MANAGEMENT: 'pos-category-management',
+  ROOM_MANAGEMENT_SCREEN: 'room-management-screen',
+  ADD_ROOM_SCREEN: 'add-room-screen',
+  // Screens – misc
+  EXCEL_EXPORT_SCREEN: 'excel-export-screen',
+  REPORT_SCREEN: 'report-screen',
+  SETTING_SCREEN: 'setting-screen',
 };
 
 const config = new LoggerConfigBuilder()

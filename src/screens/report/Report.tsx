@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.REPORT_SCREEN);
+
 import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
@@ -199,7 +202,7 @@ export default function Report({
       setTopSalesItems(sales);
       setTopLodgingItems(lodging);
     } catch (error) {
-      console.error('[Report] loadData error:', error);
+      logger.error('[Report] loadData error:', error);
     } finally {
       setLoading(false);
     }
