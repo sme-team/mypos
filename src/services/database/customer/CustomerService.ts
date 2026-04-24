@@ -308,7 +308,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return null;
 
-      const rows = await QueryBuilder.table('customers', db.getInternalDAO())
+      const rows = await QueryBuilder.table('customers', db)
         .select(['*'])
         .where('id', id)
         .whereNull('deleted_at')
@@ -338,7 +338,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return [];
 
-      let query = QueryBuilder.table('customers', db.getInternalDAO())
+      let query = QueryBuilder.table('customers', db)
         .select(['*'])
         .whereNull('deleted_at'); // ✅ IS NULL — đúng SQL
 
@@ -380,7 +380,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return null;
 
-      let query = QueryBuilder.table('customers', db.getInternalDAO())
+      let query = QueryBuilder.table('customers', db)
         .select(['*'])
         .where('phone', phone.trim())
         .whereNull('deleted_at')
@@ -409,7 +409,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return 0;
 
-      let query = QueryBuilder.table('customers', db.getInternalDAO())
+      let query = QueryBuilder.table('customers', db)
         .select(['COUNT(*) as cnt'])
         .whereNull('deleted_at');
 
@@ -668,7 +668,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return [];
 
-      let query = QueryBuilder.table('bills', db.getInternalDAO())
+      let query = QueryBuilder.table('bills', db)
         .select(['*'])
         .where('customer_id', customerId)
         .whereNull('deleted_at'); // ✅ IS NULL
@@ -708,7 +708,7 @@ class CustomerServiceClass {
       const db = getDB();
       if (!db) return null;
 
-      const rows = await QueryBuilder.table('contracts', db.getInternalDAO())
+      const rows = await QueryBuilder.table('contracts', db)
         .select([
           'contracts.*',
           'products.name as room_name',

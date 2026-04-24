@@ -1,17 +1,18 @@
-import {DatabaseSchema} from '@dqcai/sqlite';
-import DatabaseFactory from './DatabaseFactory';
+import {
+  DatabaseFactory,
+  DatabaseManager as BaseManager,
+  ServiceManager,
+  DatabaseSchema,
+} from '@dqcai/sqlite';
 import DatabaseManager from './DBManagers';
-
-import {ReactNativeAdapter} from './configs/ReactNativeAdapter';
-import {createModuleLogger, AppModules} from '../logger';
-
-// ─── Import schema chính ─────────────────────────────────────────
-import {posSchema as MyPOS} from './configs/MyPOS';
+import { ReactNativeAdapter } from './configs/ReactNativeAdapter';
+import { createModuleLogger, AppModules } from '../logger';
+import { posSchema as MyPOS } from './configs/MyPOS';
 
 const logger = createModuleLogger(AppModules.DATABASE);
 
 // ─── Export schema ───────────────────────────────────────────────
-export {posSchema as MyPOS} from './configs/MyPOS';
+export { posSchema as MyPOS } from './configs/MyPOS';
 
 // ─── Registry schemas ────────────────────────────────────────────
 export const onePosEcosystemSchemas: Record<string, DatabaseSchema> = {
@@ -52,26 +53,60 @@ export const ONE_POS_ROLES = [
   },
 ];
 
+// ─── Danh sách bảng trong schema pos ────────────────────────────
+const POS_TABLES = [
+  'categories',
+  'units',
+  'products',
+  'product_variants',
+  'prices',
+  'customers',
+  'bill_cycles',
+  'bills',
+  'bill_details',
+  'payments',
+  'contracts',
+  'contract_members',
+  'receivables',
+  'residents',
+  'import_logs',
+];
+
 // ─── Khởi tạo database ───────────────────────────────────────────
 /**
- * Khởi tạo database myPOS
- * Gọi hàm này khi app start
+ * Luồng khởi tạo chuẩn theo @dqcai/sqlite:
+ *  1. registerAdapter  → đăng ký platform adapter (ReactNative / NodeJS)
+ *  2. registerSchemas  → đăng ký JSON schema định nghĩa bảng
+ *  3. init             → setup AppState listener
+ *  4. registerRoles    → quyền truy cập theo role
+ *  5. ensureConnection → mở kết nối 'pos' database
+ *  6. ServiceManager   → đăng ký tất cả services — cổng duy nhất cho CRUD
  */
 export const initDatabase = async (): Promise<void> => {
   try {
-    logger.info('Initializing myPOS database via optimized wrappers...');
+    logger.info('Initializing myPOS database...');
 
-    // 1. Register global adapter
+    // Bước 1: Đăng ký platform adapter — mọi I/O SQLite đi qua đây
     DatabaseFactory.registerAdapter(new ReactNativeAdapter());
 
-    // 2. Initialize manager and register default schemas
+    // Bước 2: Đăng ký JSON schema — thư viện tự tạo bảng, không cần CREATE TABLE thủ công
+    BaseManager.registerSchemas(onePosEcosystemSchemas);
+
+    // Bước 3: Setup lifecycle listeners (AppState)
     await DatabaseManager.init();
 
-    // 3. Register system roles
+    // Bước 4: Đăng ký system roles
     DatabaseManager.registerRoles(ONE_POS_ROLES);
 
-    // 4. Ensure the primary 'pos' connection
+    // Bước 5: Mở kết nối chính
     await DatabaseManager.ensureDatabaseConnection('pos');
+
+    // Bước 6: Đăng ký toàn bộ services qua ServiceManager
+    // Từ đây tất cả CRUD phải đi qua ServiceManager.getService() hoặc BaseService
+    const sm = ServiceManager.getInstance();
+    sm.registerServices(
+      POS_TABLES.map(tableName => ({ schemaName: 'pos', tableName })),
+    );
 
     logger.info('POS database initialized successfully.');
   } catch (error) {
@@ -81,8 +116,8 @@ export const initDatabase = async (): Promise<void> => {
 };
 
 /**
- * Helper lấy DB connection
- * Trả về wrapper từ cache hoặc lazily tạo mới
+ * Lấy UniversalDAO của 'pos' database.
+ * Dùng cho QueryBuilder trong các service phức tạp.
  */
 export const getPosDB = () => DatabaseManager.get('pos');
 

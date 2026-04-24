@@ -2,7 +2,6 @@
 import DatabaseManager from '../DBManagers';
 import { googleSheetService } from '../../services/GooglesheetServices/GoogleSheetToJson';
 import { createModuleLogger, AppModules } from '../../logger';
-import SQLiteDAO from '../SQLiteDAO';
 
 const logger = createModuleLogger(AppModules.DATABASE);
 
@@ -580,7 +579,7 @@ export class DatabaseSeeder {
       return { success: cleanedData.length, failed: 0, tableErrors: 0 };
     }
 
-    const db: SQLiteDAO = DatabaseManager.get('pos');
+    const db = DatabaseManager.get('pos');
     if (!db) {
       console.error(`[ERROR] ${tableName}: No database connection`);
       return { success: 0, failed: cleanedData.length, tableErrors: cleanedData.length };
@@ -633,7 +632,7 @@ export class DatabaseSeeder {
             const placeholders = columns.map(() => '?');
             const sql = `INSERT OR REPLACE INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`;
             const values = columns.map(col => row[col]);
-            await db.runSql(sql, values);
+            await db.execute(sql, values);
             success++;
 
             if (success <= 3 || success % 10 === 0) {
@@ -808,7 +807,7 @@ export class DatabaseSeeder {
           if (db) {
             logger.info('🗑️ Overwrite mode: Clearing existing data');
             for (const table of [...this.TABLE_ORDER].reverse()) {
-              await db.runSql(`DELETE FROM ${table}`);
+              await db.execute(`DELETE FROM ${table}`);
               logger.info(`Cleared table: ${table}`);
             }
           }
@@ -856,7 +855,7 @@ export class DatabaseSeeder {
       const db = DatabaseManager.get('pos');
       if (db) {
         const logId = await this.generateUUID();
-        await db.runSql(`
+        await db.execute(`
           INSERT INTO import_logs (id, store_id, source_url, record_count, strategy_used, status, error_message, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [logId, '00000000-0000-0000-0000-000000000001', sheetLink, totalImported, strategy, totalFailed === 0 ? 'success' : 'failed', JSON.stringify(errors.slice(0, 10)), new Date().toISOString()]);

@@ -33,7 +33,7 @@ class RoomPriceServiceClass {
       const db = DatabaseManager.get('pos');
       if (!db) return null;
 
-      const result = await QueryBuilder.table('units', db.getInternalDAO())
+      const result = await QueryBuilder.table('units', db)
         .select(['unit_code'])
         .where('id', unitId)
         .first();
@@ -60,7 +60,7 @@ class RoomPriceServiceClass {
       const db = DatabaseManager.get('pos');
       if (!db) return;
 
-      const results = await QueryBuilder.table('units', db.getInternalDAO())
+      const results = await QueryBuilder.table('units', db)
         .select(['id', 'unit_code'])
         .whereIn('id', uncachedIds)
         .get();

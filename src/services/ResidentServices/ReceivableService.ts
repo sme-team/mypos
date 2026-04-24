@@ -53,7 +53,7 @@ export class ReceivableServiceClass extends BaseService {
     const prefix = `REC-${storeId.substring(0, 4)}-${yearMonth}-`;
 
     // Lấy mã lớn nhất hiện tại
-    const result = await QueryBuilder.table('receivables', db.getInternalDAO())
+    const result = await QueryBuilder.table('receivables', db)
       .select(['receivable_code'])
       .where('store_id', storeId)
       .whereLike('receivable_code', `${prefix}%`)

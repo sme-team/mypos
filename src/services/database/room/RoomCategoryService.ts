@@ -216,7 +216,7 @@ class RoomServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) return null;
 
-    const result = await QueryBuilder.table('units', db.getInternalDAO())
+    const result = await QueryBuilder.table('units', db)
       .select(['id'])
       .where('unit_code', unitCode.toUpperCase())
       .first();

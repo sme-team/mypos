@@ -230,7 +230,7 @@ class RoomActionServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) return null;
 
-    const result = await QueryBuilder.table('bill_cycles', db.getInternalDAO())
+    const result = await QueryBuilder.table('bill_cycles', db)
       .select(['id'])
       .where('store_id', storeId)
       .where('cycle_code', cycleCode)
@@ -673,7 +673,7 @@ class RoomActionServiceClass {
 
     console.log('[checkRoomAvailability] Checking availability for room:', variantId, 'from', checkinDate, 'to', checkoutDate);
 
-    const conflictingContracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+    const conflictingContracts = await QueryBuilder.table('contracts', db)
       .select(['contracts.id', 'contracts.start_date', 'contracts.end_date', 'customers.full_name'])
       .innerJoin('customers', 'contracts.customer_id = customers.id')
       .where('contracts.variant_id', variantId)
@@ -1027,7 +1027,7 @@ class RoomActionServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) throw new Error('Database not available');
 
-    const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+    const contracts = await QueryBuilder.table('contracts', db)
       .select(['id', 'end_date', 'status'])
       .where('variant_id', variantId)
       .where('store_id', storeId)
@@ -1092,7 +1092,7 @@ class RoomActionServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) throw new Error('Database not available');
 
-    const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+    const contracts = await QueryBuilder.table('contracts', db)
       .select(['id', 'customer_id', 'status'])
       .where('variant_id', variantId)
       .where('store_id', storeId)
@@ -1209,7 +1209,7 @@ class RoomActionServiceClass {
 
       // Kiểm tra xem đã có bill cho kỳ này chưa
       const db = DatabaseManager.get('pos');
-      const existingBillRows = await QueryBuilder.table('bills', db!.getInternalDAO())
+      const existingBillRows = await QueryBuilder.table('bills', db!)
         .where('ref_id', contract.id)
         .where('ref_type', 'contract')
         .where('bill_type', '!=', 'deposit')

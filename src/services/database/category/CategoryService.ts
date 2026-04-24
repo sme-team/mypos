@@ -94,7 +94,7 @@ class CategoryServiceClass {
       // 1. Categories (root — parent_id IS NULL)
       let groupRows: any[] = [];
       try {
-        groupRows = await QueryBuilder.table('categories', db.getInternalDAO())
+        groupRows = await QueryBuilder.table('categories', db)
           .select(['id', 'name', 'apply_to', 'sort_order', 'store_id'])
           .where('store_id', storeId)
           .where('status', 'active')
@@ -112,7 +112,7 @@ class CategoryServiceClass {
       // 2. Products
       let productRows: any[] = [];
       try {
-        productRows = await QueryBuilder.table('products', db.getInternalDAO())
+        productRows = await QueryBuilder.table('products', db)
           .select(['id', 'name', 'category_id', 'store_id', 'status'])
           .where('store_id', storeId)
           .where('status', 'active')
@@ -128,7 +128,7 @@ class CategoryServiceClass {
       try {
         variantRows = await QueryBuilder.table(
           'product_variants',
-          db.getInternalDAO(),
+          db,
         )
           .select([
             'product_variants.id',
@@ -241,7 +241,7 @@ class CategoryServiceClass {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
-      const rows = await QueryBuilder.table('units', db.getInternalDAO())
+      const rows = await QueryBuilder.table('units', db)
         .select(['id', 'name', 'unit_type'])
         .where('store_id', storeId)
         .where('status', 'active')

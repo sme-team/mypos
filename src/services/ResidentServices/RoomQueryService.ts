@@ -246,7 +246,7 @@ class RoomQueryServiceClass {
     const db = DatabaseManager.get('pos');
     if (!db) return [];
 
-    const rows = await QueryBuilder.table('contracts', db.getInternalDAO())
+    const rows = await QueryBuilder.table('contracts', db)
       .select([
         'contracts.id',
         'contracts.start_date',
@@ -333,7 +333,7 @@ class RoomQueryServiceClass {
       if (!db) return [];
 
       // Get all rooms first
-      const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
+      const rows = await QueryBuilder.table('product_variants', db)
         .select([
           'product_variants.id',
           'product_variants.name',
@@ -353,7 +353,7 @@ class RoomQueryServiceClass {
       const variantIds = rows.map((r: any) => r.id);
       let contracts: any[] = [];
       if (variantIds.length > 0) {
-        contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
+        contracts = await QueryBuilder.table('contracts', db)
           .select([
             'contracts.id',
             'contracts.variant_id',
@@ -417,7 +417,7 @@ class RoomQueryServiceClass {
       // Lấy tất cả giá cho các variant này với unit_code
       let allPrices: any[] = [];
       if (variantIds.length > 0) {
-        allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
+        allPrices = await QueryBuilder.table('prices', db)
           .select([
             'prices.variant_id',
             'prices.unit_id',
@@ -582,7 +582,7 @@ class RoomQueryServiceClass {
 
     if (contract?.id) {
       const db = DatabaseManager.get('pos');
-      const billRows = await QueryBuilder.table('bills', db!.getInternalDAO())
+      const billRows = await QueryBuilder.table('bills', db!)
         .where('ref_id', contract.id)
         .where('ref_type', 'contract')
         .where('bill_type', '!=', 'deposit')
@@ -615,7 +615,7 @@ class RoomQueryServiceClass {
     let negativeBalance = 0;
     if (contract?.id) {
       const db = DatabaseManager.get('pos');
-      const adjResult = await QueryBuilder.table('receivables', db!.getInternalDAO())
+      const adjResult = await QueryBuilder.table('receivables', db!)
         .select(['SUM(amount) as total'])
         .where('contract_id', contract.id)
         .where('receivable_type', 'adjustment')
@@ -632,7 +632,7 @@ class RoomQueryServiceClass {
 
     if (contract?.id) {
       const db = DatabaseManager.get('pos');
-      const dao = db!.getInternalDAO();
+      const dao = db!;
 
       // a. Tổng Phải thu (receivables.status != cancelled)
       const payResult = await QueryBuilder.table('receivables', dao)
@@ -728,7 +728,7 @@ class RoomQueryServiceClass {
       if (!db) return [];
 
       // 1. Lấy variants loại 'room' và không có hợp đồng active
-      const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
+      const rows = await QueryBuilder.table('product_variants', db)
         .select([
           'product_variants.id',
           'product_variants.name',
@@ -748,7 +748,7 @@ class RoomQueryServiceClass {
       const variantIds = rows.map((r: any) => r.id);
       let allPrices: any[] = [];
       if (variantIds.length > 0) {
-        allPrices = await QueryBuilder.table('prices', db.getInternalDAO())
+        allPrices = await QueryBuilder.table('prices', db)
           .select([
             'prices.variant_id',
             'prices.unit_id',

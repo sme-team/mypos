@@ -410,7 +410,7 @@ class ReportServiceClass {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
-      const rows = await QueryBuilder.table('categories', db.getInternalDAO())
+      const rows = await QueryBuilder.table('categories', db)
         .select(['apply_to'])
         .where('store_id', storeId)
         .where('status', 'active')

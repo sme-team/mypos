@@ -22,7 +22,7 @@ export const PosQueryService = {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
-      const rows = await QueryBuilder.table('products', db.getInternalDAO())
+      const rows = await QueryBuilder.table('products', db)
         .select([
           'products.id',
           'products.name',
@@ -86,7 +86,7 @@ export const PosQueryService = {
 
       const rows = await QueryBuilder.table(
         'product_variants',
-        db.getInternalDAO(),
+        db,
       )
         .select([
           'product_variants.id',
@@ -138,7 +138,7 @@ export const PosQueryService = {
 
       const keyword = `%${query.trim()}%`;
 
-      const baseQuery = QueryBuilder.table('customers', db.getInternalDAO())
+      const baseQuery = QueryBuilder.table('customers', db)
         .select([
           'id',
           'name',
@@ -202,7 +202,7 @@ export const PosQueryService = {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
-      const rows = await QueryBuilder.table('categories', db.getInternalDAO())
+      const rows = await QueryBuilder.table('categories', db)
         .select(['id', 'name', 'category_code', 'parent_id', 'apply_to'])
         .where('status', 'active')
         .orderBy('sort_order', 'ASC')
@@ -231,7 +231,7 @@ export const PosQueryService = {
       const db = DatabaseManager.get('pos');
       if (!db) return [];
 
-      const rows = await QueryBuilder.table('products', db.getInternalDAO())
+      const rows = await QueryBuilder.table('products', db)
         .select([
           'products.id',
           'products.name',

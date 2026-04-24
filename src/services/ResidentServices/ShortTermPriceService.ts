@@ -100,7 +100,7 @@ class ShortTermPriceServiceClass {
     }
 
     // Query prices từ bảng prices với unit_code
-    const prices = await QueryBuilder.table('prices', db.getInternalDAO())
+    const prices = await QueryBuilder.table('prices', db)
       .select([
         'prices.variant_id',
         'prices.unit_id',

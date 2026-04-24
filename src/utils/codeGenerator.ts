@@ -12,7 +12,7 @@ export async function generateCustomerCode(storeId: string): Promise<string> {
   const storePrefix = storeId.substring(0, 4);
   const prefix = `KH-${storePrefix}-`;
 
-  const result = await QueryBuilder.table('customers', db.getInternalDAO())
+  const result = await QueryBuilder.table('customers', db)
     .select(['customer_code'])
     .where('store_id', storeId)
     .whereLike('customer_code', `${prefix}%`)
@@ -41,7 +41,7 @@ export async function generateContractCode(storeId: string): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `HD-${year}-`;
 
-  const result = await QueryBuilder.table('contracts', db.getInternalDAO())
+  const result = await QueryBuilder.table('contracts', db)
     .select(['contract_number'])
     .where('store_id', storeId)
     .whereLike('contract_number', `${prefix}%`)
@@ -71,7 +71,7 @@ export async function generateBillNumber(storeId: string): Promise<string> {
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const prefix = `HD-${dateStr}-`;
 
-  const result = await QueryBuilder.table('bills', db.getInternalDAO())
+  const result = await QueryBuilder.table('bills', db)
     .select(['bill_number'])
     .where('store_id', storeId)
     .whereLike('bill_number', `${prefix}%`)
@@ -102,7 +102,7 @@ export async function generateReceivableCode(storeId: string): Promise<string> {
   const storePrefix = storeId.substring(0, 4);
   const prefix = `REC-${storePrefix}-${yearMonth}-`;
 
-  const result = await QueryBuilder.table('receivables', db.getInternalDAO())
+  const result = await QueryBuilder.table('receivables', db)
     .select(['receivable_code'])
     .where('store_id', storeId)
     .whereLike('receivable_code', `${prefix}%`)

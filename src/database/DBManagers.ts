@@ -2,52 +2,33 @@ import { AppState, AppStateStatus } from 'react-native';
 import {
   DatabaseManager as BaseManager,
   DatabaseSchema,
+  UniversalDAO,
 } from '@dqcai/sqlite';
-import { DatabaseFactory } from './DatabaseFactory';
-import SQLiteDAO from './SQLiteDAO';
-import { posSchema as MyPOS } from './configs/MyPOS';
 
-// Local definition of RoleConfig since it's not exported from the library's main index
 export interface RoleConfig {
   roleName: string;
   requiredDatabases: string[];
   optionalDatabases?: string[];
   priority?: number;
+  description?: string;
 }
 
-// Re-export type mappings for backward compatibility if needed
-export type {
-  DatabaseSchema as DatabaseSchemaWithTypeMapping,
-};
-
-// Registry of schemas for the ecosystem
-export const onePosEcosystemSchemas: Record<string, DatabaseSchema> = {
-  pos: MyPOS,
-};
-
-export type DatabaseConnections = {
-  [key: string]: SQLiteDAO;
-};
+export type { DatabaseSchema as DatabaseSchemaWithTypeMapping };
 
 /**
- * DatabaseManager acts as a thin wrapper for @dqcai/sqlite.DatabaseManager.
- * Refactored to eliminate duplicate state and handle lazy wrapping.
+ * DatabaseManager — thin pass-through to @dqcai/sqlite BaseManager.
+ * Tất cả data flows đi qua adapter đã đăng ký (ReactNativeAdapter).
+ * Trả UniversalDAO trực tiếp — không còn lớp SQLiteDAO wrapper.
  */
 export class DatabaseManager {
   private static appStateListener: any = null;
-  // Wrapper cache: Maps schema name to local SQLiteDAO wrapper
-  private static connections: DatabaseConnections = {};
 
-  /**
-   * Initialize the manager and register schemas
-   */
   public static async init(): Promise<void> {
-    BaseManager.registerSchemas(onePosEcosystemSchemas);
     this.setupAppStateListener();
   }
 
   // ===========================================
-  // ROLE MANAGEMENT (Delegated to library)
+  // ROLE MANAGEMENT
   // ===========================================
 
   public static registerRole(roleConfig: RoleConfig): void {
@@ -62,116 +43,69 @@ export class DatabaseManager {
     userRoles: string[],
     primaryRole?: string,
   ): Promise<void> {
-    // Delegate core connection lifecycle to library
     await BaseManager.setCurrentUserRoles(userRoles, primaryRole);
-    // Cleanup local wrappers that were closed by the library
-    this.syncLocalWrappers();
   }
 
   // ===========================================
-  // CONNECTION MANAGEMENT (Wrapper)
+  // CONNECTION MANAGEMENT
   // ===========================================
 
-  /**
-   * Get a wrapped connection. Lazily creates the wrapper if it doesn't exist.
-   */
-  public static get(key: string): SQLiteDAO {
-    // 1. Check if the library still has the active connection
-    const baseDao = BaseManager.get(key);
-    if (!baseDao) {
+  public static get(key: string): UniversalDAO {
+    const dao = BaseManager.get(key);
+    if (!dao) {
       throw new Error(`Database '${key}' not connected in BaseManager.`);
     }
-
-    // 2. Wrap and cache if necessary
-    if (!this.connections[key] || this.connections[key].getInternalDAO() !== baseDao) {
-      this.connections[key] = new SQLiteDAO(baseDao);
-    }
-
-    return this.connections[key];
+    return dao;
   }
 
-  /**
-   * Alias for ensureDatabaseConnection to maintain backward compatibility with BaseService.
-   */
-  public static async getLazyLoading(key: string): Promise<SQLiteDAO> {
+  public static async getLazyLoading(key: string): Promise<UniversalDAO> {
     return this.ensureDatabaseConnection(key);
   }
 
-  /**
-   * Ensure a connection is active (delegated)
-   */
-  public static async ensureDatabaseConnection(key: string): Promise<SQLiteDAO> {
+  public static async ensureDatabaseConnection(key: string): Promise<UniversalDAO> {
     await BaseManager.ensureDatabaseConnection(key);
     return this.get(key);
   }
 
-  /**
-   * Synchronize local wrapper cache with library active connections
-   */
-  private static syncLocalWrappers(): void {
-    const activeKeys = BaseManager.listConnections();
-    // Remove local wrappers that are no longer active in library
-    for (const key in this.connections) {
-      if (!activeKeys.includes(key)) {
-        delete this.connections[key];
-      }
-    }
+  public static listConnections(): string[] {
+    return BaseManager.listConnections();
   }
 
   // ===========================================
-  // EVENTS & LIFECYCLE (Wrapper)
+  // RECONNECT EVENTS
   // ===========================================
 
   public static onDatabaseReconnect(
     schemaName: string,
-    callback: (dao: SQLiteDAO) => void,
+    callback: (dao: UniversalDAO) => void,
   ): void {
-    // Wrap the listener: when library reconnects, notify with wrapper
-    BaseManager.onDatabaseReconnect(schemaName, (baseDao) => {
-      const dao = this.get(schemaName);
-      callback(dao);
-    });
+    BaseManager.onDatabaseReconnect(schemaName, callback);
   }
 
   public static offDatabaseReconnect(
     schemaName: string,
-    callback: (dao: SQLiteDAO) => void,
+    callback: (dao: UniversalDAO) => void,
   ): void {
-    // Note: Since we wrap the callback in onDatabaseReconnect, we technically need
-    // to map back to the library's internal callback to truly remove it.
-    // For now, this is a placeholder that delegates to BaseManager assuming
-    // direct cleanup if supported by the library.
     BaseManager.offDatabaseReconnect(schemaName, callback as any);
   }
 
-  /**
-   * AppState listener: simple notify library of state changes.
-   * Race conditions are handled within BaseManager.
-   */
+  // ===========================================
+  // LIFECYCLE
+  // ===========================================
+
   private static setupAppStateListener(): void {
     if (this.appStateListener) return;
-
     this.appStateListener = AppState.addEventListener(
       'change',
-      async (nextAppState: AppStateStatus) => {
-        // Tạm thời vô hiệu hoá tính năng tự động đóng/mở kết nối SQLite khi app rơi vào background
-        // SQLite trong React Native vốn dĩ được OS tự động quản lý vòng đời. Đóng bằng code thường gây đứt gãy query đang dở dang hoặc lỗi khi reopen.
-        /*
-        if (nextAppState === 'background' || nextAppState === 'inactive') {
-          await BaseManager.closeAll();
-          this.connections = {}; // Flush wrappers
-        } else if (nextAppState === 'active') {
-          await BaseManager.reopenConnections();
-          this.syncLocalWrappers();
-        }
-        */
+      async (_nextAppState: AppStateStatus) => {
+        // SQLite lifecycle managed by OS in React Native — intentionally disabled.
+        // Closing manually causes in-flight query failures on resume.
       },
     );
   }
 
   public static async closeAll(): Promise<void> {
     await BaseManager.closeAll();
-    this.connections = {};
   }
 }
 
