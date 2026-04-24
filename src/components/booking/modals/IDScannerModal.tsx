@@ -6,6 +6,8 @@
  */
 
 import React, {useState, useEffect, useCallback} from 'react';
+import {createModuleLogger, AppModules} from '../../../logger';
+const logger = createModuleLogger(AppModules.ID_SCANNER_MODAL);
 import {
   Modal,
   View,
@@ -91,7 +93,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
 
   const parseCCCDQRCode = (rawString: string): CCCDData | null => {
     if (!rawString) return null;
-    console.log('[IDScanner] Raw scanned string:', rawString);
+    logger.debug('[IDScanner] Raw scanned string:', rawString);
 
     // Một số QR có thể bị dính ký tự lạ ở đầu/cuối
     const cleanString = rawString.trim();
@@ -136,7 +138,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
       if (codes.length > 0 && isScanning && !scannedData) {
         const firstCode = codes[0];
         if (firstCode.value) {
-          console.log(
+          logger.debug(
             '[IDScanner] Code detected:',
             firstCode.type,
             firstCode.value,
@@ -146,7 +148,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
           if (result) {
             setScannedData(result); // Hiện màn hình xác nhận
           } else {
-            console.warn('[IDScanner] Parse failed for:', firstCode.value);
+            logger.warn('[IDScanner] Parse failed for:', firstCode.value);
             Alert.alert(
               t('idScanner.invalid'),
               `${t(
@@ -184,8 +186,8 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
         .map(l => l.trim())
         .filter(Boolean);
 
-      console.log('[OCR] Raw text:', text);
-      console.log('[OCR] Lines:', lines);
+      logger.debug('[OCR] Raw text:', text);
+      logger.debug('[OCR] Lines:', lines);
 
       // Tìm số CCCD (12 chữ số)
       const idCardMatch = text.match(/\d{12}/);
@@ -229,7 +231,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
             ),
         );
         if (namePattern) {
-          console.log('[OCR] Found name pattern (with accents):', namePattern);
+          logger.debug('[OCR] Found name pattern (with accents):', namePattern);
           fullName = namePattern;
         }
       }
@@ -244,7 +246,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
             !/\b(SO|NO|ID|NUMBER|NUM|CARD|CMT)\b/.test(l), // Loại trừ nhiều từ khóa hơn
         );
         if (upper) {
-          console.log('[OCR] Found name pattern (uppercase):', upper);
+          logger.debug('[OCR] Found name pattern (uppercase):', upper);
           fullName = upper;
         }
       }
@@ -264,7 +266,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
             ),
         );
         if (wordPattern) {
-          console.log('[OCR] Found name pattern (word case):', wordPattern);
+          logger.debug('[OCR] Found name pattern (word case):', wordPattern);
           fullName = wordPattern;
         }
       }
@@ -424,10 +426,10 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
         oldIdNumber: '',
       };
 
-      console.log('[OCR] Extracted data:', scannedResult);
+      logger.debug('[OCR] Extracted data:', scannedResult);
       setScannedData(scannedResult);
     } catch (error) {
-      console.error('[OCR] Error:', error);
+      logger.error('[OCR] Error:', error);
       Alert.alert(t('common.error'), t('idScanner.ocrError'));
     } finally {
       setIsProcessing(false);
@@ -808,11 +810,11 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
               video={false}
               audio={false}
               onInitialized={() => {
-                console.log('[IDScanner] Camera initialized and active');
+                logger.debug('[IDScanner] Camera initialized and active');
                 setIsCameraActive(true);
               }}
               onError={e => {
-                console.error('[IDScanner] Camera Error:', e);
+                logger.error('[IDScanner] Camera Error:', e);
                 setCameraError(e.message);
               }}
             />

@@ -1,5 +1,8 @@
 import {BaseService} from '../../BaseService';
 import {generateSequentialId} from '../../../utils';
+import {createModuleLogger, AppModules} from '../../../logger';
+
+const logger = createModuleLogger(AppModules.PAYMENT_SERVICE);
 
 class BillService extends BaseService {
   constructor() {
@@ -70,9 +73,11 @@ class PaymentServiceClass {
     customerId = null,
   }: CreateOrderInput) {
     if (!cartItems || cartItems.length === 0) {
+      logger.warn('createOrder — cart is empty');
       throw new Error('Cart is empty');
     }
 
+    logger.info('createOrder — start', { storeId, items: cartItems.length, total, customerId });
     const now = new Date().toISOString();
     const billId = await this.generateBillId();
     const change = Math.max(0, cash - total);
@@ -193,6 +198,7 @@ class PaymentServiceClass {
         deleted_at: null,
       });
 
+      logger.info('createOrder — success', { billId, total, change });
       return {
         billId,
         total,
@@ -200,7 +206,7 @@ class PaymentServiceClass {
         change,
       };
     } catch (err) {
-      console.error('[PaymentService] createOrder error:', err);
+      logger.error('createOrder — failed', { storeId, total, error: (err as Error).message });
       throw err;
     }
   }

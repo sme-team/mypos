@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.EXCEL_EXPORT_SCREEN);
+
 import React, {useState, useCallback, useEffect} from 'react';
 import {
   View,
@@ -213,7 +216,7 @@ export default function ReportExport({
         setSheets(parsed);
       }
     } catch (e) {
-      console.warn('[ExcelExport] load error:', e);
+      logger.warn('[ExcelExport] load error:', e);
     }
   };
 
@@ -221,7 +224,7 @@ export default function ReportExport({
     try {
       await AsyncStorage.setItem(SHEETS_STORAGE_KEY, JSON.stringify(sheets));
     } catch (e) {
-      console.warn('[ExcelExport] save error:', e);
+      logger.warn('[ExcelExport] save error:', e);
     }
   };
 
@@ -267,7 +270,7 @@ export default function ReportExport({
 
     try {
       const validSheets = sheets.filter(s => s.reportType && s.template);
-      console.log('[ExcelExport] Sheets to export:', validSheets.length);
+      logger.debug('[ExcelExport] Sheets to export:', validSheets.length);
 
       const sheetsForExport = validSheets.map((sheet, index) => {
         const resolved = resolveSheetConfig(sheet);
@@ -281,7 +284,7 @@ export default function ReportExport({
           resolved.billType === 'rent' ? 'LT' : 'BH'
         }`;
 
-        console.log(`[ExcelExport] Sheet ${index + 1}:`, {
+        logger.debug(`[ExcelExport] Sheet ${index + 1}:`, {
           reportType: resolved.reportType,
           billType: resolved.billType,
           fromDate: sheet.fromDate.toLocaleDateString('vi-VN'),
@@ -300,10 +303,10 @@ export default function ReportExport({
 
       await ExcelExportService.exportAllInOne(storeId, sheetsForExport);
 
-      console.log('[ExcelExport] ✓ Export completed');
+      logger.debug('[ExcelExport] ✓ Export completed');
       Alert.alert(t('common.success'), t('report.export.success'));
     } catch (err: any) {
-      console.error('[ExcelExport] Export error:', err);
+      logger.error('[ExcelExport] Export error:', err);
       Alert.alert(t('report.export.error'), err?.message ?? 'Unable to export');
     } finally {
       setExporting(false);

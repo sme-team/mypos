@@ -83,6 +83,55 @@ const AppModules = {
   USE_ARTICLE_REACTIONS_SERVICE: 'use-article-reactions-service',
   USE_ARTICLE_REACTIONS_ROUTE: 'use-article-reactions-route',
   USE_LOGIN: 'use-login',
+
+  // ─── Database layer (app-level wrappers) ─────────────────────────
+  DB_MANAGER: 'db-manager',
+  DB_SEEDER: 'db-seeder',
+  APP_BASE_SERVICE: 'app-base-service',
+
+  // ─── POS / database services ─────────────────────────────────────
+  CUSTOMER_DB_SERVICE: 'customer-db-service',
+  PAYMENT_SERVICE: 'payment-service',
+  REPORT_SERVICE: 'report-service',
+  ROOM_CATEGORY_SERVICE: 'room-category-service',
+  EXCEL_EXPORT_SERVICE: 'excel-export-service',
+
+  // ─── Resident services ───────────────────────────────────────────
+  ROOM_ACTION_SERVICE: 'room-action-service',
+  ROOM_QUERY_SERVICE: 'room-query-service',
+  RECEIVABLE_SERVICE: 'receivable-service',
+  ROOM_PRICE_SERVICE: 'room-price-service',
+  SHORT_TERM_PRICE_SERVICE: 'short-term-price-service',
+  RESIDENT_CUSTOMER_SERVICE: 'resident-customer-service',
+
+  // ─── Utilities ───────────────────────────────────────────────────
+  CODE_GENERATOR: 'code-generator',
+  USE_EXCEL_EXPORT: 'use-excel-export',
+
+  // ─── UI Screens & Components ─────────────────────────────────────
+  // Components
+  ID_SCANNER_MODAL: 'id-scanner-modal',
+  SHORT_TERM_SUMMARY: 'short-term-summary',
+  ROOM_DETAIL_BOTTOM_SHEET: 'room-detail-bottom-sheet',
+  ROOM_SWITCH_VIEW: 'room-switch-view',
+  ROOM_CARD: 'room-card',
+  // Screens – booking
+  PLACE_SCREEN: 'place-screen',
+  ROOM_DETAIL_SCREEN: 'room-detail-screen',
+  BOOKING_SCREEN: 'booking-screen',
+  // Screens – customer
+  CUSTOMER_SCREEN: 'customer-screen',
+  ADD_CUSTOMER_SCREEN: 'add-customer-screen',
+  CUSTOMER_DETAIL_SCREEN: 'customer-detail-screen',
+  // Screens – pos / room
+  POS_RESIDENT_SCREEN: 'pos-resident-screen',
+  POS_CATEGORY_MANAGEMENT: 'pos-category-management',
+  ROOM_MANAGEMENT_SCREEN: 'room-management-screen',
+  ADD_ROOM_SCREEN: 'add-room-screen',
+  // Screens – misc
+  EXCEL_EXPORT_SCREEN: 'excel-export-screen',
+  REPORT_SCREEN: 'report-screen',
+  SETTING_SCREEN: 'setting-screen',
 };
 
 const config = new LoggerConfigBuilder()

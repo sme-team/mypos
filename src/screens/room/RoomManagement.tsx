@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.ROOM_MANAGEMENT_SCREEN);
+
 import React, {useState, useCallback, useEffect, useMemo} from 'react';
 import {
   View,
@@ -404,11 +407,11 @@ export default function RoomManagement({storeId}: Props) {
             });
             setRoomTypes([defaultRoomType]);
           } catch (err) {
-            console.error('[RoomManagement] Failed to create default room type:', err);
+            logger.error('[RoomManagement] Failed to create default room type:', err);
           }
         }
       } catch (e) {
-        console.error('[RoomManagement] loadData:', e);
+        logger.error('[RoomManagement] loadData:', e);
         setError(t('room.loadError', 'Không thể tải danh sách phòng'));
       } finally {
         setIsLoading(false);
@@ -500,7 +503,7 @@ export default function RoomManagement({storeId}: Props) {
       setShowDeleteConfirm(false);
       await loadData();
     } catch (e) {
-      console.error('[RoomManagement] delete error:', e);
+      logger.error('[RoomManagement] delete error:', e);
     }
   }, [selectedVariantIds, exitSelectionMode, loadData]);
 

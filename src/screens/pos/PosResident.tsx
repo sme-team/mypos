@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.POS_RESIDENT_SCREEN);
+
 import React, {useState, useMemo, useEffect, useCallback, useRef} from 'react';
 import {
   View,
@@ -79,14 +82,14 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     setRefreshing(true);
 
     try {
-      console.log('[PosResident] Loading data for store:', activeStoreId);
+      logger.debug('[PosResident] Loading data for store:', activeStoreId);
       const [prods, cats, roomsData] = await Promise.all([
         PosQueryService.getProducts(),
         PosQueryService.getCategories(),
         RoomQueryService.getRoomsGroupedByFloor(activeStoreId),
       ]);
 
-      console.log('[PosResident] Data Counts:', {
+      logger.debug('[PosResident] Data Counts:', {
         products: prods.length,
         categories: cats.length,
         rooms: roomsData.length,
@@ -99,7 +102,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       const mappedRooms = roomsData.map(group => ({
         title: group.title,
         data: group.data.map((item: any): Room => {
-          console.log('[PosResident Mapping] item.id:', item.id, 'item.status:', item.status, 'item.contract_id:', item.contract_id, 'item.start_date:', item.start_date, 'item.end_date:', item.end_date);
+          logger.debug('[PosResident Mapping] item.id:', item.id, 'item.status:', item.status, 'item.contract_id:', item.contract_id, 'item.start_date:', item.start_date, 'item.end_date:', item.end_date);
           return {
             id: item.id,
             status: item.status,
@@ -138,7 +141,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
         }
       }
     } catch (err) {
-      console.error('[PosResident] Error in loadData:', err);
+      logger.error('[PosResident] Error in loadData:', err);
     } finally {
       setRefreshing(false);
     }
@@ -156,7 +159,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   }, [activeStoreId]);
 
   const handleRoomPress = useCallback((room: Room) => {
-    console.log('[PosResident] handleRoomPress:', {
+    logger.debug('[PosResident] handleRoomPress:', {
       id: room.id,
       status: room.status,
       label: room.label,
@@ -961,7 +964,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                     cardWidth={cardWidth}
                     onPress={() => handleRoomPress(room)}
                     onTimelinePress={() => {
-                      console.log('[PosResident] onTimelinePress - room:', room);
+                      logger.debug('[PosResident] onTimelinePress - room:', room);
                       setSelectedRoomForDetail(room);
                       setRoomDetailVisible(true);
                     }}

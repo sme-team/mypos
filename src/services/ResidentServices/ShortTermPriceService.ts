@@ -10,6 +10,9 @@
 
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.SHORT_TERM_PRICE_SERVICE);
 
 export interface ShortTermPriceInput {
   checkinDate: string;     // YYYY-MM-DD
@@ -126,7 +129,7 @@ class ShortTermPriceServiceClass {
     const monthPrice = pricesToUse.find((p: any) => p.unit_code?.toUpperCase() === 'MONTH')?.price || 0;
 
     // Debug log
-    console.log('[ShortTermPriceService] Prices for variant', variantId, ':', {
+    logger.debug('[ShortTermPriceService] Prices for variant', variantId, ':', {
       hourFirstPrice,
       hourPrice,
       dayPrice,
@@ -137,7 +140,7 @@ class ShortTermPriceServiceClass {
     // Fallback: nếu không có hourFirstPrice, dùng hourPrice
     if (hourFirstPrice === 0 && hourPrice > 0) {
       hourFirstPrice = hourPrice * 2; // Giả sử giá 2h đầu = 2 × giá 1 giờ
-      console.log('[ShortTermPriceService] Using fallback: hourFirstPrice =', hourFirstPrice);
+      logger.debug('[ShortTermPriceService] Using fallback: hourFirstPrice =', hourFirstPrice);
     }
 
     return {

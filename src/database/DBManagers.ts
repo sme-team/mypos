@@ -4,6 +4,9 @@ import {
   DatabaseSchema,
   UniversalDAO,
 } from '@dqcai/sqlite';
+import { createModuleLogger, AppModules } from '../logger';
+
+const logger = createModuleLogger(AppModules.DB_MANAGER);
 
 export interface RoleConfig {
   roleName: string;
@@ -24,6 +27,7 @@ export class DatabaseManager {
   private static appStateListener: any = null;
 
   public static async init(): Promise<void> {
+    logger.debug('DatabaseManager.init — setting up AppState listener');
     this.setupAppStateListener();
   }
 
@@ -32,10 +36,12 @@ export class DatabaseManager {
   // ===========================================
 
   public static registerRole(roleConfig: RoleConfig): void {
+    logger.debug('registerRole', { role: roleConfig.roleName, dbs: roleConfig.requiredDatabases });
     BaseManager.registerRole(roleConfig);
   }
 
   public static registerRoles(roleConfigs: RoleConfig[]): void {
+    logger.debug('registerRoles', { count: roleConfigs.length, roles: roleConfigs.map(r => r.roleName) });
     BaseManager.registerRoles(roleConfigs);
   }
 
@@ -43,7 +49,9 @@ export class DatabaseManager {
     userRoles: string[],
     primaryRole?: string,
   ): Promise<void> {
+    logger.info('setCurrentUserRoles', { roles: userRoles, primary: primaryRole });
     await BaseManager.setCurrentUserRoles(userRoles, primaryRole);
+    logger.debug('setCurrentUserRoles — done');
   }
 
   // ===========================================
@@ -53,6 +61,7 @@ export class DatabaseManager {
   public static get(key: string): UniversalDAO {
     const dao = BaseManager.get(key);
     if (!dao) {
+      logger.error(`Database '${key}' not connected`, { key });
       throw new Error(`Database '${key}' not connected in BaseManager.`);
     }
     return dao;
@@ -63,8 +72,11 @@ export class DatabaseManager {
   }
 
   public static async ensureDatabaseConnection(key: string): Promise<UniversalDAO> {
+    logger.debug(`ensureDatabaseConnection — '${key}'`);
     await BaseManager.ensureDatabaseConnection(key);
-    return this.get(key);
+    const dao = this.get(key);
+    logger.debug(`ensureDatabaseConnection — '${key}' ready`);
+    return dao;
   }
 
   public static listConnections(): string[] {
@@ -105,7 +117,9 @@ export class DatabaseManager {
   }
 
   public static async closeAll(): Promise<void> {
+    logger.info('closeAll — closing all database connections');
     await BaseManager.closeAll();
+    logger.info('closeAll — done');
   }
 }
 

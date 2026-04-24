@@ -1,3 +1,6 @@
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.CUSTOMER_SCREEN);
+
 import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import {
   View,
@@ -195,7 +198,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
       setAllCustomers(customerList);
       setResidentIds(new Set(residentList.map((r: any) => r.customer_id)));
     } catch (err) {
-      console.error('[CustomerScreen] loadData error:', err);
+      logger.error('[CustomerScreen] loadData error:', err);
     } finally {
       setLoading(false);
     }
@@ -286,7 +289,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
       const {success} = await CustomerService.bulkSoftDelete(ids);
       setAllCustomers(prev => prev.filter(c => !success.includes(c.id)));
     } catch (err) {
-      console.error('[CustomerScreen] bulkSoftDelete error:', err);
+      logger.error('[CustomerScreen] bulkSoftDelete error:', err);
     } finally {
       setShowDeleteModal(false);
       exitSelectionMode();

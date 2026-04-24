@@ -1,5 +1,8 @@
 import { UniversalDAO, QueryTable } from '@dqcai/sqlite';
 import DatabaseManager from '../database/DBManagers';
+import { createModuleLogger, AppModules } from '../logger';
+
+const logger = createModuleLogger(AppModules.APP_BASE_SERVICE);
 
 export interface WhereClause {
     name: string;
@@ -61,6 +64,7 @@ export class BaseService {
         this.tableName = tableName || schemaName;
 
         this.reconnectHandler = (newDao: UniversalDAO) => {
+            logger.debug(`[${this.tableName}] DAO updated after reconnect`);
             this.dao = newDao;
         };
 
@@ -88,6 +92,7 @@ export class BaseService {
     async init(): Promise<this> {
         try {
             if (this.isInitialized) return this;
+            logger.debug(`[${this.tableName}] init — acquiring DAO`);
             this.dao = await DatabaseManager.getLazyLoading(this.schemaName);
             if (!this.dao) {
                 throw new Error(`Failed to initialize DAO for schema: ${this.schemaName}`);
@@ -98,8 +103,10 @@ export class BaseService {
             this.isOpened = true;
             this.isInitialized = true;
             this._emit('initialized', { schemaName: this.schemaName });
+            logger.debug(`[${this.tableName}] init — ready`);
             return this;
         } catch (error) {
+            logger.error(`[${this.tableName}] init failed`, { error: (error as Error).message });
             this._handleError('INIT_ERROR', error as Error);
             throw error;
         }
@@ -155,9 +162,11 @@ export class BaseService {
         try {
             const queryTable = this.buildSelectTable(conditions, options);
             const result = await this.dao!.selectAll(queryTable);
+            logger.trace(`[${this.tableName}] findAll — ${result.length} rows`, { conditions });
             this._emit('dataFetched', { operation: 'findAll', count: result.length });
             return result;
         } catch (error) {
+            logger.error(`[${this.tableName}] findAll failed`, { conditions, error: (error as Error).message });
             this._handleError('FIND_ALL_ERROR', error as Error);
             throw error;
         }
@@ -170,9 +179,11 @@ export class BaseService {
             const conditions = { [this.primaryKeyFields[0]]: id };
             const queryTable = this.buildSelectTable(conditions);
             const result = await this.dao!.select(queryTable);
+            logger.trace(`[${this.tableName}] findById — id=${id} found=${!!result}`);
             this._emit('dataFetched', { operation: 'findById', id });
             return result;
         } catch (error) {
+            logger.error(`[${this.tableName}] findById failed`, { id, error: (error as Error).message });
             this._handleError('FIND_BY_ID_ERROR', error as Error);
             throw error;
         }
@@ -183,9 +194,11 @@ export class BaseService {
         try {
             const queryTable = this.buildSelectTable(conditions);
             const result = await this.dao!.select(queryTable);
+            logger.trace(`[${this.tableName}] findFirst — found=${!!result}`, { conditions });
             this._emit('dataFetched', { operation: 'findFirst' });
             return result;
         } catch (error) {
+            logger.error(`[${this.tableName}] findFirst failed`, { conditions, error: (error as Error).message });
             this._handleError('FIND_FIRST_ERROR', error as Error);
             throw error;
         }
@@ -204,9 +217,11 @@ export class BaseService {
                 result = await this.findById(data[this.primaryKeyFields[0]]);
             }
 
+            logger.debug(`[${this.tableName}] create — id=${data[this.primaryKeyFields[0]]}`);
             this._emit('dataCreated', { operation: 'create', data: result });
             return result;
         } catch (error) {
+            logger.error(`[${this.tableName}] create failed`, { error: (error as Error).message });
             this._handleError('CREATE_ERROR', error as Error);
             throw error;
         }
@@ -226,9 +241,11 @@ export class BaseService {
             await this.dao!.update(queryTable);
 
             const result = await this.findById(id);
+            logger.debug(`[${this.tableName}] update — id=${id}`);
             this._emit('dataUpdated', { operation: 'update', id, data: result });
             return result;
         } catch (error) {
+            logger.error(`[${this.tableName}] update failed`, { id, error: (error as Error).message });
             this._handleError('UPDATE_ERROR', error as Error);
             throw error;
         }
@@ -241,9 +258,11 @@ export class BaseService {
             const conditions = { [this.primaryKeyFields[0]]: id };
             const queryTable = this.buildSelectTable(conditions);
             await this.dao!.delete(queryTable);
+            logger.debug(`[${this.tableName}] delete — id=${id}`);
             this._emit('dataDeleted', { operation: 'delete', id });
             return true;
         } catch (error) {
+            logger.error(`[${this.tableName}] delete failed`, { id, error: (error as Error).message });
             this._handleError('DELETE_ERROR', error as Error);
             throw error;
         }
@@ -256,6 +275,7 @@ export class BaseService {
                 throw new Error('Data must be a non-empty array');
             }
 
+            logger.debug(`[${this.tableName}] bulkCreate — ${dataArray.length} rows`);
             const results: any[] = [];
             await this.executeTransaction(async () => {
                 for (const data of dataArray) {
@@ -266,9 +286,11 @@ export class BaseService {
                 }
             });
 
+            logger.info(`[${this.tableName}] bulkCreate — completed ${results.length} rows`);
             this._emit('dataBulkCreated', { operation: 'bulkCreate', count: results.length });
             return results;
         } catch (error) {
+            logger.error(`[${this.tableName}] bulkCreate failed`, { count: dataArray.length, error: (error as Error).message });
             this._handleError('BULK_CREATE_ERROR', error as Error);
             throw error;
         }
@@ -283,6 +305,7 @@ export class BaseService {
             const result = await this.dao!.select(queryTable);
             return result.count || 0;
         } catch (error) {
+            logger.error(`[${this.tableName}] count failed`, { conditions, error: (error as Error).message });
             this._handleError('COUNT_ERROR', error as Error);
             throw error;
         }
@@ -294,12 +317,15 @@ export class BaseService {
             await this.dao!.beginTransaction();
             const result = await callback();
             await this.dao!.commitTransaction();
+            logger.debug(`[${this.tableName}] transaction committed`);
             this._emit('transactionCompleted', { operation: 'transaction' });
             return result;
         } catch (error) {
+            logger.warn(`[${this.tableName}] transaction failed — rolling back`, { error: (error as Error).message });
             try {
                 await this.dao!.rollbackTransaction();
             } catch (rollbackError) {
+                logger.error(`[${this.tableName}] rollback failed`, { error: (rollbackError as Error).message });
                 this._handleError('ROLLBACK_ERROR', rollbackError as Error);
             }
             this._handleError('TRANSACTION_ERROR', error as Error);
@@ -341,7 +367,7 @@ export class BaseService {
         const handlers = this.eventListeners.get(event);
         if (handlers) {
             handlers.forEach(handler => {
-                try { handler(data); } catch (e) { /* noop */ }
+                try { handler(data); } catch { /* noop */ }
             });
         }
     }
@@ -374,9 +400,11 @@ export class BaseService {
     private async _ensureValidConnection(): Promise<void> {
         try {
             if (!this.dao?.isConnectionOpen()) {
+                logger.warn(`[${this.tableName}] connection lost — refreshing`);
                 this.dao = DatabaseManager.get(this.schemaName);
             }
         } catch {
+            logger.warn(`[${this.tableName}] error checking connection — refreshing`);
             this.dao = DatabaseManager.get(this.schemaName);
         }
     }
@@ -398,15 +426,18 @@ export class BaseService {
             this.isInitialized = false;
             this.eventListeners.clear();
             this.errorHandlers.clear();
+            logger.debug(`[${this.tableName}] closed`);
             this._emit('closed', { schemaName: this.schemaName });
             return true;
         } catch (error) {
+            logger.error(`[${this.tableName}] close failed`, { error: (error as Error).message });
             this._handleError('CLOSE_ERROR', error as Error);
             throw error;
         }
     }
 
     public destroy(): void {
+        logger.debug(`[${this.tableName}] destroy — removing reconnect listener`);
         DatabaseManager.offDatabaseReconnect(this.schemaName, this.reconnectHandler);
     }
 
@@ -423,6 +454,7 @@ export class BaseService {
         try {
             await this._ensureInitialized();
             const count = await this.count();
+            logger.debug(`[${this.tableName}] healthCheck — ok, count=${count}`);
             return {
                 healthy: true,
                 schemaName: this.schemaName,
@@ -430,6 +462,7 @@ export class BaseService {
                 timestamp: new Date().toISOString(),
             };
         } catch (error) {
+            logger.warn(`[${this.tableName}] healthCheck — failed`, { error: (error as Error).message });
             return {
                 healthy: false,
                 schemaName: this.schemaName,

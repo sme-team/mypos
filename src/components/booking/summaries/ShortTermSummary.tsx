@@ -3,6 +3,9 @@
  * @description: Màn hình xác nhận cuối cùng cho quy trình đặt phòng NGẮN HẠN (theo giờ/ngày/đêm).
  */
 
+import {createModuleLogger, AppModules} from '../../../logger';
+const logger = createModuleLogger(AppModules.SHORT_TERM_SUMMARY);
+
 import React, {useEffect, useState} from 'react';
 import {
   View,
@@ -61,7 +64,7 @@ export const ShortTermSummary = React.memo(
           });
           setPriceResult(result);
         } catch (err) {
-          console.error('[ShortTermSummary] Price calculation error:', err);
+          logger.error('[ShortTermSummary] Price calculation error:', err);
         } finally {
           setLoadingPrice(false);
         }

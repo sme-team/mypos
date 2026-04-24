@@ -10,6 +10,9 @@
 import {useState, useCallback} from 'react';
 import {Alert} from 'react-native';
 import {exportToFile, ExportParams} from './ExcelExportService';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.USE_EXCEL_EXPORT);
 
 export interface SheetConfigMinimal {
   reportType: string; // 'S1a' | 'S2a'
@@ -63,7 +66,7 @@ export function useExcelExport({
         });
       }
     } catch (err: any) {
-      console.error('[useExcelExport] Export error:', err);
+      logger.error('Export error', { error: err?.message });
       Alert.alert(
         'Lỗi xuất file',
         err?.message ?? 'Không thể xuất file. Vui lòng thử lại.',

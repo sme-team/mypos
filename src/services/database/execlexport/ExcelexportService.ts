@@ -1,4 +1,7 @@
 import {BaseService} from '../../BaseService';
+import {createModuleLogger, AppModules} from '../../../logger';
+
+const logger = createModuleLogger(AppModules.EXCEL_EXPORT_SERVICE);
 import {
   ExportRow,
   ExportSheetData,

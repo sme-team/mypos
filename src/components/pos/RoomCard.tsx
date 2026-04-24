@@ -5,6 +5,9 @@
  * @path: src/components/pos/RoomCard.tsx
  */
 
+import {createModuleLogger, AppModules} from '../../logger';
+const logger = createModuleLogger(AppModules.ROOM_CARD);
+
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -77,10 +80,10 @@ const RoomCard: React.FC<RoomCardProps> = React.memo(
 
     // Calculate time info text
     const getTimeInfoText = () => {
-      console.log('[RoomCard getTimeInfoText] room:', room.id, 'status:', room.status, 'start_date:', room.start_date, 'end_date:', room.end_date);
+      logger.debug('[RoomCard getTimeInfoText] room:', room.id, 'status:', room.status, 'start_date:', room.start_date, 'end_date:', room.end_date);
 
       if (!room.start_date || !room.end_date) {
-        console.log('[RoomCard getTimeInfoText] No contract dates, returning:', room.status === 'available' ? 'Chưa có booking' : '');
+        logger.debug('[RoomCard getTimeInfoText] No contract dates, returning:', room.status === 'available' ? 'Chưa có booking' : '');
         return room.status === 'available' ? 'Chưa có booking' : '';
       }
 
@@ -91,26 +94,26 @@ const RoomCard: React.FC<RoomCardProps> = React.memo(
       const daysUntilCheckin = Math.ceil((new Date(startDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
       const daysUntilCheckout = Math.ceil((new Date(endDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
 
-      console.log('[RoomCard getTimeInfoText] today:', today, 'daysUntilCheckin:', daysUntilCheckin, 'daysUntilCheckout:', daysUntilCheckout);
+      logger.debug('[RoomCard getTimeInfoText] today:', today, 'daysUntilCheckin:', daysUntilCheckin, 'daysUntilCheckout:', daysUntilCheckout);
 
       if (room.status === 'occupied') {
         const checkoutDate = new Date(endDate).toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'});
         const result = `Trả phòng ${checkoutDate} · còn ${daysUntilCheckout} ngày`;
-        console.log('[RoomCard getTimeInfoText] Returning occupied:', result);
+        logger.debug('[RoomCard getTimeInfoText] Returning occupied:', result);
         return result;
       } else if (room.status === 'booked') {
         const checkinDate = new Date(startDate).toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'});
         const result = `Nhận phòng ${checkinDate} · còn ${daysUntilCheckin} ngày trống`;
-        console.log('[RoomCard getTimeInfoText] Returning booked:', result);
+        logger.debug('[RoomCard getTimeInfoText] Returning booked:', result);
         return result;
       } else if (room.status === 'available') {
         if (daysUntilCheckin > 0) {
           const availableUntil = new Date(startDate).toLocaleDateString('vi-VN', {day: '2-digit', month: '2-digit'});
           const result = `Trống đến ${availableUntil} · ${daysUntilCheckin} ngày`;
-          console.log('[RoomCard getTimeInfoText] Returning available with future booking:', result);
+          logger.debug('[RoomCard getTimeInfoText] Returning available with future booking:', result);
           return result;
         }
-        console.log('[RoomCard getTimeInfoText] Returning available no booking');
+        logger.debug('[RoomCard getTimeInfoText] Returning available no booking');
         return 'Chưa có booking';
       }
       return '';

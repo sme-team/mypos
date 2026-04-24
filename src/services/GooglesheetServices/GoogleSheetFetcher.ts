@@ -1,5 +1,8 @@
 import { defaultAxios, handleAxiosError } from '../ServicesConfig/axiosConfig';
 import * as XLSX from 'xlsx';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.GOOGLE_SHEET_FETCHER);
 
 // Interface cho input params
 interface FetchOptions {
@@ -63,7 +66,7 @@ class GoogleSheetFetcher {
     onProgress?: ProgressCallback
   ): Promise<ArrayBuffer> {
     const downloadUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
-    console.log(`Downloading Excel file from: ${downloadUrl}`);
+    logger.debug(`Downloading Excel file from: ${downloadUrl}`);
 
     let lastError: Error;
     // Clone axios instance để customize responseType
@@ -71,7 +74,7 @@ class GoogleSheetFetcher {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`Download attempt ${attempt}/${retries}`);
+        logger.debug(`Download attempt ${attempt}/${retries}`);
 
         const response = await axiosInstance.get(downloadUrl, {
           responseType: 'arraybuffer', // Customize ở đây
@@ -92,21 +95,21 @@ class GoogleSheetFetcher {
         // Kiểm tra content type nếu có
         const contentType = response.headers['content-type'];
         if (contentType && !contentType.includes('spreadsheet') && !contentType.includes('excel')) {
-          console.warn('Warning: Content type may not be Excel format:', contentType);
+          logger.warn('Content type may not be Excel format', { contentType });
         }
 
-        console.log(`Successfully downloaded ${response.data.byteLength} bytes on attempt ${attempt}`);
+        logger.info(`Successfully downloaded ${response.data.byteLength} bytes on attempt ${attempt}`);
         return response.data;
 
       } catch (error) {
         lastError = error as Error;
         const standardizedError = handleAxiosError(error); // Chuẩn hóa lỗi
-        console.warn(`Download attempt ${attempt} failed: ${standardizedError.message}`);
+        logger.warn(`Download attempt ${attempt} failed`, { error: standardizedError.message });
 
         // Nếu không phải lần cuối, đợi trước khi retry
         if (attempt < retries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
-          console.log(`Waiting ${delay}ms before retry...`);
+          logger.debug(`Waiting ${delay}ms before retry`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -134,7 +137,7 @@ class GoogleSheetFetcher {
   // Method private: Xử lý dữ liệu từ một sheet (optimized)
   private processSheetData(worksheet: XLSX.WorkSheet, sheetName: string): SheetData[] {
     try {
-      console.log(`\n=== Processing sheet: ${sheetName} ===`);
+      logger.debug(`Processing sheet: ${sheetName}`);
 
       // Sử dụng header: 1 để lấy raw array, nhưng sau đó map đúng tên cột
       const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
@@ -143,16 +146,16 @@ class GoogleSheetFetcher {
         blankrows: false,
       });
 
-      console.log(`Raw data has ${rawData.length} rows`);
+      logger.debug(`Raw data has ${rawData.length} rows`, { sheetName });
 
       if (rawData.length < 2) {
-        console.warn(`Sheet ${sheetName} has insufficient rows`);
+        logger.warn(`Sheet ${sheetName} has insufficient rows`);
         return [];
       }
 
       // Lấy và clean headers từ dòng đầu tiên
       let headers: string[] = this.cleanHeaders(rawData[0] || []);
-      console.log(`Headers found:`, headers.slice(0, 8), '...');
+      logger.debug('Headers found', { sheetName, headers: headers.slice(0, 8) });
 
       if (headers.length === 0) return [];
 
@@ -186,13 +189,13 @@ class GoogleSheetFetcher {
 
         if (isMetadata) {
           dataStartIndex = i + 1;
-          console.log(`Skipping metadata row ${i}: "${firstCell.slice(0, 40)}"`);
+          logger.trace(`Skipping metadata row ${i}: "${firstCell.slice(0, 40)}"`);
         } else if (rawData[i].some(cell => String(cell || '').trim() !== '')) {
           break;
         }
       }
 
-      console.log(`Data starts from row ${dataStartIndex + 1}`);
+      logger.debug(`Data starts from row ${dataStartIndex + 1}`, { sheetName });
 
       // Xử lý thành object với key = header thực tế
       const jsonData: SheetData[] = [];
@@ -229,10 +232,10 @@ class GoogleSheetFetcher {
         }
       }
 
-      console.log(`Successfully processed ${jsonData.length} data rows from sheet ${sheetName}`);
+      logger.info(`Processed ${jsonData.length} rows from sheet ${sheetName}`);
       return jsonData;
     } catch (error) {
-      console.error(`Error processing sheet ${sheetName}:`, error);
+      logger.error(`Error processing sheet ${sheetName}`, { error: (error as Error).message });
       return [];
     }
   }
@@ -248,7 +251,7 @@ class GoogleSheetFetcher {
       }
 
       const sheetId = this.extractSheetId(options.link);
-      console.log(`Extracted Sheet ID: ${sheetId}`);
+      logger.debug(`Extracted Sheet ID: ${sheetId}`);
 
       const timeout = options.timeout || this.defaultTimeout;
       const retries = options.retries || this.defaultRetries;
@@ -265,7 +268,7 @@ class GoogleSheetFetcher {
       });
 
       const availableSheets = workbook.SheetNames;
-      console.log(`Workbook contains ${availableSheets.length} sheets: ${availableSheets.join(', ')}`);
+      logger.debug(`Workbook contains ${availableSheets.length} sheets`, { sheets: availableSheets });
 
       if (availableSheets.length === 0) {
         throw new Error('No sheets found in the workbook');
@@ -280,7 +283,7 @@ class GoogleSheetFetcher {
         throw new Error('No valid sheets found to process');
       }
 
-      console.log(`Processing ${sheetsToProcess.length} sheets: ${sheetsToProcess.join(', ')}`);
+      logger.info(`Processing ${sheetsToProcess.length} sheets`, { sheets: sheetsToProcess });
 
       // Process each sheet
       const result: { [sheetName: string]: SheetData[] } = {};
@@ -289,7 +292,7 @@ class GoogleSheetFetcher {
         try {
           const worksheet = workbook.Sheets[sheetName];
           if (!worksheet) {
-            console.warn(`Sheet "${sheetName}" not found in workbook`);
+            logger.warn(`Sheet "${sheetName}" not found in workbook`);
             result[sheetName] = [];
             continue;
           }
@@ -298,7 +301,7 @@ class GoogleSheetFetcher {
           result[sheetName] = data;
 
         } catch (error) {
-          console.error(`Error processing sheet "${sheetName}":`, error);
+          logger.error(`Error processing sheet "${sheetName}"`, { error: (error as Error).message });
           result[sheetName] = [];
         }
       }
@@ -314,10 +317,7 @@ class GoogleSheetFetcher {
       });
 
       const processingTime = Date.now() - startTime;
-      console.log('\n=== FETCH COMPLETED ===');
-      console.log(`Total processing time: ${processingTime}ms`);
-      console.log(`Total records: ${totalRecords}`);
-      console.log('Summary:', summary);
+      logger.info(`Fetch completed`, { processingTime, totalRecords, summary });
 
       return {
         success: true,
@@ -330,7 +330,7 @@ class GoogleSheetFetcher {
 
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      console.error(`Fetch failed after ${processingTime}ms:`, error);
+      logger.error(`Fetch failed after ${processingTime}ms`, { error: (error as Error).message });
 
       return {
         success: false,
@@ -367,7 +367,7 @@ class GoogleSheetFetcher {
       const workbook = XLSX.read(excelBuffer, { type: 'array' });
       return workbook.SheetNames;
     } catch (error) {
-      console.error('Failed to get sheet names:', error);
+      logger.error('Failed to get sheet names', { error: (error as Error).message });
       return [];
     }
   }

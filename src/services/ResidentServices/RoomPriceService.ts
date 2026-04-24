@@ -6,6 +6,9 @@
 
 import { QueryBuilder } from '@dqcai/sqlite';
 import DatabaseManager from '../../database/DBManagers';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.ROOM_PRICE_SERVICE);
 
 export interface PriceRecord {
   unit_id: string;
@@ -44,7 +47,7 @@ class RoomPriceServiceClass {
       }
       return null;
     } catch (err) {
-      console.error('[RoomPriceService] Error fetching unit_code:', err);
+      logger.error('[RoomPriceService] Error fetching unit_code:', err);
       return null;
     }
   }
@@ -71,7 +74,7 @@ class RoomPriceServiceClass {
         }
       }
     } catch (err) {
-      console.error('[RoomPriceService] Error batch fetching unit_codes:', err);
+      logger.error('[RoomPriceService] Error batch fetching unit_codes:', err);
     }
   }
 

@@ -14,6 +14,9 @@
 import {QueryBuilder} from '@dqcai/sqlite';
 import DatabaseManager from '../../../database/DBManagers';
 import {generateSequentialId} from '../../../utils';
+import {createModuleLogger, AppModules} from '../../../logger';
+
+const logger = createModuleLogger(AppModules.CUSTOMER_DB_SERVICE);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Internal DAO helper (chỉ dùng cho generateSequentialId + transaction)
@@ -288,7 +291,7 @@ class CustomerServiceClass {
       await this.dao.create(record);
       return (await this.getById(id)) as CustomerRecord;
     } catch (err) {
-      console.error('[CustomerService] create error:', err);
+      logger.error('[CustomerService] create error:', err);
       throw err;
     }
   }
@@ -317,7 +320,7 @@ class CustomerServiceClass {
 
       return rows.length ? mapCustomer(rows[0]) : null;
     } catch (err) {
-      console.error('[CustomerService] getById error:', err);
+      logger.error('[CustomerService] getById error:', err);
       throw err;
     }
   }
@@ -358,7 +361,7 @@ class CustomerServiceClass {
       const rows = await query.get();
       return rows.map(mapCustomer);
     } catch (err) {
-      console.error('[CustomerService] getAll error:', err);
+      logger.error('[CustomerService] getAll error:', err);
       throw err;
     }
   }
@@ -391,7 +394,7 @@ class CustomerServiceClass {
       const rows = await query.get();
       return rows.length ? mapCustomer(rows[0]) : null;
     } catch (err) {
-      console.error('[CustomerService] findByPhone error:', err);
+      logger.error('[CustomerService] findByPhone error:', err);
       throw err;
     }
   }
@@ -421,7 +424,7 @@ class CustomerServiceClass {
       const rows = await query.get();
       return rows[0]?.cnt ?? 0;
     } catch (err) {
-      console.error('[CustomerService] count error:', err);
+      logger.error('[CustomerService] count error:', err);
       throw err;
     }
   }
@@ -492,7 +495,7 @@ class CustomerServiceClass {
       await this.dao.update(id, payload);
       return (await this.getById(id)) as CustomerRecord;
     } catch (err) {
-      console.error('[CustomerService] update error:', err);
+      logger.error('[CustomerService] update error:', err);
       throw err;
     }
   }
@@ -563,7 +566,7 @@ class CustomerServiceClass {
       });
       return true;
     } catch (err) {
-      console.error('[CustomerService] softDelete error:', err);
+      logger.error('[CustomerService] softDelete error:', err);
       throw err;
     }
   }
@@ -576,7 +579,7 @@ class CustomerServiceClass {
     try {
       return await this.dao.delete(id);
     } catch (err) {
-      console.error('[CustomerService] hardDelete error:', err);
+      logger.error('[CustomerService] hardDelete error:', err);
       throw err;
     }
   }
@@ -613,7 +616,7 @@ class CustomerServiceClass {
         }
       });
     } catch (err) {
-      console.error('[CustomerService] bulkSoftDelete error:', err);
+      logger.error('[CustomerService] bulkSoftDelete error:', err);
       throw err;
     }
     return {success, failed};
@@ -640,7 +643,7 @@ class CustomerServiceClass {
         }
       });
     } catch (err) {
-      console.error('[CustomerService] bulkHardDelete error:', err);
+      logger.error('[CustomerService] bulkHardDelete error:', err);
       throw err;
     }
     return {success, failed};
@@ -686,7 +689,7 @@ class CustomerServiceClass {
       const rows = await query.get();
       return rows as BillRecord[];
     } catch (err) {
-      console.error('[CustomerService] getBillsByCustomerId error:', err);
+      logger.error('[CustomerService] getBillsByCustomerId error:', err);
       throw err;
     }
   }
@@ -729,7 +732,7 @@ class CustomerServiceClass {
 
       return rows.length ? (rows[0] as ContractRecord) : null;
     } catch (err) {
-      console.error(
+      logger.error(
         '[CustomerService] getActiveContractByCustomerId error:',
         err,
       );

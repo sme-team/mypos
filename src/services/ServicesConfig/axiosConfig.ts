@@ -1,4 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.AXIOS_CONFIG);
 
 // Interface cho lỗi chuẩn hóa
 export interface StandardizedError {
@@ -66,14 +69,14 @@ export const createAxiosInstance = (baseURL: string = BASE_URL): AxiosInstance =
 
     // Interceptors chung cho logging (có thể mở rộng cho error handling)
     instance.interceptors.request.use((config) => {
-        console.log(` Axios Request: ${instance.getUri(config)}`);
+        logger.debug(`Axios Request: ${instance.getUri(config)}`);
         return config;
     });
 
     instance.interceptors.response.use(
         (response) => response,
         (error) => {
-            console.error(' Axios Error:', error.message);
+            logger.error('Axios Error', { message: error.message });
             return Promise.reject(error);
         },
     );

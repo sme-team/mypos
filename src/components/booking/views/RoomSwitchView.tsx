@@ -3,6 +3,9 @@
  * @description: Giao diện con phục vụ tính năng Đổi phòng (Room Swap) trong RoomDetail.
  */
 
+import {createModuleLogger, AppModules} from '../../../logger';
+const logger = createModuleLogger(AppModules.ROOM_SWITCH_VIEW);
+
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -44,7 +47,7 @@ export const RoomSwitchView = React.memo(({
   });
   listForFloor = section ? section.data : [];
 
-  console.log('RoomSwitchView Debug:', {
+  logger.debug('RoomSwitchView Debug:', {
     availableRooms: availableRooms,
     switchFloor: switchFloor,
     listForFloor: listForFloor,
