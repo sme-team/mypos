@@ -99,7 +99,18 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       const mappedRooms = roomsData.map(group => ({
         title: group.title,
         data: group.data.map((item: any): Room => {
-          console.log('[PosResident Mapping] item.id:', item.id, 'item.status:', item.status, 'item.contract_id:', item.contract_id, 'item.start_date:', item.start_date, 'item.end_date:', item.end_date);
+          console.log(
+            '[PosResident Mapping] item.id:',
+            item.id,
+            'item.status:',
+            item.status,
+            'item.contract_id:',
+            item.contract_id,
+            'item.start_date:',
+            item.start_date,
+            'item.end_date:',
+            item.end_date,
+          );
           return {
             id: item.id,
             status: item.status,
@@ -191,7 +202,8 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
   // Room Detail Bottom Sheet
   const [roomDetailVisible, setRoomDetailVisible] = useState(false);
-  const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<Room | null>(null);
+  const [selectedRoomForDetail, setSelectedRoomForDetail] =
+    useState<Room | null>(null);
 
   const [paymentVisible, setPaymentVisible] = useState(false);
 
@@ -961,7 +973,10 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                     cardWidth={cardWidth}
                     onPress={() => handleRoomPress(room)}
                     onTimelinePress={() => {
-                      console.log('[PosResident] onTimelinePress - room:', room);
+                      console.log(
+                        '[PosResident] onTimelinePress - room:',
+                        room,
+                      );
                       setSelectedRoomForDetail(room);
                       setRoomDetailVisible(true);
                     }}
@@ -1390,7 +1405,12 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
         visible={paymentVisible}
         onClose={() => setPaymentVisible(false)}
         onSuccess={() => {
-          handleClearCart(); // 🔥 reset giỏ hàng
+          handleClearCart(); // reset giỏ hàng
+          setSelectedCustomer(null); // xoá khách hàng đã chọn
+          setCustomerSearch(''); // xoá ô tìm kiếm
+          setCustomerResults([]); // xoá kết quả tìm kiếm
+          setActiveCustomerTab(t('pos.guest')); // về tab Khách vãng lai
+          setPanelVisible(false); // đóng panel, về màn hình bán hàng
         }}
         cartItems={cartItems}
         selectedCustomer={selectedCustomer}

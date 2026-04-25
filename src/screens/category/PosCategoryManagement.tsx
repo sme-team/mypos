@@ -21,7 +21,7 @@ import {AddProductModal} from './modals/AddProductModal';
 import {AddVariantModal} from './modals/AddVariantModal';
 import {EditProductModal} from './modals/EditProductModal';
 import {VariantDetailModal} from './modals/VariantDetailModal';
-import type {CategoryGroup} from './types';
+import type {CategoryGroup, UnitOption} from './types';
 
 interface Props {
   storeId: string;
@@ -37,7 +37,7 @@ export default function PosCategoryScreen({storeId}: Props) {
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const [data, setData] = useState<CategoryGroup[]>([]);
-  const [units, setUnits] = useState<string[]>([]);
+  const [units, setUnits] = useState<UnitOption[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,9 +124,13 @@ export default function PosCategoryScreen({storeId}: Props) {
     }
   };
 
-  const handleAddItem = async (categoryId: string, name: string) => {
+  const handleAddItem = async (
+    categoryId: string,
+    name: string,
+    imageUri?: string,
+  ) => {
     try {
-      await CategoryService.createProduct(storeId, categoryId, name);
+      await CategoryService.createProduct(storeId, categoryId, name, imageUri);
       await loadData();
     } catch (e) {
       console.error(e);
@@ -136,6 +140,20 @@ export default function PosCategoryScreen({storeId}: Props) {
   const handleDeleteItem = async (_groupId: string, itemId: string) => {
     try {
       await CategoryService.softDeleteProduct(itemId);
+      await loadData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateItem = async (
+    itemId: string,
+    name: string,
+    groupId: string,
+    imageUri?: string,
+  ) => {
+    try {
+      await CategoryService.updateProduct(itemId, name, groupId, imageUri);
       await loadData();
     } catch (e) {
       console.error(e);
@@ -734,9 +752,7 @@ export default function PosCategoryScreen({storeId}: Props) {
         itemId={editingItemId}
         groups={filteredGroups}
         onClose={() => setShowEditProduct(false)}
-        onSave={(_itemId, _name, _groupId) => {
-          /* TODO */
-        }}
+        onSave={handleUpdateItem}
         onAddVariant={id => {
           setShowEditProduct(false);
           setAddVariantItemId(id);

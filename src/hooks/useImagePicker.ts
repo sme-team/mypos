@@ -67,5 +67,5 @@ export function useImagePicker({
     ]);
   };
 
-  return {imageUri, chooseImage, pickFromLibrary, takePhoto};
+  return {imageUri, setImageUri, chooseImage, pickFromLibrary, takePhoto};
 }

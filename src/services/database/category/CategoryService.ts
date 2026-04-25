@@ -113,7 +113,14 @@ class CategoryServiceClass {
       let productRows: any[] = [];
       try {
         productRows = await QueryBuilder.table('products', db.getInternalDAO())
-          .select(['id', 'name', 'category_id', 'store_id', 'status'])
+          .select([
+            'id',
+            'name',
+            'category_id',
+            'store_id',
+            'status',
+            'image_url',
+          ])
           .where('store_id', storeId)
           .where('status', 'active')
           .whereNull('deleted_at')
@@ -181,6 +188,7 @@ class CategoryServiceClass {
             (prod): CategoryItem => ({
               id: prod.id,
               name: prod.name ?? 'Chưa có tên',
+              imageUri: prod.image_url ?? undefined,
               variants: variantsByProduct.get(prod.id) ?? [],
             }),
           ),
@@ -325,6 +333,7 @@ class CategoryServiceClass {
     storeId: string,
     categoryId: string,
     name: string,
+    imageUrl?: string,
   ): Promise<void> {
     const now = new Date().toISOString();
     const id = await this.generateProductId();
@@ -339,7 +348,7 @@ class CategoryServiceClass {
       name: name.trim(),
       short_name: null,
       description: null,
-      image_url: null,
+      image_url: imageUrl ?? null,
       product_type: 'product',
       pricing_type: 'fixed',
       is_active_pos: true,
@@ -352,6 +361,23 @@ class CategoryServiceClass {
       created_at: now,
       updated_at: now,
       deleted_at: null,
+    });
+  }
+
+  async updateProduct(
+    productId: string,
+    name: string,
+    categoryId: string,
+    imageUrl?: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+
+    await this.productSvc.update(productId, {
+      name: name.trim(),
+      category_id: categoryId,
+      image_url: imageUrl ?? null,
+      sync_status: 'local',
+      updated_at: now,
     });
   }
 

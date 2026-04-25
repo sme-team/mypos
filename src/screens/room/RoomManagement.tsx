@@ -19,10 +19,14 @@ import {
   RoomService,
   RoomType,
   RoomVariant,
+  EMPTY_PRICE_MAP,
 } from '../../services/database/room/RoomCategoryService';
 import {useSelectionMode} from '../../hooks/useSelectionMode';
 import {ConfirmDeleteModal} from '../../components/common/ConfirmDeleteModal';
 import {SelectionBar} from '../../components/common/SelectionBar';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.STORE_SERVICE);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -129,7 +133,6 @@ function RoomCard({
       onLongPress={onLongPress}
       activeOpacity={0.85}
       style={{
-        // ← Trắng ở light mode, dark giữ nguyên
         backgroundColor: isDark ? '#1f2937' : '#ffffff',
         borderRadius: 14,
         padding: 14,
@@ -360,6 +363,8 @@ export default function RoomManagement({storeId}: Props) {
   const {isDark} = useTheme();
   const {width} = useWindowDimensions();
 
+  logger.trace(`[RoomManagement] render, storeId=${storeId}`);
+
   const numColumns = width >= TABLET_BREAKPOINT ? 2 : 1;
 
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -371,9 +376,20 @@ export default function RoomManagement({storeId}: Props) {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  /**
+   * selectedVariant      = phòng user vừa tap (để mở modal edit)
+   * editInitialData      = dữ liệu form đã load giá từ DB (set bất đồng bộ)
+   * loadingEditVariantId = id đang fetch giá → hiện loading indicator trên card
+   */
   const [selectedVariant, setSelectedVariant] = useState<RoomVariant | null>(
     null,
   );
+  const [editInitialData, setEditInitialData] =
+    useState<RoomDetailInitialData | null>(null);
+  const [loadingEditVariantId, setLoadingEditVariantId] = useState<
+    string | null
+  >(null);
 
   const textColor = isDark ? '#f9fafb' : '#111827';
   const inputBg = isDark ? '#374151' : '#e0e3e8';
@@ -383,6 +399,9 @@ export default function RoomManagement({storeId}: Props) {
 
   const loadData = useCallback(
     async (isRefresh = false) => {
+      logger.info(
+        `[RoomManagement] loadData called, isRefresh=${isRefresh}, storeId=${storeId}`,
+      );
       if (isRefresh) setRefreshing(true);
       else setIsLoading(true);
       setError(null);
@@ -393,9 +412,15 @@ export default function RoomManagement({storeId}: Props) {
         ]);
         setRoomTypes(types);
         setVariants(vars);
+        logger.info(
+          `[RoomManagement] loadData success: ${types.length} types, ${vars.length} variants`,
+        );
 
         // Create default "Phòng" room type if none exist
         if (types.length === 0 && !isRefresh) {
+          logger.warn(
+            '[RoomManagement] No room types found, creating default "Phòng" type',
+          );
           try {
             const defaultRoomType = await RoomService.createRoomType({
               storeId,
@@ -403,12 +428,18 @@ export default function RoomManagement({storeId}: Props) {
               description: 'Danh mục phòng mặc định',
             });
             setRoomTypes([defaultRoomType]);
+            logger.info(
+              `[RoomManagement] Default room type created: id=${defaultRoomType.id}`,
+            );
           } catch (err) {
-            console.error('[RoomManagement] Failed to create default room type:', err);
+            logger.error(
+              '[RoomManagement] Failed to create default room type:',
+              err,
+            );
           }
         }
       } catch (e) {
-        console.error('[RoomManagement] loadData:', e);
+        logger.error('[RoomManagement] loadData error:', e);
         setError(t('room.loadError', 'Không thể tải danh sách phòng'));
       } finally {
         setIsLoading(false);
@@ -427,22 +458,91 @@ export default function RoomManagement({storeId}: Props) {
       activeFilter !== 'all' &&
       !roomTypes.some(rt => rt.id === activeFilter)
     ) {
+      logger.debug(
+        `[RoomManagement] activeFilter "${activeFilter}" no longer valid, resetting to "all"`,
+      );
       setActiveFilter('all');
     }
   }, [roomTypes, activeFilter]);
 
   const handleSaveRoom = useCallback(
     async (_payload: AddRoomPayload) => {
+      logger.info('[RoomManagement] handleSaveRoom called, reloading data');
       setShowAddRoom(false);
       await loadData();
     },
     [loadData],
   );
 
-  // ── Khi tạo mới loại phòng trong AddRoom → append vào state luôn (không cần reload) ──
+  // ── Khi tạo mới loại phòng trong AddRoom → append vào state luôn ──────────
 
   const handleRoomTypeCreated = useCallback((newType: RoomType) => {
+    logger.info(
+      `[RoomManagement] handleRoomTypeCreated: id=${newType.id}, name="${newType.name}"`,
+    );
     setRoomTypes(prev => [...prev, newType]);
+  }, []);
+
+  // ── Mở màn hình edit: fetch giá từ DB trước rồi mới hiển thị modal ────────
+
+  const handleOpenEdit = useCallback(async (variant: RoomVariant) => {
+    logger.info(
+      `[RoomManagement] handleOpenEdit called, variantId=${variant.id}, name="${variant.name}"`,
+    );
+    setLoadingEditVariantId(variant.id);
+    try {
+      // Load giá theo unit_code từ DB
+      const priceMap = await RoomService.loadVariantPriceMap(variant.id);
+      logger.debug(
+        `[RoomManagement] handleOpenEdit priceMap loaded: ${JSON.stringify(
+          priceMap,
+        )}`,
+      );
+
+      const initialData: RoomDetailInitialData = {
+        variantId: variant.id,
+        typeId: variant.productId,
+        name: variant.name,
+        floor: variant.attributes?.floor?.toString() ?? '',
+        // Thứ tự: HOURFIRST → HOUR → DAY → MONTH
+        priceHourFirst: priceMap.HOURFIRST,
+        priceHour: priceMap.HOUR,
+        priceListed: priceMap.DAY,
+        priceMonth: priceMap.MONTH,
+      };
+
+      setSelectedVariant(variant);
+      setEditInitialData(initialData);
+      logger.info(
+        `[RoomManagement] handleOpenEdit success, opening edit modal for variantId=${variant.id}`,
+      );
+    } catch (err) {
+      logger.error('[RoomManagement] load prices error:', err);
+      // Mở modal dù có lỗi, để user vẫn có thể thấy thông tin phòng
+      logger.warn(
+        `[RoomManagement] handleOpenEdit falling back to empty price data for variantId=${variant.id}`,
+      );
+      const fallback: RoomDetailInitialData = {
+        variantId: variant.id,
+        typeId: variant.productId,
+        name: variant.name,
+        floor: variant.attributes?.floor?.toString() ?? '',
+        priceListed: '',
+        priceHourFirst: '',
+        priceHour: '',
+        priceMonth: '',
+      };
+      setSelectedVariant(variant);
+      setEditInitialData(fallback);
+    } finally {
+      setLoadingEditVariantId(null);
+    }
+  }, []);
+
+  const handleCloseEdit = useCallback(() => {
+    logger.debug('[RoomManagement] handleCloseEdit called');
+    setSelectedVariant(null);
+    setEditInitialData(null);
   }, []);
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -470,6 +570,9 @@ export default function RoomManagement({storeId}: Props) {
           (v.attributes?.floor?.toString() ?? '').toLowerCase().includes(q),
       );
     }
+    logger.trace(
+      `[RoomManagement] displayed computed: ${result.length} items, filter="${activeFilter}", search="${searchText}"`,
+    );
     return result;
   }, [variants, activeFilter, searchText]);
 
@@ -492,15 +595,22 @@ export default function RoomManagement({storeId}: Props) {
   } = useSelectionMode(selectionGroups);
 
   const handleDeleteSelected = useCallback(async () => {
+    logger.info(
+      `[RoomManagement] handleDeleteSelected called, totalSelected=${totalSelected}`,
+    );
     try {
       for (const variantId of selectedVariantIds) {
+        logger.debug(`[RoomManagement] soft-deleting variantId=${variantId}`);
         await RoomService.softDeleteVariant(variantId);
       }
+      logger.info(
+        '[RoomManagement] handleDeleteSelected success, reloading data',
+      );
       exitSelectionMode();
       setShowDeleteConfirm(false);
       await loadData();
     } catch (e) {
-      console.error('[RoomManagement] delete error:', e);
+      logger.error('[RoomManagement] delete error:', e);
     }
   }, [selectedVariantIds, exitSelectionMode, loadData]);
 
@@ -513,27 +623,18 @@ export default function RoomManagement({storeId}: Props) {
     return `${totalSelected} phòng đã chọn`;
   }, [totalSelected, selectedVariantIds, displayed]);
 
-  // ── Room detail save ─────────────────────────────────────────────────────
+  // ── Room detail save ──────────────────────────────────────────────────────
 
   const handleSaveDetail = useCallback(
     async (_payload: AddRoomPayload) => {
-      setSelectedVariant(null);
+      logger.info(
+        '[RoomManagement] handleSaveDetail called, closing edit and reloading',
+      );
+      handleCloseEdit();
       await loadData();
     },
-    [loadData],
+    [handleCloseEdit, loadData],
   );
-
-  // Helper: map RoomVariant → RoomDetailInitialData
-  const variantToInitialData = (v: RoomVariant): RoomDetailInitialData => ({
-    variantId: v.id,
-    typeId: v.productId,
-    name: v.name,
-    floor: v.attributes?.floor?.toString() ?? '',
-    priceListed: '',
-    priceHourFirst: '',
-    priceHour: '',
-    priceMonth: '',
-  });
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -624,7 +725,12 @@ export default function RoomManagement({storeId}: Props) {
           return (
             <TouchableOpacity
               key={f.key}
-              onPress={() => setActiveFilter(f.key)}
+              onPress={() => {
+                logger.debug(
+                  `[RoomManagement] filter selected: key="${f.key}", label="${f.label}"`,
+                );
+                setActiveFilter(f.key);
+              }}
               activeOpacity={0.8}
               style={{
                 paddingHorizontal: 16,
@@ -749,6 +855,9 @@ export default function RoomManagement({storeId}: Props) {
                 isSelected={selectedVariantIds.has(item.id)}
                 onLongPress={() => {
                   if (!selectionMode) {
+                    logger.debug(
+                      `[RoomManagement] long press on variantId=${item.id}, entering selection mode`,
+                    );
                     enterSelectionMode();
                     toggleSelectItem(item.id);
                   }
@@ -757,12 +866,47 @@ export default function RoomManagement({storeId}: Props) {
                   if (selectionMode) {
                     toggleSelectItem(item.id);
                   } else {
-                    setSelectedVariant(item);
+                    handleOpenEdit(item);
                   }
                 }}
               />
             )}
           />
+
+          {/* Loading overlay khi đang fetch giá cho 1 phòng */}
+          {loadingEditVariantId !== null && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <View
+                style={{
+                  backgroundColor: isDark ? '#1f2937' : '#fff',
+                  borderRadius: 16,
+                  padding: 24,
+                  alignItems: 'center',
+                  gap: 12,
+                  elevation: 8,
+                }}>
+                <ActivityIndicator size="large" color="#3b82f6" />
+                <Text
+                  style={{
+                    color: isDark ? '#9ca3af' : '#64748b',
+                    fontSize: 13,
+                    fontWeight: '600',
+                  }}>
+                  Đang tải thông tin phòng...
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -800,20 +944,20 @@ export default function RoomManagement({storeId}: Props) {
         />
       </Modal>
 
-      {/* Room detail / edit modal */}
+      {/* Room detail / edit modal – chỉ mount khi đã có editInitialData */}
       <Modal
-        visible={selectedVariant !== null}
+        visible={selectedVariant !== null && editInitialData !== null}
         animationType="slide"
-        onRequestClose={() => setSelectedVariant(null)}>
-        {selectedVariant && (
+        onRequestClose={handleCloseEdit}>
+        {selectedVariant && editInitialData && (
           <AddRoom
             storeId={storeId}
-            onBack={() => setSelectedVariant(null)}
+            onBack={handleCloseEdit}
             onSave={handleSaveDetail}
             roomTypes={roomTypes}
             onRoomTypeCreated={handleRoomTypeCreated}
             mode="edit"
-            initialData={variantToInitialData(selectedVariant)}
+            initialData={editInitialData}
           />
         )}
       </Modal>

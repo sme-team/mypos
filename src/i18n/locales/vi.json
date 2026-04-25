@@ -130,6 +130,15 @@
     "print": "In hóa đơn",
     "confirm": "Xác nhận thanh toán"
   },
+  "alert": {
+    "error": "Lỗi",
+    "success": "Thành công",
+    "emptyCart": "Chưa có sản phẩm để thanh toán",
+    "paymentSuccess": "Thanh toán thành công",
+    "paymentFailed": "Thanh toán thất bại",
+    "syncError": "Lỗi đồng bộ"
+  },
+
   "place": {
     "title": "Phân loại & Địa điểm",
     "description": "Đây là nơi bạn có thể quản lý các danh mục phân loại và địa điểm của mình."
@@ -143,17 +152,23 @@
     "systemLanguage": "Ngôn ngữ hệ thống",
     "profile": "Hồ sơ cá nhân",
     "profileDesc": "Cập nhật thông tin cá nhân ",
-    "currency": "Quản lý tiền tệ",
-    "currencyDesc": "Quản lý tiền tệ và tỷ giá hối đoái",
-    "organization": "Cấu trúc doanh nghiệp",
-    "organizationDesc": "Quản lý chi nhánh và sơ đồ tổ chức",
     "history": "Lịch sử hoạt động",
     "historyDesc": "Xem nhật ký hoạt động hệ thống",
     "help": "Trợ giúp & Hỗ trợ",
     "helpDesc": "Trung tâm hỗ trợ và hướng dẫn sử dụng",
     "about": "Về ứng dụng",
     "aboutDesc": "Phiên bản, điều khoản và chính sách",
-    "support": "HỖ TRỢ & THÔNG TIN"
+    "support": "HỖ TRỢ & THÔNG TIN",
+    "dataSync": "ĐỒNG BỘ DỮ LIỆU",
+    "googleSheetUrl": "Đường dẫn Google Sheets (URL)",
+    "sheetLinkRequired": "Vui lòng nhập đường dẫn Google Sheets.",
+    "syncData": "Đồng bộ dữ liệu",
+    "syncDataBtn": "Đồng bộ dữ liệu",
+    "syncing": "Đang đồng bộ...",
+    "syncSuccess": "Đồng bộ dữ liệu thành công!",
+    "syncStrategyPrompt": "Bạn muốn ghi đè (xoá dữ liệu cũ) hay kết hợp (giữ nguyên dữ liệu hiện có)?",
+    "merge": "Kết hợp (Merge)",
+    "overwrite": "Ghi đè (Overwrite)"
   },
   "tabs": {
     "overview": "Overview",

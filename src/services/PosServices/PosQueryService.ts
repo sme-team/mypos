@@ -51,9 +51,7 @@ export const PosQueryService = {
             id: r.id,
             name: r.name,
             price: r.price || 0,
-            image:
-              r.image ||
-              'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
+            image: r.image || null,
             category: r.category || 'Khác',
             category_id: r.category_id,
             available: r.status === 'active',

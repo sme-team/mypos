@@ -17,6 +17,7 @@ export interface Variant {
 export interface CategoryItem {
   id: string;
   name: string;
+  imageUri?: string;
   variants: Variant[];
 }
 
