@@ -104,6 +104,7 @@ const StyledInput: React.FC<{
   numberOfLines?: number;
   maxLength?: number;
   editable?: boolean;
+  onBlur?: () => void;
 }> = ({
   placeholder,
   value,
@@ -113,6 +114,7 @@ const StyledInput: React.FC<{
   numberOfLines,
   maxLength,
   editable = true,
+  onBlur,
 }) => (
   <TextInput
     className="bg-gray-100 rounded-xl px-4 text-gray-800 text-[14px]"
@@ -131,6 +133,7 @@ const StyledInput: React.FC<{
     numberOfLines={numberOfLines}
     maxLength={maxLength}
     editable={editable}
+    onBlur={onBlur}
   />
 );
 
@@ -243,35 +246,76 @@ export default function AddCustomer({
     if (errors[key]) setErrors(prev => ({...prev, [key]: undefined}));
   };
 
+  // ── Check trùng lặp ────────────────────────────────────────────────────────
+  const checkPhoneDuplicate = async (phone: string) => {
+    const raw = phone.replace(/\s/g, '');
+    if (raw.length < 10 || raw.length > 11) return; // để validate() xử lý lỗi độ dài
+    const phoneChanged = !isEdit || phone.trim() !== initialData?.phone?.trim();
+    if (!phoneChanged) return;
+    const dup = await CustomerService.findByPhone(phone, storeId);
+    if (dup) {
+      setErrors(prev => ({
+        ...prev,
+        phone: t('validation.phone_duplicate'),
+      }));
+    }
+  };
+
+  const checkIdNumberDuplicate = async (idNumber: string) => {
+    if (!idNumber.trim()) return;
+    const idChanged =
+      !isEdit || idNumber.trim() !== initialData?.id_number?.trim();
+    if (!idChanged) return;
+    const dup = await CustomerService.findByIdNumber(idNumber.trim(), storeId);
+    if (dup) {
+      setErrors(prev => ({
+        ...prev,
+        id_number: t('validation.id_number_duplicate'),
+      }));
+    }
+  };
+
   // ── Validation ──────────────────────────────────────────────────────────────
 
   const validate = async (): Promise<boolean> => {
     const newErrors: typeof errors = {};
 
     if (!form.full_name.trim()) {
-      newErrors.full_name = t('validation.required', {
-        defaultValue: 'Trường này là bắt buộc',
-      });
+      newErrors.full_name = t('validation.required', {});
     }
-    if (!form.phone.trim()) {
-      newErrors.phone = t('validation.required', {
-        defaultValue: 'Trường này là bắt buộc',
-      });
-    } else if (form.phone.replace(/\s/g, '').length < 9) {
-      newErrors.phone = t('validation.phone_invalid', {
-        defaultValue: 'Số điện thoại không hợp lệ',
-      });
-    } else {
-      // Khi edit: chỉ check trùng nếu số điện thoại thực sự thay đổi
-      const phoneChanged =
-        !isEdit || form.phone.trim() !== initialData?.phone?.trim();
 
-      if (phoneChanged) {
-        const dup = await CustomerService.findByPhone(form.phone, storeId);
-        if (dup) {
-          newErrors.phone = t('validation.phone_duplicate', {
-            defaultValue: 'Số điện thoại đã tồn tại trong hệ thống',
-          });
+    // ── Validate SĐT ────────────────────────────────────────────────
+    if (!form.phone.trim()) {
+      newErrors.phone = t('validation.required', {});
+    } else {
+      const rawPhone = form.phone.replace(/\s/g, '');
+      if (rawPhone.length < 10 || rawPhone.length > 11) {
+        // ← THAY ĐỔI: từ < 9 thành 10–11
+        newErrors.phone = t('validation.invalid', {});
+      } else {
+        const phoneChanged =
+          !isEdit || form.phone.trim() !== initialData?.phone?.trim();
+        if (phoneChanged) {
+          const dup = await CustomerService.findByPhone(form.phone, storeId);
+          if (dup) {
+            newErrors.phone = t('validation.phone_duplicate', {});
+          }
+        }
+      }
+    }
+
+    // ── Validate CCCD ────────────────────────────────────────────────
+    if (form.id_number.trim()) {
+      // Chỉ check khi có nhập — CCCD không bắt buộc
+      const idChanged =
+        !isEdit || form.id_number.trim() !== initialData?.id_number?.trim();
+      if (idChanged) {
+        const dupId = await CustomerService.findByIdNumber(
+          form.id_number.trim(),
+          storeId,
+        );
+        if (dupId) {
+          newErrors.id_number = t('validation.id_number_duplicate');
         }
       }
     }
@@ -399,11 +443,8 @@ export default function AddCustomer({
     } catch (err: any) {
       console.error('[AddCustomer] save error:', err);
       Alert.alert(
-        t('common.error', {defaultValue: 'Lỗi'}),
-        err?.message ??
-          t('customer.add.save_error', {
-            defaultValue: 'Không thể lưu khách hàng. Vui lòng thử lại.',
-          }),
+        t('common.error'),
+        err?.message ?? t('customer.add.save_error'),
       );
     } finally {
       setSaving(false);
@@ -411,22 +452,22 @@ export default function AddCustomer({
   };
 
   const GENDERS: {key: CustomerGender; label: string}[] = [
-    {key: 'male', label: t('gender.male', {defaultValue: 'Nam'})},
-    {key: 'female', label: t('gender.female', {defaultValue: 'Nữ'})},
-    {key: 'other', label: t('gender.other', {defaultValue: 'Khác'})},
+    {key: 'male', label: t('gender.male')},
+    {key: 'female', label: t('gender.female')},
+    {key: 'other', label: t('gender.other')},
   ];
 
   // ──────────────────────────────────────────────────────────────────────────
 
   const screenTitle = isEdit
-    ? t('customer.edit.title', {defaultValue: 'Sửa khách hàng'})
-    : t('customer.add.title', {defaultValue: 'Thêm khách hàng'});
+    ? t('customer.edit.title')
+    : t('customer.add.title');
 
   const saveLabel = isEdit
-    ? t('customer.edit.save_btn', {defaultValue: 'Cập nhật'})
-    : t('customer.add.save_btn', {defaultValue: 'Lưu khách hàng'});
+    ? t('customer.edit.save_btn')
+    : t('customer.add.save_btn');
 
-  const savingLabel = t('common.saving', {defaultValue: 'Đang lưu...'});
+  const savingLabel = t('common.saving');
 
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
@@ -436,7 +477,7 @@ export default function AddCustomer({
       <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100">
         <TouchableOpacity onPress={onCancel} disabled={saving}>
           <Text className="text-gray-500 font-medium text-[15px]">
-            {t('common.cancel', {defaultValue: 'Hủy'})}
+            {t('common.cancel')}
           </Text>
         </TouchableOpacity>
         <Text className="text-base font-bold text-gray-900">{screenTitle}</Text>
@@ -445,7 +486,7 @@ export default function AddCustomer({
             <ActivityIndicator size="small" color="#3b82f6" />
           ) : (
             <Text className="text-blue-500 font-bold text-[15px]">
-              {t('common.save', {defaultValue: 'Lưu'})}
+              {t('common.save')}
             </Text>
           )}
         </TouchableOpacity>
@@ -461,9 +502,7 @@ export default function AddCustomer({
           {/* ── Thông tin cá nhân ── */}
           <SectionCard>
             <SectionTitle
-              title={t('customer.add.personal_info', {
-                defaultValue: 'Thông tin cá nhân',
-              })}
+              title={t('customer.add.personal_info')}
               right={
                 <TouchableOpacity
                   className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
@@ -475,7 +514,7 @@ export default function AddCustomer({
                   onPress={handleScanCCCD}>
                   <Icon name="camera-alt" size={15} color="#3b82f6" />
                   <Text className="text-blue-500 text-sm font-semibold">
-                    {t('customer.add.scan_cccd', {defaultValue: 'Quét CCCD'})}
+                    {t('customer.add.scan_cccd')}
                   </Text>
                 </TouchableOpacity>
               }
@@ -483,14 +522,9 @@ export default function AddCustomer({
 
             {/* Họ và tên */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.full_name', {defaultValue: 'Họ và tên'})}
-                required
-              />
+              <FieldLabel label={t('customer.add.full_name')} required />
               <StyledInput
-                placeholder={t('customer.add.full_name_placeholder', {
-                  defaultValue: 'Nhập họ và tên',
-                })}
+                placeholder={t('customer.add.full_name_placeholder')}
                 value={form.full_name}
                 onChangeText={v => setField('full_name', v)}
                 maxLength={150}
@@ -504,27 +538,24 @@ export default function AddCustomer({
 
             {/* Số CCCD */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.id_number', {
-                  defaultValue: 'Số CCCD/ID',
-                })}
-              />
+              <FieldLabel label={t('customer.add.id_number')} />
               <StyledInput
-                placeholder={t('customer.add.id_number_placeholder', {
-                  defaultValue: 'Số định danh',
-                })}
+                placeholder={t('customer.add.id_number_placeholder')}
                 value={form.id_number}
                 onChangeText={v => setField('id_number', v)}
                 keyboardType="phone-pad"
                 maxLength={20}
               />
+              {errors.id_number && (
+                <Text className="text-red-500 text-xs mt-1">
+                  {errors.id_number}
+                </Text>
+              )}
             </View>
 
             {/* Ngày sinh */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.dob', {defaultValue: 'Ngày sinh'})}
-              />
+              <FieldLabel label={t('customer.add.dob')} />
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 className="flex-row items-center bg-gray-100 rounded-xl px-4"
@@ -540,9 +571,7 @@ export default function AddCustomer({
                   style={{color: form.date_of_birth ? '#1f2937' : '#9ca3af'}}>
                   {form.date_of_birth
                     ? formatDisplayDate(form.date_of_birth)
-                    : t('customer.add.dob_placeholder', {
-                        defaultValue: 'Chọn ngày sinh',
-                      })}
+                    : t('customer.add.dob_placeholder')}
                 </Text>
                 {form.date_of_birth && (
                   <TouchableOpacity
@@ -556,7 +585,7 @@ export default function AddCustomer({
                 visible={showDatePicker}
                 selectedDate={dateOfBirthObj}
                 maxDate={new Date()}
-                title={t('customer.add.dob', {defaultValue: 'Ngày sinh'})}
+                title={t('customer.add.dob')}
                 onConfirm={handleDateConfirm}
                 onCancel={() => setShowDatePicker(false)}
               />
@@ -564,9 +593,7 @@ export default function AddCustomer({
 
             {/* Giới tính */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.gender', {defaultValue: 'Giới tính'})}
-              />
+              <FieldLabel label={t('customer.add.gender')} />
               <View className="flex-row bg-gray-100 rounded-xl overflow-hidden">
                 {GENDERS.map(g => (
                   <TouchableOpacity
@@ -602,15 +629,9 @@ export default function AddCustomer({
 
             {/* Địa chỉ */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.address', {
-                  defaultValue: 'Địa chỉ liên hệ',
-                })}
-              />
+              <FieldLabel label={t('customer.add.address')} />
               <StyledInput
-                placeholder={t('customer.add.address_placeholder', {
-                  defaultValue: 'Số nhà, tên đường, phường/xã...',
-                })}
+                placeholder={t('customer.add.address_placeholder')}
                 value={form.address}
                 onChangeText={v => setField('address', v)}
                 multiline
@@ -620,11 +641,7 @@ export default function AddCustomer({
 
             {/* Quốc tịch */}
             <View className="mb-2">
-              <FieldLabel
-                label={t('customer.add.nationality', {
-                  defaultValue: 'Quốc tịch',
-                })}
-              />
+              <FieldLabel label={t('customer.add.nationality')} />
               <StyledInput
                 placeholder="VN"
                 value={form.nationality}
@@ -636,29 +653,23 @@ export default function AddCustomer({
 
           {/* ── Thông tin liên lạc ── */}
           <SectionCard>
-            <SectionTitle
-              title={t('customer.add.contact_info', {
-                defaultValue: 'Thông tin liên lạc',
-              })}
-            />
+            <SectionTitle title={t('customer.add.contact_info')} />
 
             {/* Số điện thoại */}
             <View className="mb-4">
-              <FieldLabel
-                label={t('customer.add.phone', {defaultValue: 'Số điện thoại'})}
-                required
-              />
+              <FieldLabel label={t('customer.add.phone')} required />
               <View
                 className="bg-gray-100 rounded-xl overflow-hidden"
                 style={{paddingLeft: 12}}>
                 <TextInput
                   className="flex-1 text-gray-800 text-[14px]"
                   style={{paddingVertical: 14}}
-                  placeholder="Nhập số điện thoại"
+                  placeholder={t('customer.add.phone_placeholder')}
                   placeholderTextColor="#9ca3af"
                   value={form.phone}
                   onChangeText={v => setField('phone', v)}
                   keyboardType="phone-pad"
+                  onBlur={() => checkPhoneDuplicate(form.phone)}
                   maxLength={15}
                 />
               </View>
@@ -671,13 +682,9 @@ export default function AddCustomer({
 
             {/* Ghi chú */}
             <View className="mb-2">
-              <FieldLabel
-                label={t('customer.add.notes', {defaultValue: 'Ghi chú'})}
-              />
+              <FieldLabel label={t('customer.add.notes')} />
               <StyledInput
-                placeholder={t('customer.add.notes_placeholder', {
-                  defaultValue: 'Ghi chú thêm về khách hàng...',
-                })}
+                placeholder={t('customer.add.notes_placeholder')}
                 value={form.notes}
                 onChangeText={v => setField('notes', v)}
                 multiline

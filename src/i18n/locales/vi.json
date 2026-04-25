@@ -49,11 +49,13 @@
   },
   "common": {
     "back": "Quay lại",
-    "ok": "Đồng ý",
-    "error": "Đã xảy ra lỗi",
-    "cancel": "Huỷ",
+    "options": "Tùy chọn",
+    "ok": "OK",
+    "cancel": "Hủy",
     "save": "Lưu",
-    "options": "Tùy chọn"
+    "saving": "Đang lưu...",
+    "error": "Lỗi",
+    "unknownError": "Lỗi không xác định"
   },
   "dashboard": {
     "overview": "Tổng quan",
@@ -466,5 +468,45 @@
     "btnRetry": "Thử lại",
     "placeOfOrigin": "Quê quán",
     "placeOfResident": "Nơi thường trú"
+  },
+  "validation": {
+    "required": "Trường này là bắt buộc",
+    "invalid": "Giá trị không hợp lệ",
+    "phone_duplicate": "Số điện thoại đã tồn tại trong hệ thống",
+    "id_number_duplicate": "Số CCCD đã tồn tại trong hệ thống"
+  },
+  "gender": {
+    "male": "Nam",
+    "female": "Nữ",
+    "other": "Khác"
+  },
+  "customer": {
+    "add": {
+      "title": "Thêm khách hàng",
+      "save_btn": "Lưu khách hàng",
+      "personal_info": "Thông tin cá nhân",
+      "contact_info": "Thông tin liên lạc",
+      "scan_cccd": "Quét CCCD",
+      "full_name": "Họ và tên",
+      "full_name_placeholder": "Nhập họ và tên",
+      "id_number": "Số CCCD/ID",
+      "id_number_placeholder": "Số định danh",
+      "dob": "Ngày sinh",
+      "dob_placeholder": "Chọn ngày sinh",
+      "gender": "Giới tính",
+      "address": "Địa chỉ liên hệ",
+      "address_placeholder": "Số nhà, tên đường, phường/xã...",
+      "nationality": "Quốc tịch",
+      "nationality_placeholder": "Ví dụ: VN",
+      "phone": "Số điện thoại",
+      "phone_placeholder": "Nhập số điện thoại",
+      "notes": "Ghi chú",
+      "notes_placeholder": "Ghi chú thêm về khách hàng...",
+      "save_error": "Không thể lưu khách hàng. Vui lòng thử lại."
+    },
+    "edit": {
+      "title": "Sửa khách hàng",
+      "save_btn": "Cập nhật"
+    }
   }
 }

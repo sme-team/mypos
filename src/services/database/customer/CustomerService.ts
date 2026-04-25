@@ -396,6 +396,31 @@ class CustomerServiceClass {
     }
   }
 
+  async findByIdNumber(
+    idNumber: string,
+    storeId: string,
+  ): Promise<CustomerRecord | null> {
+    if (!idNumber?.trim()) return null;
+    try {
+      const db = getDB();
+      if (!db) return null;
+
+      let query = QueryBuilder.table('customers', db.getInternalDAO())
+        .select(['*'])
+        .where('id_number', idNumber.trim())
+        .whereNull('deleted_at')
+        .limit(1);
+
+      if (storeId) query = query.where('store_id', storeId);
+
+      const rows = await query.get();
+      return rows.length ? mapCustomer(rows[0]) : null;
+    } catch (err) {
+      console.error('[CustomerService] findByIdNumber error:', err);
+      return null;
+    }
+  }
+
   /**
    * Đếm tổng số khách hàng theo điều kiện.
    */
