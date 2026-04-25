@@ -152,9 +152,9 @@ class GoogleSheetFetcher {
 
       // Lấy và clean headers từ dòng đầu tiên
       let headers: string[] = this.cleanHeaders(rawData[0] || []);
-      console.log(`Headers found:`, headers.slice(0, 8), '...');
+      console.log('Headers found:', headers.slice(0, 8), '...');
 
-      if (headers.length === 0) return [];
+      if (headers.length === 0) {return [];}
 
       // ✅ CẢI TIẾN: Tìm dòng bắt đầu dữ liệu (skip metadata) - LOGIC MỚI
       let dataStartIndex = 1;
@@ -198,14 +198,14 @@ class GoogleSheetFetcher {
       const jsonData: SheetData[] = [];
       for (let i = dataStartIndex; i < rawData.length; i++) {
         const row = rawData[i];
-        if (!row || row.length === 0) continue;
+        if (!row || row.length === 0) {continue;}
 
         const rowObject: SheetData = {};
         let hasValidData = false;
 
         for (let j = 0; j < headers.length; j++) {
           const header = headers[j];
-          if (!header) continue;
+          if (!header) {continue;}
 
           let value: any = j < row.length ? row[j] : null;
 
@@ -213,10 +213,10 @@ class GoogleSheetFetcher {
             const strVal = String(value).trim();
 
             // Giữ nguyên boolean vì seeder cần biết true/false
-            if (strVal.toLowerCase() === 'true') value = true;
-            else if (strVal.toLowerCase() === 'false') value = false;
+            if (strVal.toLowerCase() === 'true') {value = true;}
+            else if (strVal.toLowerCase() === 'false') {value = false;}
             // Tất cả còn lại giữ nguyên string — seeder tự xử lý
-            else value = strVal;
+            else {value = strVal;}
 
             hasValidData = true;
           }

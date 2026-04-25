@@ -56,9 +56,9 @@ const DATA_START_ROW = 11;
 // ─── Permission helper ────────────────────────────────────────────────────────
 
 async function requestWritePermission(): Promise<boolean> {
-  if (Platform.OS !== 'android') return true;
+  if (Platform.OS !== 'android') {return true;}
   const sdkInt = Number(Platform.Version);
-  if (sdkInt >= 29) return true;
+  if (sdkInt >= 29) {return true;}
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
     {
@@ -80,7 +80,7 @@ async function saveAndShare(
 ): Promise<void> {
   if (Platform.OS === 'android') {
     const hasPermission = await requestWritePermission();
-    if (!hasPermission) throw new Error('Không có quyền ghi file.');
+    if (!hasPermission) {throw new Error('Không có quyền ghi file.');}
     const downloadPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
     await RNFS.writeFile(downloadPath, base64Data, 'base64');
     try {
@@ -167,7 +167,7 @@ function addMerge(
   r2: number,
   c2: number,
 ) {
-  if (!ws['!merges']) ws['!merges'] = [];
+  if (!ws['!merges']) {ws['!merges'] = [];}
   (ws['!merges'] as Range[]).push({
     s: {r: r1 - 1, c: c1},
     e: {r: r2 - 1, c: c2},
@@ -197,7 +197,7 @@ function formatDateFile(d: Date): string {
 
 function bufferToBase64(buf: Uint8Array): string {
   let bin = '';
-  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+  for (let i = 0; i < buf.length; i++) {bin += String.fromCharCode(buf[i]);}
   return btoa(bin);
 }
 
@@ -206,10 +206,10 @@ function bufferToBase64(buf: Uint8Array): string {
  * Luôn lấy phần ngày LOCAL.
  */
 function extractLocalDate(raw: any): string | null {
-  if (!raw) return null;
+  if (!raw) {return null;}
   try {
     const d = raw instanceof Date ? raw : new Date(raw);
-    if (isNaN(d.getTime())) return null;
+    if (isNaN(d.getTime())) {return null;}
     return toLocalDateStr(d);
   } catch {
     return null;
@@ -257,7 +257,7 @@ async function fetchAggregated(
   // ── Bước 2: Filter issued_at trong khoảng [from, to] ─────────────────────
   const filteredBills = bills.filter(b => {
     const dateStr = extractLocalDate(b.issued_at);
-    if (!dateStr) return false;
+    if (!dateStr) {return false;}
     return dateStr >= from && dateStr <= to;
   });
 
@@ -306,7 +306,7 @@ async function fetchAggregated(
 
   for (const detail of relevantDetails) {
     const dateISO = billDateMap.get(detail.bill_id);
-    if (!dateISO) continue;
+    if (!dateISO) {continue;}
 
     const desc =
       (detail.line_description as string | undefined)?.trim() || 'Khác';
@@ -364,7 +364,7 @@ async function loadTemplate(templateName: string): Promise<WorkBook> {
         const base64 = await RNFS.readFileAssets(p, 'base64');
         const binary = atob(base64);
         const buf = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+        for (let i = 0; i < binary.length; i++) {buf[i] = binary.charCodeAt(i);}
         console.log('[loadTemplate] ✓ Android asset:', p);
         return XLSX.read(buf, {type: 'array', cellStyles: true});
       } catch (err) {
@@ -379,7 +379,7 @@ async function loadTemplate(templateName: string): Promise<WorkBook> {
       const base64 = await RNFS.readFile(path, 'base64');
       const binary = atob(base64);
       const buf = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+      for (let i = 0; i < binary.length; i++) {buf[i] = binary.charCodeAt(i);}
       console.log('[loadTemplate] ✓ Loaded from:', basePath);
       return XLSX.read(buf, {type: 'array', cellStyles: true});
     } catch (err) {
@@ -413,27 +413,25 @@ function writeHeader(
     const tax_ = params.taxCode ?? '';
     const addr_ = params.address ?? '';
     const loc_ = params.location ?? '';
-    if (ws['A1']) {
-      ws[
-        'A1'
-      ].v = `HỘ, CÁ NHÂN KINH DOANH: ${name_}\nMã số thuế: ${tax_}\nĐịa chỉ: ${addr_}`;
+    if (ws.A1) {
+      ws.A1.v = `HỘ, CÁ NHÂN KINH DOANH: ${name_}\nMã số thuế: ${tax_}\nĐịa chỉ: ${addr_}`;
     }
-    if (ws['A4']) {
-      ws['A4'].v = `Địa điểm kinh doanh: ${loc_}`;
+    if (ws.A4) {
+      ws.A4.v = `Địa điểm kinh doanh: ${loc_}`;
     }
-    if (ws['A5']) {
-      ws['A5'].v = kyStr;
+    if (ws.A5) {
+      ws.A5.v = kyStr;
     }
   } else {
     // S1a: header nằm ở các ô riêng lẻ
-    if (ws['A1'] && params.businessName)
-      ws['A1'].v = `Hộ, CÁ NHÂN KINH DOANH: ${params.businessName}`;
-    if (ws['A2'] && params.taxCode)
-      ws['A2'].v = `Mã số thuế: ${params.taxCode}`;
-    if (ws['A3'] && params.address) ws['A3'].v = `Địa chỉ: ${params.address}`;
-    if (ws['A6'] && params.location)
-      ws['A6'].v = `Địa điểm kinh doanh: ${params.location}`;
-    if (ws['A7']) ws['A7'].v = kyStr;
+    if (ws.A1 && params.businessName)
+      {ws.A1.v = `Hộ, CÁ NHÂN KINH DOANH: ${params.businessName}`;}
+    if (ws.A2 && params.taxCode)
+      {ws.A2.v = `Mã số thuế: ${params.taxCode}`;}
+    if (ws.A3 && params.address) {ws.A3.v = `Địa chỉ: ${params.address}`;}
+    if (ws.A6 && params.location)
+      {ws.A6.v = `Địa điểm kinh doanh: ${params.location}`;}
+    if (ws.A7) {ws.A7.v = kyStr;}
   }
 }
 
@@ -444,13 +442,13 @@ function writeHeader(
  * Rows < fromRow (header + dòng trống template) được giữ nguyên.
  */
 function clearDataRows(ws: WorkSheet, fromRow: number): void {
-  if (!ws['!ref']) return;
+  if (!ws['!ref']) {return;}
   const range = XLSX.utils.decode_range(ws['!ref']);
   const maxRow = range.e.r + 1;
   for (let r = fromRow; r <= maxRow; r++) {
     for (let c = 0; c <= range.e.c; c++) {
       const cellAddr = addr(c, r);
-      if (ws[cellAddr]) delete ws[cellAddr];
+      if (ws[cellAddr]) {delete ws[cellAddr];}
     }
   }
   if (ws['!merges']) {
@@ -740,7 +738,7 @@ export async function exportAllSheetsToOneFile(params: {
   address?: string;
   location?: string;
 }): Promise<void> {
-  if (params.sheets.length === 0) return;
+  if (params.sheets.length === 0) {return;}
   console.log(
     '[exportAllSheetsToOneFile] Exporting',
     params.sheets.length,

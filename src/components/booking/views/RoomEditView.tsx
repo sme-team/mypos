@@ -17,7 +17,7 @@ export const RoomEditView = React.memo(({
   editData,
   setEditData,
   themedColors,
-  t
+  t,
 }: any) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themedColors.bg }]}>
@@ -32,7 +32,7 @@ export const RoomEditView = React.memo(({
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.body}
         removeClippedSubviews={true}
         scrollEventThrottle={16}
@@ -49,8 +49,8 @@ export const RoomEditView = React.memo(({
               <Text style={{ color: themedColors.textSecondary, fontSize: 13, marginTop: 2 }}>{t('roomDetail.status')}: {t('roomDetail.occupied')}</Text>
             </View>
           </View>
-          <TouchableOpacity 
-            style={[styles.outlineBtnSmall, { borderColor: themedColors.primary, backgroundColor: themedColors.primaryLight }]} 
+          <TouchableOpacity
+            style={[styles.outlineBtnSmall, { borderColor: themedColors.primary, backgroundColor: themedColors.primaryLight }]}
             onPress={() => setView('switch')}
           >
             <Text style={{ color: themedColors.primary, fontSize: 12, fontWeight: '700' }}>{t('roomDetail.switchRoom')}</Text>
@@ -59,27 +59,27 @@ export const RoomEditView = React.memo(({
 
         {/* Thông tin khách hàng (Cư dân) */}
         <Text style={[styles.sectionTitle, { color: themedColors.textSecondary }]}>{t('booking.sections.tenant')}</Text>
-        
+
         <Text style={[styles.inputLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.fullName')}</Text>
-        <TextInput 
-          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]} 
-          value={editData.tenant} 
-          onChangeText={t => setEditData({ ...editData, tenant: t })} 
+        <TextInput
+          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]}
+          value={editData.tenant}
+          onChangeText={t => setEditData({ ...editData, tenant: t })}
         />
-        
+
         <Text style={[styles.inputLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.phone')}</Text>
-        <TextInput 
-          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]} 
-          value={editData.phone} 
-          onChangeText={t => setEditData({ ...editData, phone: t })} 
-          keyboardType="phone-pad" 
+        <TextInput
+          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]}
+          value={editData.phone}
+          onChangeText={t => setEditData({ ...editData, phone: t })}
+          keyboardType="phone-pad"
         />
-        
+
         <Text style={[styles.inputLabel, { color: themedColors.textSecondary }]}>CCCD/Passport</Text>
-        <TextInput 
-          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]} 
-          value={editData.cccd} 
-          onChangeText={t => setEditData({ ...editData, cccd: t })} 
+        <TextInput
+          style={[styles.input, { borderColor: themedColors.border, color: themedColors.text }]}
+          value={editData.cccd}
+          onChangeText={t => setEditData({ ...editData, cccd: t })}
         />
 
         {/* Thông tin dịch vụ & Chỉ số điện nước */}
@@ -94,19 +94,19 @@ export const RoomEditView = React.memo(({
           <View style={{ flexDirection: 'row' }}>
             <View style={{ flex: 1, marginRight: 10 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.unitPrice')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-                value={editData.rentPrice} 
-                onChangeText={t => setEditData({ ...editData, rentPrice: t })} 
-                keyboardType="numeric" 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+                value={editData.rentPrice}
+                onChangeText={t => setEditData({ ...editData, rentPrice: t })}
+                keyboardType="numeric"
               />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.quantity')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text, opacity: 0.6 }]} 
-                value="1" 
-                editable={false} 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text, opacity: 0.6 }]}
+                value="1"
+                editable={false}
               />
             </View>
           </View>
@@ -121,29 +121,29 @@ export const RoomEditView = React.memo(({
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <View style={{ flex: 1, marginRight: 10 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.old')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-                value={editData.electricOld} 
-                onChangeText={v => setEditData({ ...editData, electricOld: v })} 
-                keyboardType="numeric" 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+                value={editData.electricOld}
+                onChangeText={v => setEditData({ ...editData, electricOld: v })}
+                keyboardType="numeric"
               />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.new')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-                value={editData.electricNew} 
-                onChangeText={v => setEditData({ ...editData, electricNew: v })} 
-                keyboardType="numeric" 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+                value={editData.electricNew}
+                onChangeText={v => setEditData({ ...editData, electricNew: v })}
+                keyboardType="numeric"
               />
             </View>
           </View>
           <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.unitRate')}</Text>
-          <TextInput 
-            style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-            value={editData.electricRate} 
-            onChangeText={v => setEditData({ ...editData, electricRate: v })} 
-            keyboardType="numeric" 
+          <TextInput
+            style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+            value={editData.electricRate}
+            onChangeText={v => setEditData({ ...editData, electricRate: v })}
+            keyboardType="numeric"
           />
         </View>
 
@@ -156,29 +156,29 @@ export const RoomEditView = React.memo(({
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <View style={{ flex: 1, marginRight: 10 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.old')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-                value={editData.waterOld} 
-                onChangeText={v => setEditData({ ...editData, waterOld: v })} 
-                keyboardType="numeric" 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+                value={editData.waterOld}
+                onChangeText={v => setEditData({ ...editData, waterOld: v })}
+                keyboardType="numeric"
               />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.new')}</Text>
-              <TextInput 
-                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-                value={editData.waterNew} 
-                onChangeText={v => setEditData({ ...editData, waterNew: v })} 
-                keyboardType="numeric" 
+              <TextInput
+                style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+                value={editData.waterNew}
+                onChangeText={v => setEditData({ ...editData, waterNew: v })}
+                keyboardType="numeric"
               />
             </View>
           </View>
           <Text style={[styles.inputSubLabel, { color: themedColors.textSecondary }]}>{t('roomDetail.unitRate')}</Text>
-          <TextInput 
-            style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]} 
-            value={editData.waterRate} 
-            onChangeText={v => setEditData({ ...editData, waterRate: v })} 
-            keyboardType="numeric" 
+          <TextInput
+            style={[styles.inputSmall, { borderColor: themedColors.border, color: themedColors.text }]}
+            value={editData.waterRate}
+            onChangeText={v => setEditData({ ...editData, waterRate: v })}
+            keyboardType="numeric"
           />
         </View>
 
@@ -193,14 +193,14 @@ export const RoomEditView = React.memo(({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
-    paddingTop: 12, 
-    paddingBottom: 16, 
-    borderBottomWidth: 1 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   headerTitle: { fontSize: 18, fontWeight: '800' },
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },

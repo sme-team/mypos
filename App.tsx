@@ -36,6 +36,7 @@ import PlaceScreen from './src/screens/booking/Place';
 import Setting from './src/screens/setting/Setting';
 import Report from './src/screens/report/Report';
 import ReportExport from './src/screens/excel-export/ExcelExport';
+import ExportHistory from './src/screens/excel-export/ExportHistory';
 import CategoryManagement from './src/screens/category/CategoryManagement';
 import CustomerScreen from './src/screens/customer/CustomerScreen';
 
@@ -61,7 +62,8 @@ type Screen =
   | 'pos_resident'
   | 'place_resident'
   | 'customer'
-  | 'report_export';
+  | 'report_export'
+  | 'report_export_history';
 
 // ─── Inner app ────────────────────────────────────────────────────────────────
 const AppContent: React.FC = () => {
@@ -75,14 +77,18 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const startApp = async () => {
       try {
+        console.log('[App] Starting database initialization...');
         await initDatabase();
+        console.log('[App] Database initialized successfully');
         setDbReady(true);
       } catch (err) {
+        console.error('[App] Database initialization failed:', err);
         logger.error('[App] Database initialization failed:', err);
         Alert.alert(
           'Lỗi',
           'Không thể khởi tạo cơ sở dữ liệu. Vui lòng thử lại sau.',
         );
+        setDbReady(true); // Force proceed even if DB fails
       }
     };
     startApp();
@@ -305,6 +311,15 @@ const AppContent: React.FC = () => {
         <ReportExport
           onOpenMenu={() => setIsSidebarVisible(true)}
           onBack={() => setScreen('report')}
+          onHistory={() => setScreen('report_export_history')}
+        />
+      )}
+
+      {/* ── Report Export History ───────────────────────────────── */}
+      {screen === 'report_export_history' && (
+        <ExportHistory
+          onOpenMenu={() => setIsSidebarVisible(true)}
+          onBack={() => setScreen('report_export')}
         />
       )}
 

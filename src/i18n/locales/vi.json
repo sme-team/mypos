@@ -81,6 +81,7 @@
   },
   "pos": {
     "title": "Bán hàng",
+    "all": "Tất cả",
     "search_placeholder": "Tìm sản phẩm...",
     "search_placeholder_combined": "Sản phẩm Products",
     "category_all": "Tất cả",
@@ -222,7 +223,11 @@
       "confirmDelete": "Bạn có muốn xóa sheet này không",
       "dataexport": "Dữ liệu xuất file",
       "create": "Tạo thêm sheet mới",
-      "description": "Bạn có thể thêm nhiều loại báo cáo khác nhau vào cùng một file Excel để so sánh dữ liệu hiệu quả hơn."
+      "description": "Bạn có thể thêm nhiều loại báo cáo khác nhau vào cùng một file Excel để so sánh dữ liệu hiệu quả hơn.",
+      "history": "Lịch sử",
+      "noHistory": "Chưa có lịch sử xuất file",
+      "success": "Xuất file thành công",
+      "error": "Lỗi khi xuất file"
     }
   },
   "calendar": {

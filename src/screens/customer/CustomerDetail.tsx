@@ -30,7 +30,7 @@ const formatCurrency = (amount: number): string =>
   amount.toLocaleString('vi-VN') + ' đ';
 
 const formatDate = (dateStr?: string | null): string => {
-  if (!dateStr) return '-';
+  if (!dateStr) {return '-';}
   const d = new Date(dateStr);
   return `${String(d.getDate()).padStart(2, '0')}/${String(
     d.getMonth() + 1,
@@ -46,14 +46,14 @@ const formatDateTime = (dateStr: string): string => {
 };
 
 const formatGender = (gender?: string | null): string => {
-  if (gender === 'male') return 'Nam';
-  if (gender === 'female') return 'Nữ';
-  if (gender === 'other') return 'Khác';
+  if (gender === 'male') {return 'Nam';}
+  if (gender === 'female') {return 'Nữ';}
+  if (gender === 'other') {return 'Khác';}
   return '-';
 };
 
 const formatNationality = (code?: string | null): string => {
-  if (code === 'VN') return 'Việt Nam';
+  if (code === 'VN') {return 'Việt Nam';}
   return code ?? '-';
 };
 

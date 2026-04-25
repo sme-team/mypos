@@ -26,7 +26,7 @@ export const RoomSwitchView = React.memo(({
   extractFloor,
   setView,
   themedColors,
-  t
+  t,
 }: any) => {
   // availableRooms is Array<{ title: string; data: any[] }> from RoomQueryService
   const floorsFromSections = availableRooms.map((s: any) => {
@@ -48,7 +48,7 @@ export const RoomSwitchView = React.memo(({
     availableRooms: availableRooms,
     switchFloor: switchFloor,
     listForFloor: listForFloor,
-    listForFloorLength: listForFloor.length
+    listForFloorLength: listForFloor.length,
   });
 
   return (
@@ -62,7 +62,7 @@ export const RoomSwitchView = React.memo(({
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.body}
         removeClippedSubviews={true}
         scrollEventThrottle={16}
@@ -95,15 +95,15 @@ export const RoomSwitchView = React.memo(({
                 key={f}
                 onPress={() => setSwitchFloor(f)}
                 style={[
-                  styles.tab, 
+                  styles.tab,
                   { borderColor: themedColors.border, backgroundColor: themedColors.surface },
-                  switchFloor === f && { borderColor: themedColors.primary, backgroundColor: themedColors.primary }
+                  switchFloor === f && { borderColor: themedColors.primary, backgroundColor: themedColors.primary },
                 ]}
               >
                 <Text style={[
-                  styles.tabText, 
+                  styles.tabText,
                   { color: themedColors.textSecondary },
-                  switchFloor === f && { color: '#ffffff' }
+                  switchFloor === f && { color: '#ffffff' },
                 ]}>
                   {f === '?' ? t('roomDetail.other') : `${t('pos.floor')} ${f}`}
                 </Text>
@@ -123,13 +123,13 @@ export const RoomSwitchView = React.memo(({
                 activeOpacity={0.8}
                 onPress={() => setSelectedNewRoom(selectedNewRoom?.id === r.id ? null : r)}
                 style={[
-                  styles.roomCard, 
-                  { 
+                  styles.roomCard,
+                  {
                     backgroundColor: '#F9FBE7',
                     borderColor: selectedNewRoom?.id === r.id ? themedColors.primary : '#C5CAA0',
                     borderWidth: selectedNewRoom?.id === r.id ? 2.5 : 1.5,
                   },
-                  selectedNewRoom?.id === r.id && { backgroundColor: themedColors.primaryLight }
+                  selectedNewRoom?.id === r.id && { backgroundColor: themedColors.primaryLight },
                 ]}
               >
                 <View style={styles.cardHeader}>
@@ -158,7 +158,7 @@ export const RoomSwitchView = React.memo(({
                     </Text>
                   </View>
                 </View>
-                
+
                 {selectedNewRoom?.id === r.id && (
                   <View style={[styles.checkRow, { justifyContent: 'flex-end' }]}>
                     <View style={[styles.checkIcon, { backgroundColor: themedColors.primary }]}>
@@ -182,14 +182,14 @@ export const RoomSwitchView = React.memo(({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
-    paddingTop: 12, 
-    paddingBottom: 16, 
-    borderBottomWidth: 1 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   headerTitle: { fontSize: 18, fontWeight: '800' },
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },

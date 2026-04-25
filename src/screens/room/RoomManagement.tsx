@@ -57,7 +57,9 @@ const colorForProduct = (productId: string): string => {
 
 const extractRoomNumber = (name: string): string => {
   const numMatch = name.match(/(\d+)\s*$/);
-  if (numMatch) return numMatch[1];
+  if (numMatch) {
+    return numMatch[1];
+  }
   const lastWord = name.trim().split(/\s+/).pop() ?? '';
   return lastWord.slice(0, 4).toUpperCase();
 };
@@ -404,6 +406,7 @@ export default function RoomManagement({storeId}: Props) {
       );
       if (isRefresh) setRefreshing(true);
       else setIsLoading(true);
+
       setError(null);
       try {
         const [types, vars] = await Promise.all([

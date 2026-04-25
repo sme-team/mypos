@@ -152,12 +152,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
   // ── Hydrate: chạy một lần khi app khởi động ──────────────────────────────
   useEffect(() => {
     const hydrate = async () => {
+      console.log('[AuthStore] Starting hydrate...');
       dispatch({type: 'HYDRATE_START'});
 
       try {
         await tokenManager.init();
+        console.log('[AuthStore] Token manager initialized');
         const user = tokenManager.getAuthInfo()?.user;
         const method = tokenManager.getAuthMethod();
+        console.log('[AuthStore] User:', user, 'Method:', method);
 
         if (user && method) {
           dispatch({
@@ -165,9 +168,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
             payload: {user, authMethod: method},
           });
         } else {
+          console.log('[AuthStore] No user found, setting to unauthenticated');
           dispatch({type: 'HYDRATE_DONE', payload: null});
         }
       } catch (err: any) {
+        console.error('[AuthStore] Hydrate error:', err);
         logger.error('[AuthStore] Hydrate error:', err?.message);
         dispatch({type: 'HYDRATE_DONE', payload: null});
       }

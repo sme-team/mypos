@@ -9,16 +9,16 @@ export const BREAKPOINTS = {
   androidMedium: 380,   // Galaxy A51, most Android phones
   androidLarge: 412,    // Pixel 6, large Android phones
   androidXLarge: 480,   // Large Android phones/phablets
-  
-  // iOS devices  
+
+  // iOS devices
   smallPhone: 360,      // iPhone SE (2nd/3rd gen)
   phone: 375,          // iPhone 12/13 mini
   largePhone: 414,      // iPhone 12/13 Pro Max
-  
+
   // Tablets
   tablet: 768,         // iPad mini, Android small tablets
   largeTablet: 1024,   // iPad, Android large tablets
-  
+
   // Universal
   desktop: 1200,       // Large tablets, desktop
 };
@@ -33,11 +33,11 @@ export const useResponsive = () => {
   const isAndroidMedium = width >= BREAKPOINTS.androidMedium && width < BREAKPOINTS.androidLarge;
   const isAndroidLarge = width >= BREAKPOINTS.androidLarge && width < BREAKPOINTS.androidXLarge;
   const isAndroidXLarge = width >= BREAKPOINTS.androidXLarge && width < BREAKPOINTS.tablet;
-  
+
   const isSmallPhone = width >= BREAKPOINTS.smallPhone && width < BREAKPOINTS.phone;
   const isPhone = width >= BREAKPOINTS.phone && width < BREAKPOINTS.largePhone;
   const isLargePhone = width >= BREAKPOINTS.largePhone && width < BREAKPOINTS.tablet;
-  
+
   const isTablet = width >= BREAKPOINTS.tablet && width < BREAKPOINTS.largeTablet;
   const isLargeTablet = width >= BREAKPOINTS.largeTablet && width < BREAKPOINTS.desktop;
   const isDesktop = width >= BREAKPOINTS.desktop;
@@ -67,21 +67,21 @@ export const useResponsive = () => {
     default: T;
   }): T => {
     // Check Android devices first (more specific)
-    if (isAndroidLarge && values.androidLarge !== undefined) return values.androidLarge;
-    if (isAndroidMedium && values.androidMedium !== undefined) return values.androidMedium;
-    if (isAndroidSmall && values.androidSmall !== undefined) return values.androidSmall;
-    if (isAndroidXLarge && values.androidXLarge !== undefined) return values.androidXLarge;
-    
+    if (isAndroidLarge && values.androidLarge !== undefined) {return values.androidLarge;}
+    if (isAndroidMedium && values.androidMedium !== undefined) {return values.androidMedium;}
+    if (isAndroidSmall && values.androidSmall !== undefined) {return values.androidSmall;}
+    if (isAndroidXLarge && values.androidXLarge !== undefined) {return values.androidXLarge;}
+
     // Check iOS devices
-    if (isLargePhone && values.largePhone !== undefined) return values.largePhone;
-    if (isPhone && values.phone !== undefined) return values.phone;
-    if (isSmallPhone && values.smallPhone !== undefined) return values.smallPhone;
-    
+    if (isLargePhone && values.largePhone !== undefined) {return values.largePhone;}
+    if (isPhone && values.phone !== undefined) {return values.phone;}
+    if (isSmallPhone && values.smallPhone !== undefined) {return values.smallPhone;}
+
     // Check tablets
-    if (isDesktop && values.desktop !== undefined) return values.desktop;
-    if (isLargeTablet && values.largeTablet !== undefined) return values.largeTablet;
-    if (isTablet && values.tablet !== undefined) return values.tablet;
-    
+    if (isDesktop && values.desktop !== undefined) {return values.desktop;}
+    if (isLargeTablet && values.largeTablet !== undefined) {return values.largeTablet;}
+    if (isTablet && values.tablet !== undefined) {return values.tablet;}
+
     return values.default;
   };
 
@@ -166,7 +166,7 @@ export const useResponsive = () => {
     isTablet,
     isLargeTablet,
     isDesktop,
-    
+
     // universal flags
     isMobile,
     isTabletDevice,

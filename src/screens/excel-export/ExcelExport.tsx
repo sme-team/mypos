@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Modal,
   Alert,
+  Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useTranslation} from 'react-i18next';
@@ -16,6 +17,7 @@ import {SheetCard, SheetConfig} from '../../components/excel-export/SheetCard';
 import ExcelExportService, {
   BillType,
 } from '../../services/excel-export-service/ExcelExportService';
+import {BaseService} from '../../services/BaseService';
 import {
   ExcelExportScreenProps,
   ConfirmDeleteModalProps,
@@ -61,7 +63,7 @@ function resolveSheetConfig(
   const reportType =
     REPORT_EXCEL_MAP[sheet.template] ??
     REPORT_EXCEL_MAP[sheet.template?.toLowerCase()];
-  if (!billType || !reportType) return null;
+  if (!billType || !reportType) {return null;}
   return {reportType, billType};
 }
 
@@ -185,6 +187,7 @@ export default function ReportExport({
   storeId: storeIdProp,
   onOpenMenu,
   onBack,
+  onHistory,
 }: ExcelExportScreenProps) {
   const [sheets, setSheets] = useState<SheetConfig[]>([]);
   const [deleteModalVisible, setDeleteModal] = useState(false);
@@ -240,7 +243,7 @@ export default function ReportExport({
 
   const handleConfirmDelete = useCallback(() => {
     if (sheetToDelete)
-      setSheets(prev => prev.filter(s => s.id !== sheetToDelete));
+      {setSheets(prev => prev.filter(s => s.id !== sheetToDelete));}
     setDeleteModal(false);
     setSheetToDelete(null);
   }, [sheetToDelete]);
@@ -262,7 +265,7 @@ export default function ReportExport({
    *  S2a (lưu trú)  → bill_type = 'rent'
    */
   const handleExport = useCallback(async () => {
-    if (!canExport || exporting) return;
+    if (!canExport || exporting) {return;}
     setExporting(true);
 
     try {
@@ -355,37 +358,52 @@ export default function ReportExport({
 
       {/* Footer */}
       <View
-        className={`absolute bottom-0 left-0 right-0 border-t px-4 pb-8 pt-3 ${
+        className={`absolute bottom-0 left-0 right-0 border-t px-6 pb-4 pt-3 mb-safe ${
           isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
         }`}>
-        <TouchableOpacity
-          onPress={handleExport}
-          disabled={!canExport || exporting}
-          className={`flex-row items-center justify-center rounded-2xl py-4 gap-2 ${
-            canExport && !exporting
-              ? 'bg-blue-600'
-              : isDark
-              ? 'bg-gray-700'
-              : 'bg-blue-200'
-          }`}>
-          <Icon
-            name={exporting ? 'hourglass-empty' : 'download'}
-            size={20}
-            color={
-              canExport && !exporting ? 'white' : isDark ? '#6b7280' : '#cbd5e1'
-            }
-          />
-          <Text
-            className={`text-base font-bold ${
-              canExport && !exporting
-                ? 'text-white'
-                : isDark
-                ? 'text-gray-500'
-                : 'text-blue-400'
+        <View className="flex-row gap-2">
+          <TouchableOpacity
+            onPress={() => onHistory?.()}
+            className={`flex-1 flex-row items-center justify-center rounded-2xl py-3.5 gap-2 ${
+              isDark ? 'bg-gray-700' : 'bg-gray-100'
             }`}>
-            {exporting ? t('common.loading') : t('report.export.export')}
-          </Text>
-        </TouchableOpacity>
+            <Icon name="history" size={18} color={isDark ? '#9ca3af' : '#6B7280'} />
+            <Text
+              className={`text-sm font-semibold ${
+                isDark ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+              {t('report.export.history')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleExport}
+            disabled={!canExport || exporting}
+            className={`flex-1 flex-row items-center justify-center rounded-2xl py-3.5 gap-2 ${
+              canExport && !exporting
+                ? 'bg-blue-600'
+                : isDark
+                ? 'bg-gray-700'
+                : 'bg-blue-200'
+            }`}>
+            <Icon
+              name={exporting ? 'hourglass-empty' : 'download'}
+              size={18}
+              color={
+                canExport && !exporting ? 'white' : isDark ? '#6b7280' : '#cbd5e1'
+              }
+            />
+            <Text
+              className={`text-sm font-semibold ${
+                canExport && !exporting
+                  ? 'text-white'
+                  : isDark
+                  ? 'text-gray-500'
+                  : 'text-blue-400'
+              }`}>
+              {exporting ? t('common.loading') : t('report.export.export')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ConfirmDeleteModal

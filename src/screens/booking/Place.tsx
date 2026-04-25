@@ -54,7 +54,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
         console.log('[PlaceScreen] Sample room price data:', {
           id: dbRooms[0].id,
           name: dbRooms[0].name,
-          displayPriceText: dbRooms[0].displayPriceText
+          displayPriceText: dbRooms[0].displayPriceText,
         });
       }
       setRooms(dbRooms);
@@ -78,12 +78,57 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   console.log('[PlaceScreen] Render state:', {
     roomsCount: rooms.length,
     activeFloor,
-    loading
+    loading,
   });
 
   const formatPrice = (price: number | null | undefined) => {
-    if (price == null) return '0đ';
+    if (price == null) {return '0đ';}
     return price.toLocaleString('vi-VN') + 'đ';
+  };
+
+  /**
+   * Tính thời gian còn lại đến giờ check-in
+   * Trả về text hiển thị countdown hoặc ngày
+   */
+  const getTimeUntilCheckIn = (startDate: string | null, checkInTime: string | undefined): string => {
+    if (!startDate) return '';
+
+    const now = new Date();
+    const checkInDate = new Date(startDate);
+
+    // Nếu check-in không phải hôm nay → hiển thị ngày
+    const today = now.toISOString().split('T')[0];
+    if (startDate !== today) {
+      return checkInDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    }
+
+    // Nếu là hôm nay nhưng không có giờ check-in → hiển thị ngày
+    if (!checkInTime) {
+      return checkInDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    }
+
+    // Tính thời gian còn lại
+    const [checkInHour, checkInMin] = checkInTime.split(':').map(Number);
+    const checkInDateTime = new Date(now);
+    checkInDateTime.setHours(checkInHour, checkInMin, 0, 0);
+
+    const diffMs = checkInDateTime.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    // Đã qua giờ check-in
+    if (diffMinutes <= 0) {
+      return 'Đã đến giờ';
+    }
+
+    // Tính giờ và phút
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+
+    if (hours > 0) {
+      return minutes > 0 ? `Còn ${hours}h ${minutes}p` : `Còn ${hours}h`;
+    } else {
+      return `Còn ${minutes}p`;
+    }
   };
 
   // Responsive calculations
@@ -380,8 +425,8 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const floors = Array.from(
     new Set(rooms.map(r => String(r.floor || '?'))),
   ).sort((a, b) => {
-    if (a === '?') return 1;
-    if (b === '?') return -1;
+    if (a === '?') {return 1;}
+    if (b === '?') {return -1;}
     return a.localeCompare(b, undefined, { numeric: true });
   });
 
@@ -397,7 +442,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     const matchFloor = activeFloor === 'all' ? true : String(r.floor) === activeFloor;
     const matchStatus = activeStatus === 'all' ? true : r.status === activeStatus;
     const matchType = activeRoomType === 'all' ? true : (r.product_name || '') === activeRoomType;
-    
+
     const price = r.displayPriceValue || 0;
     const minP = minPrice ? parseInt(minPrice.replace(/\D/g, '')) || 0 : 0;
     const maxP = maxPrice ? parseInt(maxPrice.replace(/\D/g, '')) || Infinity : Infinity;
@@ -617,7 +662,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                       <View style={{marginLeft: 8, flex: 1}}>
                         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
                           <Text style={styles.roomName}>{room.label}</Text>
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             onPress={(e) => {
                               e.stopPropagation();
                               setSelectedRoomForDetail(room);
@@ -629,6 +674,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                           </TouchableOpacity>
                         </View>
                         <Text style={styles.roomType}>{room.product_name}</Text>
+                        {room.status === 'booked' && room.start_date && (
+                          <View style={{marginTop: 4}}>
+                            <Text style={styles.checkoutText}>
+                              Nhận: {getTimeUntilCheckIn(room.start_date, room.checkInTime)}
+                            </Text>
+                          </View>
+                        )}
                         {occupied && (
                           <View style={{marginTop: 4}}>
                             {room.start_date && (

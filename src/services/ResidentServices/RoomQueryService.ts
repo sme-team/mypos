@@ -22,6 +22,7 @@ export interface RoomGridItem {
   contract_status: string;
   end_date: string | null;  // contracts.end_date → badge "Hết hạn"
   start_date: string | null; // contracts.start_date
+  checkInTime?: string;     // Giờ check-in từ contract metadata (HH:mm)
   customer_name: string;
   borderColor: string;
   attributes: Record<string, any>;
@@ -161,13 +162,13 @@ class RoomQueryServiceClass {
   // ── helpers ─────────────────────────────────
 
   private parseAttr(raw: any): Record<string, any> {
-    if (!raw) return {};
-    if (typeof raw === 'object') return raw;
+    if (!raw) {return {};}
+    if (typeof raw === 'object') {return raw;}
     try { return JSON.parse(raw); } catch { return {}; }
   }
 
   private resolveFloor(attr: Record<string, any>, name: string): string {
-    if (attr.floor != null) return String(attr.floor);
+    if (attr.floor != null) {return String(attr.floor);}
     const m = String(name || '').match(/\d/);
     return m ? m[0] : '?';
   }
@@ -201,8 +202,8 @@ class RoomQueryServiceClass {
 
     console.log('[resolveStatus] variantStatus:', variantStatus, 'contractId:', contractId, 'contractStartDate:', contractStartDate, 'contractEndDate:', contractEndDate, 'attrStatus:', attrStatus, 'today:', today, 'checkInTime:', checkInTime, 'checkOutTime:', checkOutTime, 'currentTime:', `${currentHour}:${currentMinute}`, 'isLongTerm:', isLongTerm);
 
-    if (variantStatus === 'inactive') return 'maintenance';
-    if (attrStatus === 'cleaning') return 'cleaning';
+    if (variantStatus === 'inactive') {return 'maintenance';}
+    if (attrStatus === 'cleaning') {return 'cleaning';}
 
     if (contractId && contractStartDate && contractEndDate) {
       const start = contractStartDate;
@@ -244,7 +245,7 @@ class RoomQueryServiceClass {
    */
   async getRoomContracts(variantId: string): Promise<any[]> {
     const db = DatabaseManager.get('pos');
-    if (!db) return [];
+    if (!db) {return [];}
 
     const rows = await QueryBuilder.table('contracts', db.getInternalDAO())
       .select([
@@ -330,7 +331,7 @@ class RoomQueryServiceClass {
   async getRoomsFlatList(storeId: string): Promise<RoomGridItem[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       // Get all rooms first
       const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
@@ -361,7 +362,7 @@ class RoomQueryServiceClass {
             'contracts.start_date',
             'contracts.end_date',
             'contracts.metadata',
-            'customers.full_name as customer_name'
+            'customers.full_name as customer_name',
           ])
           .innerJoin('customers', 'contracts.customer_id = customers.id')
           .where('contracts.variant_id', 'in', variantIds)
@@ -423,7 +424,7 @@ class RoomQueryServiceClass {
             'prices.unit_id',
             'prices.price',
             'prices.price_list_name',
-            'units.unit_code'
+            'units.unit_code',
           ])
           .innerJoin('units', 'prices.unit_id = units.id')
           .whereIn('prices.variant_id', variantIds)
@@ -504,6 +505,7 @@ class RoomQueryServiceClass {
           contract_status: contract?.status || 'inactive',
           start_date: contract?.start_date || null,
           end_date: contract?.end_date || null,
+          checkInTime,  // Giờ check-in từ contract metadata
           customer_name: contract?.customer_name || '',
           borderColor: BORDER_COLORS[status],
           attributes: attr,
@@ -531,14 +533,14 @@ class RoomQueryServiceClass {
 
     for (const room of flat) {
       const key = room.floor !== '?' ? `Tầng ${room.floor}` : 'Khác';
-      if (!byFloor[key]) byFloor[key] = [];
+      if (!byFloor[key]) {byFloor[key] = [];}
       byFloor[key].push(room);
     }
 
     return Object.keys(byFloor)
       .sort((a, b) => {
-        if (a === 'Khác') return 1;
-        if (b === 'Khác') return -1;
+        if (a === 'Khác') {return 1;}
+        if (b === 'Khác') {return -1;}
         return a.localeCompare(b, undefined, { numeric: true });
       })
       .map(title => ({ title, data: byFloor[title] }));
@@ -554,7 +556,7 @@ class RoomQueryServiceClass {
   async getRoomDetails(variantId: string): Promise<RoomDetailInfo | null> {
     // 1. Variant
     const variant = await this.variantSvc.findById(variantId);
-    if (!variant) return null;
+    if (!variant) {return null;}
     const attr = this.parseAttr(variant.attributes);
 
     // 2. Product (tên loại phòng)
@@ -725,7 +727,7 @@ class RoomQueryServiceClass {
   ): Promise<Array<{ title: string; data: AvailableRoomItem[] }>> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       // 1. Lấy variants loại 'room' và không có hợp đồng active
       const rows = await QueryBuilder.table('product_variants', db.getInternalDAO())
@@ -734,7 +736,7 @@ class RoomQueryServiceClass {
           'product_variants.name',
           'product_variants.product_id',
           'product_variants.attributes',
-          'products.name as product_name'
+          'products.name as product_name',
         ])
         .innerJoin('products', 'product_variants.product_id = products.id')
         .leftJoin('contracts', 'product_variants.id = contracts.variant_id AND contracts.status = "active"')
@@ -754,7 +756,7 @@ class RoomQueryServiceClass {
             'prices.unit_id',
             'prices.price',
             'prices.price_list_name',
-            'units.unit_code'
+            'units.unit_code',
           ])
           .innerJoin('units', 'prices.unit_id = units.id')
           .whereIn('prices.variant_id', variantIds)
@@ -765,7 +767,7 @@ class RoomQueryServiceClass {
       const byFloor: Record<string, AvailableRoomItem[]> = {};
 
       for (const r of rows) {
-        if (r.id === excludeVariantId) continue;
+        if (r.id === excludeVariantId) {continue;}
 
         const attr = this.parseAttr(r.attributes);
         const floor = this.resolveFloor(attr, r.name);
@@ -785,7 +787,7 @@ class RoomQueryServiceClass {
 
         const mPrice = variantPrices.find(p => p.unit_code?.toUpperCase() === 'MONTH')?.price;
 
-        if (!byFloor[key]) byFloor[key] = [];
+        if (!byFloor[key]) {byFloor[key] = [];}
         byFloor[key].push({
           id: r.id,
           name: attr.room ?? r.name,
@@ -801,8 +803,8 @@ class RoomQueryServiceClass {
 
       return Object.keys(byFloor)
         .sort((a, b) => {
-          if (a === 'Khác') return 1;
-          if (b === 'Khác') return -1;
+          if (a === 'Khác') {return 1;}
+          if (b === 'Khác') {return -1;}
           return a.localeCompare(b, undefined, { numeric: true });
         })
         .map(title => ({ title, data: byFloor[title] }));

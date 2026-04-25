@@ -244,7 +244,9 @@ class RoomServiceClass {
 
     // 2. Lấy variants — filter theo productId nếu có
     const queryConditions: Record<string, any> = {store_id: storeId};
-    if (productId) queryConditions.product_id = productId;
+    if (productId) {
+      queryConditions.product_id = productId;
+    }
 
     const allVariants: any[] = await this.variantSvc.findAll(queryConditions);
     logger.trace(`[RoomService] raw variants fetched: ${allVariants.length}`);
@@ -252,7 +254,9 @@ class RoomServiceClass {
     // 3. Chỉ giữ variant thuộc product type=room, chưa xóa, đang active
     const result = allVariants
       .filter((v: any) => {
-        if (v.deleted_at || v.status !== 'active') return false;
+        if (v.deleted_at || v.status !== 'active') {
+          return false;
+        }
         return productMap.has(v.product_id);
       })
       .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -913,6 +917,7 @@ class RoomServiceClass {
           `[RoomService] saveVariantPrices skipping zero/invalid price for unitCode: ${p.unitCode}`,
         );
         skippedCount++;
+
         continue;
       }
 

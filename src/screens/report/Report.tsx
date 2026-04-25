@@ -181,7 +181,7 @@ export default function Report({
   const [topLodgingItems, setTopLodgingItems] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
-    if (!storeId) return;
+    if (!storeId) {return;}
     setLoading(true);
     try {
       const [summaryData, chart, groups, sales, lodging] = await Promise.all([

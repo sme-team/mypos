@@ -74,7 +74,7 @@ const Pagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) {return null;}
 
   /**
    * Tính danh sách trang hiển thị (tối đa 5 trang xung quanh trang hiện tại)
@@ -538,7 +538,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
         <SelectionBar
           totalSelected={totalSelected}
           onDelete={() => {
-            if (totalSelected > 0) setShowDeleteModal(true);
+            if (totalSelected > 0) {setShowDeleteModal(true);}
           }}
           labelSelected={() =>
             t('customer.delete_selected', {

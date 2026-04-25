@@ -33,14 +33,14 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
     <View>
       {/* Ngày bắt đầu hợp đồng */}
       <FieldLabel text={t('booking.form.startDate')} />
-      <TouchableOpacity 
-        style={[styles.fieldInputRow, { borderColor: themedColors.border, backgroundColor: themedColors.surface }]} 
+      <TouchableOpacity
+        style={[styles.fieldInputRow, { borderColor: themedColors.border, backgroundColor: themedColors.surface }]}
         onPress={() => setIsCalOpen(true)}
       >
         <Text style={{ color: themedColors.text, fontSize: 14 }}>{form.contractStart || t('booking.form.selectStartDate')}</Text>
         <Icon name="calendar-today" size={18} color={themedColors.textSecondary} />
       </TouchableOpacity>
-      
+
       <View style={{ height: 12 }} />
 
       {/* Thời hạn hợp đồng (Dropdown) */}
@@ -65,14 +65,14 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
                 styles.durationItem,
                 idx === durationOptions.length - 1 && { borderBottomWidth: 0 },
                 { borderBottomColor: themedColors.border },
-                form.contractDuration === opt.value && { backgroundColor: isDark ? '#2D3748' : '#F0F7FF' }
+                form.contractDuration === opt.value && { backgroundColor: isDark ? '#2D3748' : '#F0F7FF' },
               ]}
               onPress={() => { updateForm({ contractDuration: opt.value }); setIsDurationOpen(false); }}
             >
               <Text style={[
                 styles.durationText,
                 { color: themedColors.text },
-                form.contractDuration === opt.value && { color: themedColors.primary, fontWeight: '700' }
+                form.contractDuration === opt.value && { color: themedColors.primary, fontWeight: '700' },
               ]}>
                 {opt.label}
               </Text>
@@ -86,7 +86,7 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
       {/* Tiền cọc và tiền thuê hàng tháng */}
       <AmountField label={t('booking.form.deposit')} value={form.deposit} onChange={(v: any) => updateForm({ deposit: v })} themedColors={themedColors} />
       <AmountField label={t('booking.form.monthlyRent')} value={form.monthlyPrice} onChange={(v: any) => updateForm({ monthlyPrice: v })} themedColors={themedColors} />
-      
+
       <View style={{ height: 12 }} />
 
       {/* Chỉ số điện/nước đầu kỳ (để tính tiền tháng đầu) */}

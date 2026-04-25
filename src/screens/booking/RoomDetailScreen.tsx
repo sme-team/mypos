@@ -87,7 +87,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   // Adapter: updateForm-style để ServicesSection hoạt động
   const fakeForm = useMemo(() => ({ services }), [services]);
   const updateServicesForm = useCallback((partial: any) => {
-    if (partial.services !== undefined) setServices(partial.services);
+    if (partial.services !== undefined) {setServices(partial.services);}
   }, []);
 
   // ─── Load dữ liệu ─────────────────────────────────────────────────────────
@@ -99,8 +99,8 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         setDetails(dbDetails);
         setElectricNew('');
         setWaterNew('');
-        if (dbDetails.electric_rate) setElectricRate(dbDetails.electric_rate);
-        if (dbDetails.water_rate) setWaterRate(dbDetails.water_rate);
+        if (dbDetails.electric_rate) {setElectricRate(dbDetails.electric_rate);}
+        if (dbDetails.water_rate) {setWaterRate(dbDetails.water_rate);}
       }
       const svcs = await PosQueryService.getServices();
       // Map sang format của ServicesSection (qty, selected, unitPrice, unit)
@@ -130,7 +130,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const [selectedNewRoom, setSelectedNewRoom] = useState<any>(null);
 
   useEffect(() => { loadDetails(); }, [room.id]);
-  useEffect(() => { if (view === 'switch') loadAvailableRoomsForSwitch(); }, [view]);
+  useEffect(() => { if (view === 'switch') {loadAvailableRoomsForSwitch();} }, [view]);
 
   // Auto-select first floor when availableRooms loads
   useEffect(() => {
@@ -160,10 +160,10 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   // Gross Total (Phải thu): Tổng tất cả dịch vụ + tiền phòng + nợ cũ
   // Nếu đã có bill, details.total_amount thường đã gồm rent + negative_balance + prev services.
   // Nếu chưa có bill, ta phải cộng thủ công rent và negative_balance.
-  const baseAmount = !!details?.current_bill_id 
-    ? (details?.total_amount ?? 0) 
+  const baseAmount = details?.current_bill_id
+    ? (details?.total_amount ?? 0)
     : (rentAmount + (details?.negative_balance ?? 0));
-  
+
   const grossTotal = baseAmount + meterEstimate + extraTotal;
 
   // Tiền đã trả (từ bill hiện tại)
@@ -199,7 +199,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         onPress: async () => {
           try { await RoomActionService.checkOut('store-001', room.id); onBack(); }
           catch (e) { Alert.alert(t('common.error'), String(e)); }
-        }
+        },
       },
     ]);
   };
@@ -212,13 +212,13 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         onPress: async () => {
           try { await RoomActionService.extendContract('store-001', room.id, 1); loadDetails(); Alert.alert(t('common.ok'), t('roomDetail.success.extend')); }
           catch (e) { Alert.alert(t('common.error'), String(e)); }
-        }
+        },
       },
     ]);
   };
 
   const handleSwap = () => {
-    if (!selectedNewRoom) return;
+    if (!selectedNewRoom) {return;}
     Alert.alert(
       t('roomDetail.confirmSwap'),
       t('roomDetail.confirmSwapDesc') || 'Bạn có chắc chắn muốn đổi khách sang phòng đã chọn không?',
@@ -232,8 +232,8 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               Alert.alert(t('common.ok'), t('roomDetail.success.swap', { name: selectedNewRoom.name }));
               onBack();
             } catch (err) { console.error(err); }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -285,29 +285,29 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
     }
 
     const editData = {
-      tenant: editTenant, 
+      tenant: editTenant,
       phone: editPhone,
-      cccd: editCccd, 
+      cccd: editCccd,
       rentPrice: editRentPrice,
-      electricOld: editElectricOld, 
-      electricNew: electricNew, 
+      electricOld: editElectricOld,
+      electricNew: electricNew,
       electricRate: String(electricRate),
-      waterOld: editWaterOld, 
-      waterNew: waterNew, 
+      waterOld: editWaterOld,
+      waterNew: waterNew,
       waterRate: String(waterRate),
     };
 
     const handleSetEditData = (newData: any) => {
-      if (newData.tenant !== undefined) setEditTenant(newData.tenant);
-      if (newData.phone !== undefined) setEditPhone(newData.phone);
-      if (newData.cccd !== undefined) setEditCccd(newData.cccd);
-      if (newData.rentPrice !== undefined) setEditRentPrice(newData.rentPrice);
-      if (newData.electricOld !== undefined) setEditElectricOld(newData.electricOld);
-      if (newData.electricNew !== undefined) setElectricNew(newData.electricNew);
-      if (newData.electricRate !== undefined) setElectricRate(Number(newData.electricRate));
-      if (newData.waterOld !== undefined) setEditWaterOld(newData.waterOld);
-      if (newData.waterNew !== undefined) setWaterNew(newData.waterNew);
-      if (newData.waterRate !== undefined) setWaterRate(Number(newData.waterRate));
+      if (newData.tenant !== undefined) {setEditTenant(newData.tenant);}
+      if (newData.phone !== undefined) {setEditPhone(newData.phone);}
+      if (newData.cccd !== undefined) {setEditCccd(newData.cccd);}
+      if (newData.rentPrice !== undefined) {setEditRentPrice(newData.rentPrice);}
+      if (newData.electricOld !== undefined) {setEditElectricOld(newData.electricOld);}
+      if (newData.electricNew !== undefined) {setElectricNew(newData.electricNew);}
+      if (newData.electricRate !== undefined) {setElectricRate(Number(newData.electricRate));}
+      if (newData.waterOld !== undefined) {setEditWaterOld(newData.waterOld);}
+      if (newData.waterNew !== undefined) {setWaterNew(newData.waterNew);}
+      if (newData.waterRate !== undefined) {setWaterRate(Number(newData.waterRate));}
     };
 
     const onSaveEdit = async () => {
@@ -324,7 +324,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
           waterRate: waterRate,
           electricReadingInit: Number(editElectricOld),
           waterReadingInit: Number(editWaterOld),
-          // Nếu có nhập số mới thì coi như cập nhật luôn? 
+          // Nếu có nhập số mới thì coi như cập nhật luôn?
           // Thực tế editRoomDetails chủ yếu sửa thông tin nền.
         });
         Alert.alert(t('common.ok'), t('roomDetail.success.update') || 'Cập nhật thành công');
@@ -339,12 +339,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
 
     return (
       <RoomEditView
-        setView={setView} 
-        handleUpdateEdit={onSaveEdit} 
+        setView={setView}
+        handleUpdateEdit={onSaveEdit}
         room={room}
-        editData={editData} 
+        editData={editData}
         setEditData={handleSetEditData}
-        themedColors={colors} 
+        themedColors={colors}
         t={t}
       />
     );
@@ -362,6 +362,27 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   // ─── Màn hình Chi tiết chính ─────────────────────────────────────────────
   const dueDate = details?.end_date ?? '';
   const isOverdue = dueDate && new Date(dueDate) < new Date();
+
+  // Calculate next monthly due date for long-term rentals
+  // Detect long-term based on contract duration (end_date - start_date >= 30 days)
+  const isLongTerm = details?.start_date && details?.end_date && 
+    ((new Date(details.end_date).getTime() - new Date(details.start_date).getTime()) / (1000 * 60 * 60 * 24) >= 30);
+  
+  let nextMonthlyDueDate = '';
+  if (isLongTerm && details?.billing_day) {
+    const now = new Date();
+    const currentDay = now.getDate();
+    const billingDay = details.billing_day;
+    
+    if (currentDay < billingDay) {
+      // Next billing is this month
+      nextMonthlyDueDate = `${billingDay}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    } else {
+      // Next billing is next month
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, billingDay);
+      nextMonthlyDueDate = `${billingDay}/${nextMonth.getMonth() + 1}/${nextMonth.getFullYear()}`;
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -528,13 +549,13 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
       {/* ── MENU MODAL ── */}
       {showMenu && (
         <Modal visible={showMenu} animationType="fade" transparent onRequestClose={() => setShowMenu(false)}>
-          <TouchableOpacity 
-            style={s.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={s.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowMenu(false)}
           >
             <View style={[s.menuContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[s.menuItem, { borderBottomColor: colors.border }]}
                 onPress={() => {
                   setShowMenu(false);
@@ -582,10 +603,12 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                     <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>{fmt(Math.max(0, netRemainingDebt - (Number(partialAmount || 0))))}</Text>
                   </View>
                 </View>
-                <View style={{ backgroundColor: colors.primaryLight, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-                  <Icon name="calendar-today" size={12} color={colors.primary} style={{ marginRight: 6 }} />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>{t('roomDetail.payment.nextDueDate', { date: details?.end_date ? new Date(details.end_date).toLocaleDateString('vi-VN') : '---' })}</Text>
-                </View>
+                {isLongTerm && (
+                  <View style={{ backgroundColor: colors.primaryLight, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                    <Icon name="calendar-today" size={12} color={colors.primary} style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>{t('roomDetail.payment.nextDueDate', { date: nextMonthlyDueDate || '---' })}</Text>
+                  </View>
+                )}
               </View>
 
               {/* Amount input block */}

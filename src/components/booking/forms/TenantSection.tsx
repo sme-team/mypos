@@ -17,7 +17,7 @@ export const TenantSection = React.memo(({
   filteredCustomers, selectedCustomer, setSelectedCustomer,
   setScannerVisible, // Prop mới để điều khiển Modal quét
   errors = {}, clearError,
-  t, themedColors
+  t, themedColors,
 }: any) => (
   <View>
     {/* Tiêu đề phân đoạn */}
@@ -29,7 +29,7 @@ export const TenantSection = React.memo(({
         style={[
           styles.tenantTabBtn,
           { borderColor: themedColors.border, backgroundColor: themedColors.surface },
-          form.tenantTab === 'existing' && { backgroundColor: themedColors.primary, borderColor: themedColors.primary }
+          form.tenantTab === 'existing' && { backgroundColor: themedColors.primary, borderColor: themedColors.primary },
         ]}
         onPress={() => updateForm({ tenantTab: 'existing' })}
       >
@@ -41,7 +41,7 @@ export const TenantSection = React.memo(({
         style={[
           styles.tenantTabBtn,
           { borderColor: themedColors.border, backgroundColor: themedColors.surface },
-          form.tenantTab === 'new' && { backgroundColor: themedColors.primary, borderColor: themedColors.primary }
+          form.tenantTab === 'new' && { backgroundColor: themedColors.primary, borderColor: themedColors.primary },
         ]}
         onPress={() => updateForm({ tenantTab: 'new' })}
       >
@@ -74,7 +74,7 @@ export const TenantSection = React.memo(({
         {/* Danh sách kết quả tìm kiếm khách hàng */}
         {isCustomerDropdownOpen && (
           <View style={[styles.dropdownWindow, { backgroundColor: themedColors.surface, borderColor: themedColors.border }]}>
-            <ScrollView 
+            <ScrollView
               nestedScrollEnabled
               removeClippedSubviews={true}
               scrollEventThrottle={16}
@@ -121,7 +121,7 @@ export const TenantSection = React.memo(({
     ) : (
       <View style={{ gap: 10 }}>
         {/* Chế độ nhập khách hàng mới */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.scanBtn, { borderColor: themedColors.primaryMid, backgroundColor: themedColors.primaryLight }]}
           onPress={() => setScannerVisible(true)}
         >

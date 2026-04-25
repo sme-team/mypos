@@ -56,7 +56,8 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
   const [activeSection, setActiveSection] = useState<'pos' | 'stay'>('pos');
-  const [activeMainCategory, setActiveMainCategory] = useState<string>('');
+  const [activeMainCategory, setActiveMainCategory] =
+    useState<string>('__all__'); // '__all__' means all main categories
   const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
   const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>(
     'all',
@@ -75,7 +76,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const activeStoreId = 'store-001';
 
   const loadData = async () => {
-    if (!activeStoreId) return;
+    if (!activeStoreId) {
+      return;
+    }
     setRefreshing(true);
 
     try {
@@ -128,26 +131,12 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
             contract_id: item.contract_id,
             start_date: item.start_date,
             end_date: item.end_date,
+            checkInTime: item.checkInTime,
           };
         }),
       }));
 
       setRooms(mappedRooms);
-
-      if (cats.length > 0 && !activeMainCategory) {
-        // Tìm danh mục gốc đầu tiên - chỉ set activeMainCategory, không thay đổi activeSection
-        const rootCats = cats.filter(c => !c.parent_id || c.parent_id === c.id);
-        if (rootCats.length > 0) {
-          // Tìm danh mục theo activeSection hiện tại
-          const sectionRoot = rootCats.find(c => c.apply_to === activeSection);
-          if (sectionRoot) {
-            setActiveMainCategory(sectionRoot.id);
-          } else {
-            // Nếu không tìm thấy, dùng danh mục đầu tiên
-            setActiveMainCategory(rootCats[0].id);
-          }
-        }
-      }
     } catch (err) {
       console.error('[PosResident] Error in loadData:', err);
     } finally {
@@ -213,8 +202,12 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     );
     // Sắp xếp: POS luôn đứng đầu
     const sortedTypes = rawTypes.sort((a, b) => {
-      if (a === 'pos') return -1;
-      if (b === 'pos') return 1;
+      if (a === 'pos') {
+        return -1;
+      }
+      if (b === 'pos') {
+        return 1;
+      }
       return String(a).localeCompare(String(b));
     });
 
@@ -278,6 +271,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const cardWidth = (screenWidth - 32 - GAP * (numCols - 1)) / numCols;
 
   const filteredProducts = products.filter(p => {
+    if (activeMainCategory === '__all__') {
+      return p.name.toLowerCase().includes(searchText.toLowerCase());
+    }
     let allowedCategoryIds: string[] = [];
     if (activeSubCategory !== 'all') {
       allowedCategoryIds = [activeSubCategory];
@@ -317,7 +313,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     const types = new Set<string>();
     rooms.forEach(g =>
       g.data.forEach(r => {
-        if (r.product_name) types.add(r.product_name);
+        if (r.product_name) {
+          types.add(r.product_name);
+        }
       }),
     );
     return Array.from(types).sort();
@@ -326,7 +324,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const handleAdd = useCallback(
     async (id: string) => {
       const product = products.find(p => p.id === id);
-      if (!product) return;
+      if (!product) {
+        return;
+      }
 
       // Nếu sản phẩm đã có trong giỏ → chỉ tăng số lượng, không fetch lại
       setCartItems(prev => {
@@ -349,7 +349,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCartItems(prev => {
         const existing = prev.find(i => i.product.id === id);
         // Nếu đã có variants (thêm lần 2+) thì không fetch
-        if (existing && existing.variants.length > 0) return prev;
+        if (existing && existing.variants.length > 0) {
+          return prev;
+        }
         return prev; // giữ nguyên, fetch dưới đây
       });
 
@@ -364,9 +366,13 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
         setCartItems(prev =>
           prev.map(i => {
-            if (i.product.id !== id) return i;
+            if (i.product.id !== id) {
+              return i;
+            }
             // Nếu user đã chọn variant thủ công trước khi fetch xong → giữ nguyên
-            if (i.selectedVariant) return {...i, variants: data};
+            if (i.selectedVariant) {
+              return {...i, variants: data};
+            }
             return {
               ...i,
               variants: data,
@@ -427,7 +433,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     } else {
       setCartItems(prev => {
         const item = prev.find(i => i.product.id === id);
-        if (!item) return prev;
+        if (!item) {
+          return prev;
+        }
         const diff = quantity - item.quantity;
         setCartCount(c => Math.max(0, c + diff));
         return prev.map(i => (i.product.id === id ? {...i, quantity} : i));
@@ -440,8 +448,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCustomerSearch(text);
       setSelectedCustomer(null);
 
-      if (customerSearchTimeout.current)
+      if (customerSearchTimeout.current) {
         clearTimeout(customerSearchTimeout.current);
+      }
 
       if (!text.trim()) {
         setCustomerResults([]);
@@ -718,6 +727,41 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
               paddingBottom: 10,
               gap: 12,
             }}>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveMainCategory('__all__');
+                setActiveSubCategory('all');
+              }}
+              style={{
+                flexDirection: 'row',
+                height: 40,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                backgroundColor:
+                  activeMainCategory === '__all__' ? '#3b82f6' : cardBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                elevation: activeMainCategory === '__all__' ? 4 : 1,
+                borderWidth: activeMainCategory === '__all__' ? 0 : 1,
+                borderColor: borderColor,
+              }}>
+              <Icon
+                name="category"
+                size={18}
+                color={activeMainCategory === '__all__' ? '#fff' : '#3b82f6'}
+              />
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color:
+                    activeMainCategory === '__all__' ? '#fff' : subTextColor,
+                }}>
+                {t('pos.all')}
+              </Text>
+            </TouchableOpacity>
+
             {mainCategories.map(cat => {
               const isActive = activeMainCategory === cat.id;
 
@@ -784,7 +828,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           </ScrollView>
         )}
 
-        {/* Sub-categories (Chỉ hiện cho POS) - Lấy theo intern1/Qanhdev */}
+        {/* Sub-categories (Chỉ hiện cho POS) */}
         {!isRoomMode && subCategories.length > 0 && (
           <ScrollView
             horizontal
@@ -954,7 +998,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           renderItem={({item, index, section}) => {
             // Because SectionList doesn't support numColumns, we handle the grid manually
             // by only rendering the start of each row.
-            if (index % numCols !== 0) return null;
+            if (index % numCols !== 0) {
+              return null;
+            }
 
             const rowItems = section.data.slice(index, index + numCols);
 
@@ -1068,9 +1114,25 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
               alignItems: 'center',
               backgroundColor: cardBg,
             }}>
-            <Text style={{fontSize: 20, fontWeight: '600', color: textColor}}>
-              {t('pos.cart')}
-            </Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+              <TouchableOpacity
+                onPress={() => setPanelVisible(false)} // Đóng panel khi nhấn nút back
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon name="arrow-back" size={20} color={textColor} />
+              </TouchableOpacity>
+
+              <Text style={{fontSize: 20, fontWeight: '600', color: textColor}}>
+                {t('pos.cart')}
+              </Text>
+            </View>
             <TouchableOpacity onPress={handleClearCart}>
               <Text style={{fontSize: 14, color: '#ef4444', fontWeight: '600'}}>
                 {t('payment.clear')}

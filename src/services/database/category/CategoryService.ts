@@ -48,16 +48,16 @@ class UnitBaseService extends BaseService {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function applyToToTabs(applyTo: string | null): TabType[] {
-  if (!applyTo || applyTo === 'all') return ['selling', 'storage'];
-  if (applyTo === 'pos') return ['selling'];
+  if (!applyTo || applyTo === 'all') {return ['selling', 'storage'];}
+  if (applyTo === 'pos') {return ['selling'];}
   return ['storage'];
 }
 
 function tabsToApplyTo(tabs: TabType[]): string {
   const hasSelling = tabs.includes('selling');
   const hasStorage = tabs.includes('storage');
-  if (hasSelling && hasStorage) return 'all';
-  if (hasSelling) return 'pos';
+  if (hasSelling && hasStorage) {return 'all';}
+  if (hasSelling) {return 'pos';}
   return 'hostel';
 }
 
@@ -107,7 +107,7 @@ class CategoryServiceClass {
         logger.error('[CategoryService] Error fetching categories:', err);
       }
 
-      if (!groupRows || groupRows.length === 0) return [];
+      if (!groupRows || groupRows.length === 0) {return [];}
 
       // 2. Products
       let productRows: any[] = [];
@@ -213,7 +213,7 @@ class CategoryServiceClass {
    */
   searchGroups(groups: CategoryGroup[], query: string): CategoryGroup[] {
     const q = query.trim().toLowerCase();
-    if (!q) return groups;
+    if (!q) {return groups;}
 
     const result: CategoryGroup[] = [];
 
@@ -228,7 +228,7 @@ class CategoryServiceClass {
 
       // Lọc items
       const matchedItems = group.items.filter(item => {
-        if (item.name.toLowerCase().includes(q)) return true;
+        if (item.name.toLowerCase().includes(q)) {return true;}
         // Kiểm tra variant names
         return item.variants.some(v => v.name.toLowerCase().includes(q));
       });
@@ -247,7 +247,7 @@ class CategoryServiceClass {
   async loadUnits(storeId: string): Promise<UnitOption[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('units', db.getInternalDAO())
         .select(['id', 'name', 'unit_type'])

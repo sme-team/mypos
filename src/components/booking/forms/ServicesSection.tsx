@@ -22,7 +22,7 @@ export const ServiceSelectionModal = React.memo(({ visible, onClose, availableSe
             <Icon name="close" size={24} color={themedColors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView 
+        <ScrollView
           style={{ maxHeight: 400 }}
           removeClippedSubviews={true}
           scrollEventThrottle={16}
@@ -73,7 +73,7 @@ export const ServicesSection = React.memo(({ form, availableServices, updateForm
   return (
     <View>
       <SectionLabel text={t('booking.sections.services')} />
-      
+
       {form.services.length === 0 ? (
         <View style={[styles.emptyCard, { borderColor: themedColors.border, backgroundColor: themedColors.surface }]}>
           <Text style={{ color: themedColors.textHint, fontSize: 13 }}>{t('booking.form.noServices')}</Text>

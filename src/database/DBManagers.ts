@@ -149,7 +149,7 @@ export class DatabaseManager {
    * Race conditions are handled within BaseManager.
    */
   private static setupAppStateListener(): void {
-    if (this.appStateListener) return;
+    if (this.appStateListener) {return;}
 
     this.appStateListener = AppState.addEventListener(
       'change',

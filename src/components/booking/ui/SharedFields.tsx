@@ -39,12 +39,12 @@ export const FieldInput = React.memo(({ value, onChangeText, placeholder, keyboa
       key={fieldKey}
       style={[
         styles.fieldInput,
-        { 
-          color: themedColors.text, 
-          borderColor: error ? themedColors.danger : themedColors.border, 
-          backgroundColor: themedColors.surface 
+        {
+          color: themedColors.text,
+          borderColor: error ? themedColors.danger : themedColors.border,
+          backgroundColor: themedColors.surface,
         },
-        multiline && styles.fieldInputMulti
+        multiline && styles.fieldInputMulti,
       ]}
       value={value}
       onChangeText={onChangeText}
@@ -73,7 +73,7 @@ export const ToggleGroup = React.memo(({ options, value, onChange, themedColors 
         style={[
           styles.toggleBtn,
           { borderColor: themedColors.border, backgroundColor: themedColors.surface },
-          value === opt.value && { backgroundColor: themedColors.primary, borderColor: themedColors.primary }
+          value === opt.value && { backgroundColor: themedColors.primary, borderColor: themedColors.primary },
         ]}
         onPress={() => onChange(opt.value)}
       >
@@ -108,7 +108,7 @@ export const Stepper = React.memo(({ value, onDecrement, onIncrement, min = 0, t
 /**
  * Bộ chọn thời trang (Giờ:Phút) chuyên biệt cho check-in/out
  */
-export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) => {
+export const TimeStepper = React.memo(({ value, onChange, themedColors, minTime }: any) => {
   const [inputValue, setInputValue] = React.useState(value);
 
   React.useEffect(() => {
@@ -120,18 +120,31 @@ export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) =
     const h = parseInt(parts[0], 10) || 0;
     const m = parseInt(parts[1], 10) || 0;
     let totalMins = h * 60 + m + deltaMinutes;
-    if (totalMins < 0) totalMins += 24 * 60;
-    
+    if (totalMins < 0) {totalMins += 24 * 60;}
+
     const newH = Math.floor(totalMins / 60) % 24;
     const newM = totalMins % 60;
     const formatted = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+
+    // Validate against minTime if provided
+    if (minTime) {
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      const selectedMins = newH * 60 + newM;
+      
+      // Only validate if we're on the same day (minTime is for today)
+      if (selectedMins < currentMins) {
+        return; // Don't allow time before current time
+      }
+    }
+
     setInputValue(formatted);
     onChange(formatted);
   };
 
   const handleBlur = () => {
-    let formatted = value; 
-    const clean = inputValue.replace(/[^\d:]/g, ''); 
+    let formatted = value;
+    const clean = inputValue.replace(/[^\d:]/g, '');
     if (clean.includes(':')) {
       const parts = clean.split(':');
       let h = parseInt(parts[0], 10);
@@ -139,6 +152,20 @@ export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) =
       if (!isNaN(h) && !isNaN(m)) {
         h = Math.max(0, Math.min(23, h));
         m = Math.max(0, Math.min(59, m));
+        
+        // Validate against minTime if provided
+        if (minTime) {
+          const now = new Date();
+          const currentMins = now.getHours() * 60 + now.getMinutes();
+          const selectedMins = h * 60 + m;
+          
+          // If selected time is before current time, set to current time
+          if (selectedMins < currentMins) {
+            h = now.getHours();
+            m = now.getMinutes();
+          }
+        }
+        
         formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       }
     } else if (clean.length > 0) {
@@ -146,6 +173,18 @@ export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) =
         let h = parseInt(clean, 10);
         if (!isNaN(h)) {
           h = Math.max(0, Math.min(23, h));
+          
+          // Validate against minTime if provided
+          if (minTime) {
+            const now = new Date();
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const selectedMins = h * 60;
+            
+            if (selectedMins < currentMins) {
+              h = now.getHours();
+            }
+          }
+          
           formatted = `${String(h).padStart(2, '0')}:00`;
         }
       } else {
@@ -156,6 +195,19 @@ export const TimeStepper = React.memo(({ value, onChange, themedColors }: any) =
         if (!isNaN(h) && !isNaN(m)) {
           h = Math.max(0, Math.min(23, h));
           m = Math.max(0, Math.min(59, m));
+          
+          // Validate against minTime if provided
+          if (minTime) {
+            const now = new Date();
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const selectedMins = h * 60 + m;
+            
+            if (selectedMins < currentMins) {
+              h = now.getHours();
+              m = now.getMinutes();
+            }
+          }
+          
           formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
       }

@@ -60,21 +60,21 @@ export class DatabaseFactory {
   ): Promise<DatabaseSchema> {
     const { config, configAsset, configPath } = options;
 
-    if (config) return config;
-    if (configAsset) return configAsset;
+    if (config) {return config;}
+    if (configAsset) {return configAsset;}
 
     if (configPath) {
       if (this.schemaCache.has(configPath)) {
         return this.schemaCache.get(configPath)!;
       }
 
-      // Placeholder for dynamic loading: require if it's a local file, 
+      // Placeholder for dynamic loading: require if it's a local file,
       // or warn that RNFS is not installed.
       console.warn(
         `[DatabaseFactory] Dynamic loading for ${configPath} requires react-native-fs. 
         Falling back to static schema check.`,
       );
-      
+
       // If the project doesn't have RNFS, we can't load from bundle/documents
       throw new Error(`Dynamic schema loading from ${configPath} failed. react-native-fs not installed.`);
     }
@@ -102,7 +102,7 @@ export class DatabaseFactory {
     configPath: string,
   ): Promise<DatabaseSchema> {
     // Requires: import RNFS from 'react-native-fs';
-    throw new Error("RNFS not installed. Cannot load from bundle.");
+    throw new Error('RNFS not installed. Cannot load from bundle.');
   }
 
   /**
@@ -112,7 +112,7 @@ export class DatabaseFactory {
     configPath: string,
   ): Promise<DatabaseSchema> {
     // Requires: import RNFS from 'react-native-fs';
-    throw new Error("RNFS not installed. Cannot load from documents.");
+    throw new Error('RNFS not installed. Cannot load from documents.');
   }
 
   /**

@@ -20,7 +20,7 @@ export const PosQueryService = {
   async getProducts(): Promise<(Product & {category_id: string})[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('products', db.getInternalDAO())
         .select([
@@ -80,7 +80,7 @@ export const PosQueryService = {
   > {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table(
         'product_variants',
@@ -132,7 +132,7 @@ export const PosQueryService = {
   > {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const keyword = `%${query.trim()}%`;
 
@@ -198,7 +198,7 @@ export const PosQueryService = {
   async getCategories(): Promise<Category[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('categories', db.getInternalDAO())
         .select(['id', 'name', 'category_code', 'parent_id', 'apply_to'])
@@ -227,7 +227,7 @@ export const PosQueryService = {
   async getServices(storeId: string = 'store-001'): Promise<any[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('products', db.getInternalDAO())
         .select([
