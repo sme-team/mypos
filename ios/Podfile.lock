@@ -1741,6 +1741,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNFS (2.20.0):
+    - React-Core
   - RNMLKitTextRecognition (2.0.0):
     - GoogleMLKit/TextRecognition (= 8.0.0)
     - GoogleMLKit/TextRecognitionChinese (= 8.0.0)
@@ -1748,6 +1750,27 @@ PODS:
     - GoogleMLKit/TextRecognitionJapanese (= 8.0.0)
     - GoogleMLKit/TextRecognitionKorean (= 8.0.0)
     - React
+  - RNShare (12.2.6):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNVectorIcons (10.3.0):
     - DoubleConversion
     - glog
@@ -1856,7 +1879,9 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - RNBootSplash (from `../node_modules/react-native-bootsplash`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - RNFS (from `../node_modules/react-native-fs`)
   - "RNMLKitTextRecognition (from `../node_modules/@react-native-ml-kit/text-recognition`)"
+  - RNShare (from `../node_modules/react-native-share`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -2021,8 +2046,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-bootsplash"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNFS:
+    :path: "../node_modules/react-native-fs"
   RNMLKitTextRecognition:
     :path: "../node_modules/@react-native-ml-kit/text-recognition"
+  RNShare:
+    :path: "../node_modules/react-native-share"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
   VisionCamera:
@@ -2116,7 +2145,9 @@ SPEC CHECKSUMS:
   ReactCommon: 429ca28cd813c31359c73ffac6dc24f93347d522
   RNBootSplash: 361b4bee87db6dad2363acfb013766aef3021c35
   RNCAsyncStorage: e261f5fef2092b11db2e9dfd0cf3620b1d88dca3
+  RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNMLKitTextRecognition: 02e17c2274c9c98aeaab68be51f6921746ffc8e1
+  RNShare: 79e6297abfbfa15675ca64140d5caeb086cc7500
   RNVectorIcons: 67fb9844e2355e70e240cb778e6cd2a10f3f0aea
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 47f10351a1b6a8d251b90986ae72ca5f52331954

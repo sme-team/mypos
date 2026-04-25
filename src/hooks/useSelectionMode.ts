@@ -47,7 +47,7 @@ export function useSelectionMode<G extends SelectableGroup>(
 
   const toggleSelectGroup = (groupId: string) => {
     const group = filteredGroups.find(g => g.id === groupId);
-    if (!group) return;
+    if (!group) {return;}
     const itemIds = group.items.map(i => i.id);
     const willBeSelected = !selectedGroups.has(groupId);
 

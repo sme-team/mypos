@@ -178,14 +178,14 @@ class RoomServiceClass {
 
     // 2. Lấy variants — filter theo productId nếu có
     const queryConditions: Record<string, any> = {store_id: storeId};
-    if (productId) queryConditions.product_id = productId;
+    if (productId) {queryConditions.product_id = productId;}
 
     const allVariants: any[] = await this.variantSvc.findAll(queryConditions);
 
     // 3. Chỉ giữ variant thuộc product type=room, chưa xóa, đang active
     return allVariants
       .filter((v: any) => {
-        if (v.deleted_at || v.status !== 'active') return false;
+        if (v.deleted_at || v.status !== 'active') {return false;}
         return productMap.has(v.product_id);
       })
       .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -214,7 +214,7 @@ class RoomServiceClass {
    */
   private async getUnitByCode(unitCode: string): Promise<string | null> {
     const db = DatabaseManager.get('pos');
-    if (!db) return null;
+    if (!db) {return null;}
 
     const result = await QueryBuilder.table('units', db.getInternalDAO())
       .select(['id'])
@@ -357,7 +357,7 @@ class RoomServiceClass {
     const today = todayDate();
 
     for (const p of prices) {
-      if (!p.price || p.price <= 0) continue;
+      if (!p.price || p.price <= 0) {continue;}
 
       const priceListName = p.priceListName ?? 'default';
 

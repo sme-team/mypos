@@ -31,7 +31,7 @@ class RoomPriceServiceClass {
 
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return null;
+      if (!db) {return null;}
 
       const result = await QueryBuilder.table('units', db.getInternalDAO())
         .select(['unit_code'])
@@ -54,11 +54,11 @@ class RoomPriceServiceClass {
    */
   private async batchFetchUnitCodes(unitIds: string[]): Promise<void> {
     const uncachedIds = unitIds.filter(id => !this.unitCodeCache.has(id));
-    if (uncachedIds.length === 0) return;
+    if (uncachedIds.length === 0) {return;}
 
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return;
+      if (!db) {return;}
 
       const results = await QueryBuilder.table('units', db.getInternalDAO())
         .select(['id', 'unit_code'])
@@ -101,7 +101,7 @@ class RoomPriceServiceClass {
    * @returns Mức giá ưu tiên nhất hoặc null
    */
   async getPriorityPrice(prices: PriceRecord[]): Promise<PriceRecordWithCode | null> {
-    if (!prices || prices.length === 0) return null;
+    if (!prices || prices.length === 0) {return null;}
 
     // Enrich prices with unit_codes
     const enrichedPrices = await this.enrichPricesWithUnitCodes(prices);
@@ -111,7 +111,7 @@ class RoomPriceServiceClass {
 
     for (const code of priorityOrder) {
       const price = enrichedPrices.find(p => p.unit_code.toUpperCase() === code);
-      if (price) return price;
+      if (price) {return price;}
     }
 
     // Nếu không khớp code nào, lấy giá đầu tiên
@@ -128,7 +128,7 @@ class RoomPriceServiceClass {
     const formattedAmount = price.toLocaleString('vi-VN') + 'đ';
     const unitCode = await this.getUnitCode(unitId);
 
-    if (!unitCode) return formattedAmount;
+    if (!unitCode) {return formattedAmount;}
 
     const code = unitCode.toUpperCase();
     switch (code) {

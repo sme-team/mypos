@@ -23,6 +23,7 @@ import { useTheme } from '../../../hooks/useTheme';
 import { Room } from '../../../screens/pos/types';
 import { RoomQueryService } from '../../../services/ResidentServices/RoomQueryService';
 import { RoomActionService } from '../../../services/ResidentServices/RoomActionService';
+import { EarlyCheckInService } from '../../../services/ResidentServices/EarlyCheckInService';
 
 interface RoomDetailBottomSheetProps {
   visible: boolean;
@@ -59,8 +60,11 @@ export default function RoomDetailBottomSheet({
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(false);
   const [showEarlyCheckInDetails, setShowEarlyCheckInDetails] = useState(false);
-  const [surchargeMode, setSurchargeMode] = useState<'percentage' | 'price'>('percentage');
+  const [surchargeMode, setSurchargeMode] = useState<'percentage' | 'fixed'>('percentage');
   const [surchargeValue, setSurchargeValue] = useState('');
+  const [basePriceType, setBasePriceType] = useState<'day' | 'hour'>('day');
+  const [basePrice, setBasePrice] = useState(0);
+  const [overrideReason, setOverrideReason] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -210,6 +214,7 @@ export default function RoomDetailBottomSheet({
                       onPress={() => {
                         if (dayBookings.length > 0) {
                           setSelectedBooking(dayBookings[0]);
+                          setShowEarlyCheckInDetails(false);
                         }
                       }}
                       activeOpacity={0.7}>
@@ -316,7 +321,10 @@ export default function RoomDetailBottomSheet({
             <TouchableOpacity
               key={booking.id}
               style={styles.bookingCard}
-              onPress={() => setSelectedBooking(booking)}
+              onPress={() => {
+                setSelectedBooking(booking);
+                setShowEarlyCheckInDetails(false);
+              }}
               activeOpacity={0.7}>
               <View style={styles.bookingCardHeader}>
                 <View style={styles.bookingCardInfo}>
@@ -383,39 +391,53 @@ export default function RoomDetailBottomSheet({
   };
 
   const calculateEarlyCheckInFee = () => {
-    if (!selectedBooking) return null;
+    if (!selectedBooking) {return null;}
 
     const now = new Date();
-    const checkInDateTime = new Date(`${selectedBooking.startDate}T${selectedBooking.checkInTime || '14:00'}`);
-    const hoursUntilCheckIn = Math.max(0, (checkInDateTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+    const currentHour = String(now.getHours()).padStart(2, '0');
+    const currentMin = String(now.getMinutes()).padStart(2, '0');
+    const actualCheckinDateTime = now.toISOString();
 
-    let surchargeAmount = 0;
-    let surchargePercent = 0;
+    // Tạo scheduled datetime từ startDate + checkInTime
+    const scheduledDate = selectedBooking.startDate || now.toISOString().split('T')[0];
+    const scheduledTime = selectedBooking.checkInTime || '14:00';
+    const scheduledCheckinDateTime = `${scheduledDate}T${scheduledTime}:00`;
 
-    if (surchargeMode === 'percentage') {
-      // Use user input percentage
-      const percent = parseFloat(surchargeValue) || 0;
-      surchargePercent = percent;
-      const roomPrice = room?.monthly_price || 0;
-      surchargeAmount = (roomPrice * percent) / 100;
-    } else {
-      // Use user input price directly
-      surchargeAmount = parseFloat(surchargeValue) || 0;
-      // Calculate equivalent percentage for display
-      const roomPrice = room?.monthly_price || 0;
-      surchargePercent = roomPrice > 0 ? (surchargeAmount / roomPrice) * 100 : 0;
+    // Tính số giờ sớm
+    const hoursEarly = EarlyCheckInService.calculateHoursEarly(
+      actualCheckinDateTime,
+      scheduledCheckinDateTime,
+    );
+
+    if (hoursEarly <= 0) {
+      return null;
     }
 
+    // Sử dụng giá cơ sở (mặc định giá ngày từ room)
+    const priceToUse = basePrice > 0 ? basePrice : (room?.monthly_price || 0);
+
+    // Tính phụ thu bằng service
+    const calculation = EarlyCheckInService.calculateSurcharge(
+      surchargeMode,
+      surchargeValue,
+      priceToUse,
+      basePriceType,
+      hoursEarly,
+    );
+
     return {
-      hoursUntilCheckIn: Math.floor(hoursUntilCheckIn),
-      surchargePercent: Math.round(surchargePercent),
-      surchargeAmount,
-      totalFee: surchargeAmount,
+      hoursEarly,
+      surchargePercent: calculation.equivalentPercentage,
+      surchargeAmount: calculation.surchargeAmount,
+      baseAmount: calculation.baseAmount,
+      description: calculation.description,
+      actualCheckinDateTime,
+      scheduledCheckinDateTime,
     };
   };
 
   const handleConfirmEarlyCheckIn = async () => {
-    if (!selectedBooking) return;
+    if (!selectedBooking) {return;}
 
     try {
       setLoading(true);
@@ -427,24 +449,40 @@ export default function RoomDetailBottomSheet({
         return;
       }
 
-      // TODO: Call RoomActionService to update contract status
-      // For now, simulate the check-in by updating local state
-      const updatedBookings = bookings.map(b =>
-        b.id === selectedBooking.id
-          ? { ...b, status: 'occupied' as const }
-          : b
-      );
-      setBookings(updatedBookings);
+      // Validate input
+      if (!surchargeValue || parseFloat(surchargeValue) <= 0) {
+        Alert.alert('Lỗi', 'Vui lòng nhập giá trị phụ thu.');
+        return;
+      }
+
+      // Get storeId (use default since Room interface doesn't have store_id)
+      const storeId = 'store-001';
+
+      // Call EarlyCheckInService to process
+      const result = await EarlyCheckInService.processEarlyCheckIn({
+        storeId,
+        contractId: selectedBooking.id,
+        variantId: room?.id || '',
+        actualCheckinDateTime: feeInfo.actualCheckinDateTime,
+        scheduledCheckinDateTime: feeInfo.scheduledCheckinDateTime,
+        surchargeMode,
+        surchargeValue,
+        basePriceType,
+        basePrice: basePrice > 0 ? basePrice : (room?.monthly_price || 0),
+        overrideReason: overrideReason || undefined,
+      });
 
       // Close tooltip and reset state
       setSelectedBooking(null);
       setShowEarlyCheckInDetails(false);
       setSurchargeMode('percentage');
       setSurchargeValue('');
+      setOverrideReason('');
+      setBasePrice(0);
 
       Alert.alert(
         'Thành công',
-        `Đã check-in sớm cho khách ${selectedBooking.customerName}. Phụ thu: ${feeInfo.surchargeAmount.toLocaleString('vi-VN')}đ`
+        `Đã check-in sớm cho khách ${selectedBooking.customerName}. Phụ thu: ${result.surchargeAmount.toLocaleString('vi-VN')}đ (${result.hoursEarly} giờ sớm)`
       );
 
       // Refresh room contracts to get updated data
@@ -453,14 +491,14 @@ export default function RoomDetailBottomSheet({
       }
     } catch (error) {
       console.error('[RoomDetailBottomSheet] Early check-in error:', error);
-      Alert.alert('Lỗi', 'Không thể check-in sớm. Vui lòng thử lại.');
+      Alert.alert('Lỗi', String(error));
     } finally {
       setLoading(false);
     }
   };
 
   const renderBookingTooltip = () => {
-    if (!selectedBooking) return null;
+    if (!selectedBooking) {return null;}
 
     const startDate = new Date(selectedBooking.startDate);
     const endDate = new Date(selectedBooking.endDate);
@@ -555,7 +593,8 @@ export default function RoomDetailBottomSheet({
             </View>
 
             {/* Early Check-in Details */}
-            {showEarlyCheckInDetails && selectedBooking.status === 'booked' && (() => {
+            {(() => {
+              if (!showEarlyCheckInDetails || selectedBooking.status !== 'booked') return null;
               const feeInfo = calculateEarlyCheckInFee();
               if (!feeInfo) return null;
               return (
@@ -563,7 +602,18 @@ export default function RoomDetailBottomSheet({
                   <View style={styles.earlyCheckInRow}>
                     <Icon name="schedule" size={16} color="#185FA5" />
                     <Text style={styles.earlyCheckInLabel}>
-                      Còn {feeInfo.hoursUntilCheckIn} giờ nữa đến giờ check-in chuẩn
+                      Sớm {feeInfo.hoursEarly} giờ
+                    </Text>
+                  </View>
+                  <View style={styles.earlyCheckInRow}>
+                    <Text style={styles.earlyCheckInSubLabel}>
+                      {new Date(feeInfo.actualCheckinDateTime).toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})} → {new Date(feeInfo.scheduledCheckinDateTime).toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})}
+                    </Text>
+                  </View>
+                  <View style={styles.earlyCheckInRow}>
+                    <Icon name="info" size={16} color="#6B7280" />
+                    <Text style={styles.earlyCheckInSubLabel}>
+                      Giá tương ứng: {feeInfo.baseAmount.toLocaleString('vi-VN')}đ
                     </Text>
                   </View>
 
@@ -588,15 +638,15 @@ export default function RoomDetailBottomSheet({
                     <TouchableOpacity
                       style={[
                         styles.surchargeModeBtn,
-                        surchargeMode === 'price' && styles.surchargeModeBtnActive,
+                        surchargeMode === 'fixed' && styles.surchargeModeBtnActive,
                       ]}
                       onPress={() => {
-                        setSurchargeMode('price');
+                        setSurchargeMode('fixed');
                         setSurchargeValue('');
                       }}>
                       <Text style={[
                         styles.surchargeModeText,
-                        surchargeMode === 'price' && styles.surchargeModeTextActive,
+                        surchargeMode === 'fixed' && styles.surchargeModeTextActive,
                       ]}>
                         Nhập giá
                       </Text>
@@ -614,13 +664,18 @@ export default function RoomDetailBottomSheet({
                         value={surchargeValue}
                         onChangeText={setSurchargeValue}
                         keyboardType="numeric"
-                        placeholder={surchargeMode === 'percentage' ? 'Nhập %' : 'Nhập số tiền'}
+                        placeholder={surchargeMode === 'percentage' ? 'Nhập % (VD: 50)' : 'Nhập số tiền (VD: 100000)'}
                         placeholderTextColor="#9CA3AF"
                       />
                       <Text style={styles.surchargeInputSuffix}>
                         {surchargeMode === 'percentage' ? '%' : 'đ'}
                       </Text>
                     </View>
+                    {surchargeMode === 'fixed' && (
+                      <Text style={styles.surchargeInfoText}>
+                        Tương đương: {feeInfo.surchargePercent}% giá ngày
+                      </Text>
+                    )}
                   </View>
 
                   <View style={[styles.earlyCheckInRow, styles.earlyCheckInTotalRow]}>
@@ -660,7 +715,7 @@ export default function RoomDetailBottomSheet({
     );
   };
 
-  if (!room) return null;
+  if (!room) {return null;}
 
   return (
     <>
@@ -1145,6 +1200,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  earlyCheckInSubLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
   earlyCheckInTotalRow: {
     marginTop: 8,
     paddingTop: 8,
@@ -1223,6 +1282,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     borderLeftWidth: 1,
     borderLeftColor: '#E5E7EB',
+  },
+  surchargeInfoText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
   loadingContainer: {
     padding: 40,

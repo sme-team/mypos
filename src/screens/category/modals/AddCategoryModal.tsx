@@ -18,7 +18,7 @@ export const AddCategoryModal: React.FC<Props> = ({
   const [name, setName] = useState('');
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {return;}
     onSave(name.trim());
     setName('');
   };

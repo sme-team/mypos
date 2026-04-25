@@ -47,16 +47,15 @@ const PreLogin = ({ onLogin }: any) => {
           {/* Logo Section */}
           <View className="items-center mb-6">
             <Image
-              source={require('../../assets/logo/logoMypos.png')}
+              source={require('../../assets/logo/logoMyposs.png')}
               style={{
-                width: 80 * fontScale,
-                height: 80 * fontScale,
+                width: 180 * fontScale,
+                height: 180 * fontScale,
                 borderRadius: 12,
               }}
               resizeMode="contain"
             />
             <View className="items-center mb-6">
-              <Text className={`text-3xl font-bold mb-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>myPOS</Text>
               <View className={`h-1 w-12 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`} />
             </View>
           </View>

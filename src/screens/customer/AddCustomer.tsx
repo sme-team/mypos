@@ -220,7 +220,7 @@ export default function AddCustomer({
     : new Date(new Date().getFullYear() - 25, 0, 1);
 
   const formatDisplayDate = (dateStr: string): string => {
-    if (!dateStr) return '';
+    if (!dateStr) {return '';}
     const d = new Date(dateStr);
     return `${String(d.getDate()).padStart(2, '0')}/${String(
       d.getMonth() + 1,
@@ -240,7 +240,7 @@ export default function AddCustomer({
     value: AddCustomerForm[K],
   ) => {
     setForm(prev => ({...prev, [key]: value}));
-    if (errors[key]) setErrors(prev => ({...prev, [key]: undefined}));
+    if (errors[key]) {setErrors(prev => ({...prev, [key]: undefined}));}
   };
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -286,9 +286,9 @@ export default function AddCustomer({
     launchImageLibrary(
       {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
       res => {
-        if (res.didCancel || res.errorCode) return;
+        if (res.didCancel || res.errorCode) {return;}
         const uri = res.assets?.[0]?.uri;
-        if (uri) setField('imageUri', uri);
+        if (uri) {setField('imageUri', uri);}
       },
     );
   };
@@ -347,7 +347,7 @@ export default function AddCustomer({
 
   const handleSave = async () => {
     const valid = await validate();
-    if (!valid) return;
+    if (!valid) {return;}
 
     setSaving(true);
     try {

@@ -13,7 +13,7 @@ export const generateSequentialId = async (
     const match = id.match(new RegExp(`^${prefix}-(\\d+)$`));
     if (match) {
       const num = parseInt(match[1], 10);
-      if (num > max) max = num;
+      if (num > max) {max = num;}
     }
   }
 

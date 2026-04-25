@@ -7,7 +7,7 @@ export function RoomHistoryView({
   details,
   setView,
   themedColors: c,
-  t
+  t,
 }: any) {
   const getNextBillDate = (billingDay: number) => {
     const today = new Date();
@@ -36,7 +36,7 @@ export function RoomHistoryView({
   const processedItems = historyBills.map((bill: any) => {
     const status = getStatusColor(bill.bill_status);
     const period = `${bill.cycle_period_from} - ${bill.cycle_period_to}`;
-    
+
     return {
       type: 'bill',
       title: `Hóa đơn ${bill.bill_number}`,
@@ -46,7 +46,7 @@ export function RoomHistoryView({
       icon: status.icon,
       color: status.color,
       bg: status.bg,
-      status: bill.bill_status
+      status: bill.bill_status,
     };
   });
 
@@ -89,7 +89,7 @@ export function RoomHistoryView({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
           <SummaryCard label={t('roomDetail.debt.payable')} value={fmt(details?.total_payable)} color="#007AFF" c={c} />
           <SummaryCard label={t('roomDetail.debt.paid')} value={fmt(details?.total_paid)} color="#34C759" c={c} />
-          <SummaryCard label={t('roomDetail.debt.balance')} value={fmt(details?.balance)} color="#FF3B30" valueColor={details?.balance > 0 ? "#FF3B30" : c.text} c={c} />
+          <SummaryCard label={t('roomDetail.debt.balance')} value={fmt(details?.balance)} color="#FF3B30" valueColor={details?.balance > 0 ? '#FF3B30' : c.text} c={c} />
           <SummaryCard label={t('roomDetail.debt.overdue')} value={`${historyBills.filter((b:any) => b.bill_status === 'overdue').length} ${t('roomDetail.other')}`} color="#FF3B30" valueColor="#FF3B30" c={c} />
         </View>
 
@@ -104,7 +104,7 @@ export function RoomHistoryView({
                 </View>
                 {index < processedItems.length - 1 && <View style={[s.timelineLine, { backgroundColor: c.border }]} />}
               </View>
- 
+
               {/* Nội dung Card */}
               <View style={[s.timelineCard, { backgroundColor: c.surface, borderColor: c.border }]}>
                  {/* Left Accent border */}
@@ -151,7 +151,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
   headerTitle: { fontSize: 17, fontWeight: '700' },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  
+
   roomTitle: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
   tenantName: { fontSize: 16, fontWeight: '600' },
 
@@ -168,11 +168,11 @@ const s = StyleSheet.create({
   timelineLeft: { width: 36, alignItems: 'center', marginRight: 16 },
   timelineDot: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   timelineLine: { position: 'absolute', top: 36, bottom: -28, width: 2, zIndex: 1 },
-  
+
   timelineCard: { flex: 1, borderRadius: 14, borderWidth: 1, overflow: 'hidden', minHeight: 80, justifyContent: 'center' },
   leftAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   cardContent: { padding: 16, paddingLeft: 20 },
-  
+
   itemTitle: { fontSize: 15, fontWeight: '700' },
   itemDate: { fontSize: 12, fontWeight: '500' },
   itemAmount: { fontSize: 18, fontWeight: '900' },

@@ -33,6 +33,7 @@ export interface ExcelExportScreenProps {
   storeId?: string;
   onOpenMenu: () => void;
   onBack: () => void;
+  onHistory?: () => void;
 }
 
 export interface ExcelExportScreenState {

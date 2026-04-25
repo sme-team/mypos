@@ -75,7 +75,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const activeStoreId = 'store-001';
 
   const loadData = async () => {
-    if (!activeStoreId) return;
+    if (!activeStoreId) {return;}
     setRefreshing(true);
 
     try {
@@ -117,6 +117,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
             contract_id: item.contract_id,
             start_date: item.start_date,
             end_date: item.end_date,
+            checkInTime: item.checkInTime,
           };
         }),
       }));
@@ -201,8 +202,8 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     );
     // Sắp xếp: POS luôn đứng đầu
     const sortedTypes = rawTypes.sort((a, b) => {
-      if (a === 'pos') return -1;
-      if (b === 'pos') return 1;
+      if (a === 'pos') {return -1;}
+      if (b === 'pos') {return 1;}
       return String(a).localeCompare(String(b));
     });
 
@@ -305,7 +306,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     const types = new Set<string>();
     rooms.forEach(g =>
       g.data.forEach(r => {
-        if (r.product_name) types.add(r.product_name);
+        if (r.product_name) {types.add(r.product_name);}
       }),
     );
     return Array.from(types).sort();
@@ -314,7 +315,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const handleAdd = useCallback(
     async (id: string) => {
       const product = products.find(p => p.id === id);
-      if (!product) return;
+      if (!product) {return;}
 
       // Nếu sản phẩm đã có trong giỏ → chỉ tăng số lượng, không fetch lại
       setCartItems(prev => {
@@ -337,7 +338,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCartItems(prev => {
         const existing = prev.find(i => i.product.id === id);
         // Nếu đã có variants (thêm lần 2+) thì không fetch
-        if (existing && existing.variants.length > 0) return prev;
+        if (existing && existing.variants.length > 0) {return prev;}
         return prev; // giữ nguyên, fetch dưới đây
       });
 
@@ -352,9 +353,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
         setCartItems(prev =>
           prev.map(i => {
-            if (i.product.id !== id) return i;
+            if (i.product.id !== id) {return i;}
             // Nếu user đã chọn variant thủ công trước khi fetch xong → giữ nguyên
-            if (i.selectedVariant) return {...i, variants: data};
+            if (i.selectedVariant) {return {...i, variants: data};}
             return {
               ...i,
               variants: data,
@@ -415,7 +416,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     } else {
       setCartItems(prev => {
         const item = prev.find(i => i.product.id === id);
-        if (!item) return prev;
+        if (!item) {return prev;}
         const diff = quantity - item.quantity;
         setCartCount(c => Math.max(0, c + diff));
         return prev.map(i => (i.product.id === id ? {...i, quantity} : i));
@@ -429,7 +430,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setSelectedCustomer(null);
 
       if (customerSearchTimeout.current)
-        clearTimeout(customerSearchTimeout.current);
+        {clearTimeout(customerSearchTimeout.current);}
 
       if (!text.trim()) {
         setCustomerResults([]);
@@ -942,7 +943,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           renderItem={({item, index, section}) => {
             // Because SectionList doesn't support numColumns, we handle the grid manually
             // by only rendering the start of each row.
-            if (index % numCols !== 0) return null;
+            if (index % numCols !== 0) {return null;}
 
             const rowItems = section.data.slice(index, index + numCols);
 

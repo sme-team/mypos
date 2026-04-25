@@ -42,6 +42,7 @@ export interface Room {
   contract_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  checkInTime?: string; // Giờ check-in từ contract metadata (HH:mm)
 }
 
 export interface CartItem {

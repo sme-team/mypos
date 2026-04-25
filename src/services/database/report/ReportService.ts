@@ -71,8 +71,8 @@ class BillService extends BaseService {
     );
 
     return bills.filter(b => {
-      if (b.deleted_at) return false;
-      if (!PAID_STATUSES.includes(b.bill_status)) return false;
+      if (b.deleted_at) {return false;}
+      if (!PAID_STATUSES.includes(b.bill_status)) {return false;}
       const d = b.issued_at ? b.issued_at.split('T')[0] : '';
       return d >= from && d <= to;
     });
@@ -93,7 +93,7 @@ class BillDetailService extends BaseService {
   }
 
   async getDetailsByBillIds(billIds: string[]): Promise<any[]> {
-    if (billIds.length === 0) return [];
+    if (billIds.length === 0) {return [];}
 
     const BATCH = 20;
     const allDetails: any[] = [];
@@ -121,7 +121,7 @@ class ProductService extends BaseService {
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {return [];}
     const uniqueIds = [...new Set(ids)];
     const results = await Promise.all(
       uniqueIds.map(id =>
@@ -243,8 +243,8 @@ class ReportServiceClass {
           );
 
     if (displayMode === 'day')
-      return this._groupByDay(bills, fromDate, toDate, applyToKeys);
-    if (displayMode === 'week') return this._groupByWeek(bills, applyToKeys);
+      {return this._groupByDay(bills, fromDate, toDate, applyToKeys);}
+    if (displayMode === 'week') {return this._groupByWeek(bills, applyToKeys);}
     return this._groupByMonth(bills, applyToKeys);
   }
 
@@ -258,7 +258,7 @@ class ReportServiceClass {
 
     bills.forEach(b => {
       const key = b.issued_at ? b.issued_at.split('T')[0] : '';
-      if (!key) return;
+      if (!key) {return;}
       accumulateBill(map, key, b, applyToKeys);
     });
 
@@ -277,7 +277,7 @@ class ReportServiceClass {
     const map: Record<string, Record<string, number>> = {};
     bills.forEach(b => {
       const dateStr = b.issued_at ? b.issued_at.split('T')[0] : '';
-      if (!dateStr) return;
+      if (!dateStr) {return;}
       accumulateBill(map, getISOWeekKey(dateStr), b, applyToKeys);
     });
 
@@ -293,7 +293,7 @@ class ReportServiceClass {
     const map: Record<string, Record<string, number>> = {};
     bills.forEach(b => {
       const dateStr = b.issued_at ? b.issued_at.split('T')[0] : '';
-      if (!dateStr) return;
+      if (!dateStr) {return;}
       accumulateBill(map, getMonthKey(dateStr), b, applyToKeys);
     });
 
@@ -361,7 +361,7 @@ class ReportServiceClass {
     // 3. Gộp theo product_id → tổng amount
     const amountByProduct: Record<string, number> = {};
     details.forEach(d => {
-      if (!d.product_id) return;
+      if (!d.product_id) {return;}
       amountByProduct[d.product_id] =
         (amountByProduct[d.product_id] ?? 0) + (d.amount ?? 0);
     });
@@ -371,7 +371,7 @@ class ReportServiceClass {
       .sort(([, a], [, b]) => b - a)
       .map(([id]) => id);
 
-    if (sortedIds.length === 0) return [];
+    if (sortedIds.length === 0) {return [];}
 
     // 5. Lấy tên sản phẩm
     const products = await this.productSvc.getByIds(sortedIds);
@@ -408,7 +408,7 @@ class ReportServiceClass {
 
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('categories', db.getInternalDAO())
         .select(['apply_to'])

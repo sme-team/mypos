@@ -228,7 +228,7 @@ class RoomActionServiceClass {
     cycleCode: 'daily' | 'monthly',
   ): Promise<string | null> {
     const db = DatabaseManager.get('pos');
-    if (!db) return null;
+    if (!db) {return null;}
 
     const result = await QueryBuilder.table('bill_cycles', db.getInternalDAO())
       .select(['id'])
@@ -267,7 +267,7 @@ class RoomActionServiceClass {
     startOrder = 10,
     notes?: string,  // FIX #9: Thêm notes parameter
   ): Promise<number> {
-    if (!services || services.length === 0) return 0;
+    if (!services || services.length === 0) {return 0;}
     let totalSvcAmount = 0;
     for (let i = 0; i < services.length; i++) {
       const svc = services[i];
@@ -276,7 +276,7 @@ class RoomActionServiceClass {
       const taxRate = svc.taxRate ?? 0;
       const taxAmount = amount * taxRate / 100;
       totalSvcAmount += amount;
-      
+
       await this.billDetailSvc.create({
         id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: storeId,
@@ -379,10 +379,10 @@ class RoomActionServiceClass {
    */
   private incrementCode(code: string): string {
     const parts = code.split('-');
-    if (parts.length === 0) return code;
+    if (parts.length === 0) {return code;}
     const lastPart = parts[parts.length - 1];
     const num = parseInt(lastPart, 10);
-    if (isNaN(num)) return code + '-1';
+    if (isNaN(num)) {return code + '-1';}
 
     parts[parts.length - 1] = String(num + 1).padStart(lastPart.length, '0');
     return parts.join('-');
@@ -446,7 +446,6 @@ class RoomActionServiceClass {
         rent_amount: input.rentAmount,
         deposit_amount: input.depositAmount ?? 0,
         electric_rate: input.electricRate ?? 0,
-        water_rate: input.water_rate ?? 0,
         electric_reading_init: input.electricReadingInit ?? 0,
         water_reading_init: input.waterReadingInit ?? 0,
         billing_day: input.billingDay ?? 1,
@@ -503,6 +502,8 @@ class RoomActionServiceClass {
           id: await generateSequentialId(this.billDetailSvc, 'bdt'),
           store_id: input.storeId,
           bill_id: depositBillId,
+          product_id: input.productId,
+          variant_id: input.variantId,
           line_description: 'Tiền đặt cọc',
           quantity: 1,
           unit_price: depositAmount,
@@ -571,11 +572,13 @@ class RoomActionServiceClass {
       // FIX #7: Tính tax_amount cho tiền phòng (giả định tax_rate = 0 cho phòng, có thể thay đổi sau)
       const roomTaxRate = 0;
       const roomTaxAmount = input.rentAmount * roomTaxRate / 100;
-      
+
       await this.billDetailSvc.create({
         id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: input.storeId,
         bill_id: rentBillId,
+        product_id: input.productId,
+        variant_id: input.variantId,
         line_description: 'Tiền thuê phòng (tháng đầu)',
         quantity: 1,
         unit_price: input.rentAmount,
@@ -669,7 +672,7 @@ class RoomActionServiceClass {
     storeId: string,
   ): Promise<void> {
     const db = DatabaseManager.get('pos');
-    if (!db) return;
+    if (!db) {return;}
 
     console.log('[checkRoomAvailability] Checking availability for room:', variantId, 'from', checkinDate, 'to', checkoutDate);
 
@@ -831,7 +834,25 @@ class RoomActionServiceClass {
           updated_at: now,
         });
 
-        // 5.1 Receivable cho cọc
+        // 5.1 bill_details — dòng tiền cọc
+        await this.billDetailSvc.create({
+          id: await generateSequentialId(this.billDetailSvc, 'bdt'),
+          store_id: input.storeId,
+          bill_id: depositBillId,
+          product_id: input.productId,
+          variant_id: input.variantId,
+          line_description: 'Tiền đặt cọc phòng ngắn hạn',
+          quantity: 1,
+          unit_price: depositAmount,
+          amount: depositAmount,
+          notes: input.notes || null,
+          sort_order: 1,
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        // 5.2 Receivable cho cọc
         const receivableCodeDeposit = await generateReceivableCode(
           input.storeId,
         );
@@ -884,11 +905,13 @@ class RoomActionServiceClass {
       // FIX #7: Tính tax_amount cho tiền phòng (giả định tax_rate = 0 cho phòng, có thể thay đổi sau)
       const roomTaxRate = 0;
       const roomTaxAmount = rentAmount * roomTaxRate / 100;
-      
+
       await this.billDetailSvc.create({
         id: await generateSequentialId(this.billDetailSvc, 'bdt'),
         store_id: input.storeId,
         bill_id: rentBillId,
+        product_id: input.productId,
+        variant_id: input.variantId,
         line_description: `Tiền thuê phòng ngắn hạn (${priceResult.description})`,
         quantity: nights > 0 ? nights : 1,
         unit_price: rentAmount / (nights > 0 ? nights : 1),
@@ -982,31 +1005,31 @@ class RoomActionServiceClass {
       {columns: ['id', 'customer_id']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
-    if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+    if (!contract) {throw new Error('Không tìm thấy hợp đồng đang hoạt động');}
 
     await this.contractSvc.executeTransaction(async () => {
       // 2. Cập nhật thông tin khách
       if (input.fullName || input.phone || input.idNumber) {
         const customerUpdate: Record<string, any> = {updated_at: now};
-        if (input.fullName) customerUpdate.full_name = input.fullName;
-        if (input.phone) customerUpdate.phone = input.phone;
-        if (input.idNumber) customerUpdate.id_number = input.idNumber;
+        if (input.fullName) {customerUpdate.full_name = input.fullName;}
+        if (input.phone) {customerUpdate.phone = input.phone;}
+        if (input.idNumber) {customerUpdate.id_number = input.idNumber;}
         await this.customerSvc.update(contract.customer_id, customerUpdate);
       }
 
       // 3. Cập nhật hợp đồng
       const contractUpdate: Record<string, any> = {updated_at: now};
       if (input.rentAmount != null)
-        contractUpdate.rent_amount = input.rentAmount;
+        {contractUpdate.rent_amount = input.rentAmount;}
       if (input.electricRate != null)
-        contractUpdate.electric_rate = input.electricRate;
-      if (input.waterRate != null) contractUpdate.water_rate = input.waterRate;
+        {contractUpdate.electric_rate = input.electricRate;}
+      if (input.waterRate != null) {contractUpdate.water_rate = input.waterRate;}
       if (input.electricReadingInit != null)
-        contractUpdate.electric_reading_init = input.electricReadingInit;
+        {contractUpdate.electric_reading_init = input.electricReadingInit;}
       if (input.waterReadingInit != null)
-        contractUpdate.water_reading_init = input.waterReadingInit;
-      if (input.endDate) contractUpdate.end_date = input.endDate;
-      if (input.notes != null) contractUpdate.notes = input.notes;
+        {contractUpdate.water_reading_init = input.waterReadingInit;}
+      if (input.endDate) {contractUpdate.end_date = input.endDate;}
+      if (input.notes != null) {contractUpdate.notes = input.notes;}
 
       await this.contractSvc.update(contract.id, contractUpdate);
     });
@@ -1025,7 +1048,7 @@ class RoomActionServiceClass {
   ): Promise<void> {
     // Tìm contract với nhiều status khác nhau (không chỉ 'active')
     const db = DatabaseManager.get('pos');
-    if (!db) throw new Error('Database not available');
+    if (!db) {throw new Error('Database not available');}
 
     const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
       .select(['id', 'end_date', 'status'])
@@ -1037,7 +1060,7 @@ class RoomActionServiceClass {
       .get();
 
     const contract = contracts.length > 0 ? contracts[0] : null;
-    if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+    if (!contract) {throw new Error('Không tìm thấy hợp đồng đang hoạt động');}
 
     console.log('[extendContract] Found contract:', { id: contract.id, status: contract.status, end_date: contract.end_date });
 
@@ -1069,14 +1092,14 @@ class RoomActionServiceClass {
       {columns: ['id']},
     );
     const contract = contracts.length > 0 ? contracts[0] : null;
-    if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+    if (!contract) {throw new Error('Không tìm thấy hợp đồng đang hoạt động');}
 
     const updateData: Record<string, any> = {
       variant_id: newVariantId,
       product_id: newProductId,
       updated_at: this.now(),
     };
-    if (newRentAmount != null) updateData.rent_amount = newRentAmount;
+    if (newRentAmount != null) {updateData.rent_amount = newRentAmount;}
 
     await this.contractSvc.update(contract.id, updateData);
   }
@@ -1090,7 +1113,7 @@ class RoomActionServiceClass {
   async checkOut(storeId: string, variantId: string): Promise<void> {
     // Tìm contract với nhiều status khác nhau (không chỉ 'active')
     const db = DatabaseManager.get('pos');
-    if (!db) throw new Error('Database not available');
+    if (!db) {throw new Error('Database not available');}
 
     const contracts = await QueryBuilder.table('contracts', db.getInternalDAO())
       .select(['id', 'customer_id', 'status'])
@@ -1102,7 +1125,7 @@ class RoomActionServiceClass {
       .get();
 
     const contract = contracts.length > 0 ? contracts[0] : null;
-    if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+    if (!contract) {throw new Error('Không tìm thấy hợp đồng đang hoạt động');}
 
     console.log('[checkOut] Found contract:', { id: contract.id, status: contract.status, customer_id: contract.customer_id });
 
@@ -1160,11 +1183,11 @@ class RoomActionServiceClass {
       store_id: input.storeId,
     });
     // Filter out cancelled/terminated contracts, but allow contracts without status (old contracts)
-    const activeContracts = contracts.filter(c => 
+    const activeContracts = contracts.filter(c =>
       c.status !== 'cancelled' && c.status !== 'terminated'
     );
     const contract = activeContracts.length > 0 ? activeContracts[0] : null;
-    if (!contract) throw new Error('Không tìm thấy hợp đồng đang hoạt động');
+    if (!contract) {throw new Error('Không tìm thấy hợp đồng đang hoạt động');}
 
     // Chỉ số điện nước kỳ trước (lấy từ bill_details gần nhất)
     const prevBills = await this.billSvc.findAll(
@@ -1188,8 +1211,8 @@ class RoomActionServiceClass {
           d.line_description?.includes('nước') ||
           d.line_description?.includes('Nước'),
       );
-      if (eDet?.reading_to != null) prevElectric = eDet.reading_to;
-      if (wDet?.reading_to != null) prevWater = wDet.reading_to;
+      if (eDet?.reading_to != null) {prevElectric = eDet.reading_to;}
+      if (wDet?.reading_to != null) {prevWater = wDet.reading_to;}
     }
 
     // Tính toán tiền điện nước
@@ -1226,7 +1249,7 @@ class RoomActionServiceClass {
       if (existingBill) {
         // Cập nhật bill hiện tại
         billId = existingBill.id;
-        
+
         // Tính lại total_amount bao gồm điện nước mới
         const recalculatedTotal = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount;
         const currentPaid = existingBill.paid_amount ?? 0;
@@ -1389,7 +1412,7 @@ class RoomActionServiceClass {
   async cancelContract(contractId: string): Promise<void> {
     const now = this.now();
     const db = DatabaseManager.get('pos');
-    if (!db) throw new Error('Database connection not available');
+    if (!db) {throw new Error('Database connection not available');}
 
     await this.contractSvc.executeTransaction(async () => {
       // 1. Cập nhật trạng thái hợp đồng thành 'cancelled'
@@ -1403,7 +1426,7 @@ class RoomActionServiceClass {
         ref_id: contractId,
         ref_type: 'contract',
       });
-      
+
       for (const bill of bills) {
         if (['draft', 'issued'].includes(bill.bill_status)) {
           await this.billSvc.update(bill.id, {

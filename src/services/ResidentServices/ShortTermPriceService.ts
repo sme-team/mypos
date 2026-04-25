@@ -106,7 +106,7 @@ class ShortTermPriceServiceClass {
         'prices.unit_id',
         'prices.price',
         'prices.price_list_name',
-        'units.unit_code'
+        'units.unit_code',
       ])
       .innerJoin('units', 'prices.unit_id = units.id')
       .where('prices.variant_id', variantId)

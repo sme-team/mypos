@@ -681,6 +681,137 @@ export const posSchema: DatabaseSchema = {
       foreign_keys: [],
     },
 
+    // ══════════════════════════════════════════════════════════════════════════
+    //  16. TAX_REPORTS – Sổ doanh thu hộ kinh doanh (TT 152/2025/TT-BTC)
+    // ══════════════════════════════════════════════════════════════════════════
+    tax_reports: {
+      description:
+        'Sổ doanh thu hộ kinh doanh theo Thông tư 152/2025/TT-BTC. ' +
+        'Hỗ trợ 2 mẫu: S1a-HKD (ghi sổ doanh thu) và S2a-HKD (tờ khai thuế).',
+      cols: [
+        { name: 'id', type: 'text', constraints: 'NOT NULL UNIQUE PRIMARY KEY', description: 'Mã báo cáo thuế.' },
+        { name: 'store_id', type: 'text', constraints: 'NOT NULL', description: 'Cửa hàng. FK logic → core.stores.' },
+        // Thông tin hộ kinh doanh
+        { name: 'business_name', type: 'text', constraints: 'NOT NULL', description: 'Tên hộ cá nhân kinh doanh.' },
+        { name: 'tax_code', type: 'text', description: 'Mã số thuế (MST).' },
+        { name: 'business_address', type: 'text', description: 'Địa chỉ hộ kinh doanh.' },
+        { name: 'business_location', type: 'text', description: 'Địa điểm kinh doanh (có thể khác địa chỉ đăng ký).' },
+        { name: 'representative_name', type: 'text', constraints: 'NOT NULL', description: 'Họ tên người đại diện hộ kinh doanh.' },
+        // Kỳ kê khai
+        {
+          name: 'form_type',
+          type: 'varchar',
+          length: 20,
+          constraints: 'NOT NULL',
+          description: 'Loại mẫu báo cáo.',
+          enum: ['S1a-HKD', 'S2a-HKD'],
+        },
+        {
+          name: 'period_type',
+          type: 'varchar',
+          length: 20,
+          constraints: 'NOT NULL',
+          description: 'Loại kỳ kê khai.',
+          enum: ['month', 'quarter'],
+        },
+        { name: 'period_from', type: 'date', constraints: 'NOT NULL', description: 'Từ ngày.' },
+        { name: 'period_to', type: 'date', constraints: 'NOT NULL', description: 'Đến ngày.' },
+        // Tổng hợp thuế (chỉ có giá trị với S2a; để NULL với S1a)
+        { name: 'total_revenue', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Tổng doanh thu kỳ kê khai.' },
+        { name: 'vat_rate_pct', type: 'decimal', precision: 5, scale: 2, description: 'Tỷ lệ % thuế GTGT (nếu dùng chung 1 mức).' },
+        { name: 'pit_rate_pct', type: 'decimal', precision: 5, scale: 2, description: 'Tỷ lệ % thuế TNCN (nếu dùng chung 1 mức).' },
+        { name: 'total_vat_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Tổng thuế GTGT phải nộp.' },
+        { name: 'total_pit_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Tổng thuế TNCN phải nộp.' },
+        { name: 'total_tax_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Tổng số thuế phải nộp (GTGT + TNCN).' },
+        // Trạng thái & kiểm toán
+        { name: 'issued_date', type: 'date', constraints: 'NOT NULL', description: 'Ngày lập sổ.' },
+        {
+          name: 'status',
+          type: 'varchar',
+          length: 20,
+          constraints: "DEFAULT 'draft'",
+          description: 'Trạng thái báo cáo.',
+          enum: ['draft', 'finalized', 'submitted'],
+        },
+        { name: 'notes', type: 'text', description: 'Ghi chú.' },
+        { name: 'metadata', type: 'text', description: 'Thông tin mở rộng (JSON).' },
+        {
+          name: 'sync_status',
+          type: 'varchar',
+          length: 20,
+          constraints: "DEFAULT 'local'",
+          description: 'Trạng thái đồng bộ.',
+          enum: ['local', 'synced'],
+        },
+        { name: 'created_at', type: 'timestamp', constraints: 'DEFAULT CURRENT_TIMESTAMP', description: 'Thời gian tạo.' },
+        { name: 'updated_at', type: 'timestamp', constraints: 'DEFAULT CURRENT_TIMESTAMP', description: 'Thời gian cập nhật.' },
+        { name: 'deleted_at', type: 'timestamp', description: 'Thời gian xoá mềm.' },
+      ],
+      indexes: [
+        { name: 'idx_tax_reports_store_id', columns: ['store_id'], unique: false, description: 'Index theo cửa hàng.' },
+        { name: 'idx_tax_reports_period', columns: ['store_id', 'period_from', 'period_to'], unique: false, description: 'Index theo kỳ kê khai.' },
+        { name: 'idx_tax_reports_status', columns: ['store_id', 'status'], unique: false, description: 'Lọc theo trạng thái.' },
+        { name: 'idx_tax_reports_sync', columns: ['sync_status', 'updated_at'], unique: false, description: 'Index hàng đợi đồng bộ.' },
+      ],
+      foreign_keys: [],
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  17. TAX_REPORT_DETAILS – Chi tiết sổ doanh thu hộ kinh doanh
+    // ══════════════════════════════════════════════════════════════════════════
+    tax_report_details: {
+      description:
+        'Chi tiết dòng sổ doanh thu hộ kinh doanh. ' +
+        'S1a: dòng doanh thu; S2a: dòng doanh thu theo ngành + dòng tổng hợp thuế.',
+      cols: [
+        { name: 'id', type: 'text', constraints: 'NOT NULL UNIQUE PRIMARY KEY', description: 'Mã dòng chi tiết.' },
+        { name: 'store_id', type: 'text', constraints: 'NOT NULL', description: 'Cửa hàng. FK logic → core.stores.' },
+        { name: 'report_id', type: 'text', constraints: 'NOT NULL', description: 'Báo cáo thuế cha. FK → tax_reports.' },
+        // Phân loại dòng
+        {
+          name: 'line_type',
+          type: 'varchar',
+          length: 30,
+          constraints: 'NOT NULL',
+          description: 'Loại dòng.',
+          enum: ['revenue_entry', 'revenue_by_industry', 'tax_summary'],
+        },
+        { name: 'industry_group', type: 'text', description: 'Nhóm ngành nghề (chỉ dùng với S2a).' },
+        { name: 'line_number', type: 'text', description: 'Số hiệu / số thứ tự dòng.' },
+        // Nội dung dòng
+        { name: 'entry_date', type: 'date', description: 'Ngày tháng ghi sổ (cột A).' },
+        { name: 'description', type: 'text', description: 'Diễn giải nội dung (cột B/C).' },
+        { name: 'revenue_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Số tiền doanh thu (cột 1).' },
+        // Thuế theo dòng (chỉ có giá trị với S2a)
+        { name: 'vat_rate_pct', type: 'decimal', precision: 5, scale: 2, description: 'Tỷ lệ % thuế GTGT của nhóm ngành nghề này.' },
+        { name: 'pit_rate_pct', type: 'decimal', precision: 5, scale: 2, description: 'Tỷ lệ % thuế TNCN của nhóm ngành nghề này.' },
+        { name: 'vat_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Thuế GTGT dòng này.' },
+        { name: 'pit_amount', type: 'decimal', precision: 15, scale: 2, constraints: 'DEFAULT 0', description: 'Thuế TNCN dòng này.' },
+        { name: 'sort_order', type: 'integer', constraints: 'DEFAULT 0', description: 'Thứ tự hiển thị.' },
+        { name: 'notes', type: 'text', description: 'Ghi chú dòng.' },
+        {
+          name: 'sync_status',
+          type: 'varchar',
+          length: 20,
+          constraints: "DEFAULT 'local'",
+          description: 'Trạng thái đồng bộ.',
+          enum: ['local', 'synced'],
+        },
+        { name: 'created_at', type: 'timestamp', constraints: 'DEFAULT CURRENT_TIMESTAMP', description: 'Thời gian tạo.' },
+        { name: 'updated_at', type: 'timestamp', constraints: 'DEFAULT CURRENT_TIMESTAMP', description: 'Thời gian cập nhật.' },
+        { name: 'deleted_at', type: 'timestamp', description: 'Thời gian xoá mềm.' },
+      ],
+      indexes: [
+        { name: 'idx_tax_report_details_report_id', columns: ['report_id'], unique: false, description: 'Index chi tiết theo báo cáo.' },
+        { name: 'idx_tax_report_details_line_type', columns: ['report_id', 'line_type'], unique: false, description: 'Lọc theo loại dòng.' },
+        { name: 'idx_tax_report_details_industry', columns: ['report_id', 'industry_group'], unique: false, description: 'Lọc theo ngành nghề.' },
+        { name: 'idx_tax_report_details_sync', columns: ['sync_status', 'updated_at'], unique: false, description: 'Index hàng đợi đồng bộ.' },
+      ],
+      foreign_keys: [
+        { name: 'fk_tax_report_details_report_id', columns: ['report_id'], references: { table: 'tax_reports', columns: ['id'] }, on_delete: 'CASCADE', on_update: 'CASCADE', description: 'Chi tiết thuộc báo cáo thuế.' },
+      ],
+    },
+
   },
 };
 

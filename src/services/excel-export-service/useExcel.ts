@@ -36,7 +36,7 @@ export function useExcelExport({
   const [exporting, setExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
-    if (exporting) return;
+    if (exporting) {return;}
 
     const validSheets = sheets.filter(s => s.reportType && s.template);
     if (validSheets.length === 0) {
