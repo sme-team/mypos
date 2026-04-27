@@ -44,9 +44,12 @@ export const handleAxiosError = (error: any): StandardizedError => {
 };
 
 
-import { Platform } from 'react-native';
+// import { Platform } from 'react-native';
 
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3001/api' : 'http://localhost:3001/api';
+// const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3001/api' : 'http://localhost:3001/api';
+// const BASE_URL = 'http://192.168.1.120/api';
+import { Config } from '../../config';
+const BASE_URL = Config.API_BASE;
 
 // Tạo axios instance với config chung cho React Native
 export const createAxiosInstance = (baseURL: string = BASE_URL): AxiosInstance => {

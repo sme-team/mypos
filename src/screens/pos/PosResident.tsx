@@ -32,6 +32,7 @@ import {
   PosCategory,
 } from './types';
 import {useTheme} from '../../hooks/useTheme';
+import {useAuth} from '../../store/authStore';
 import BookingScreen from '../booking/BookingScreen';
 import PaymentModal from './PaymentModal';
 import RoomDetailScreen from '../booking/RoomDetailScreen';
@@ -50,11 +51,21 @@ const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
 export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const {t} = useTranslation();
   const {isDark} = useTheme();
+  const {state: authState} = useAuth();
+  const jwtBusinessTypes = useMemo(
+    () => authState.user?.businessTypes ?? [],
+    [authState.user?.businessTypes],
+  );
   const insets = useSafeAreaInsets();
   const {width: screenWidth} = useWindowDimensions();
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
-  const [activeSection, setActiveSection] = useState<'pos' | 'stay'>('pos');
+  // Default section theo JWT: nếu chỉ có accommodation thì mặc định 'stay', còn lại 'pos'
+  const defaultSection: 'pos' | 'stay' =
+    jwtBusinessTypes.includes('accommodation') && !jwtBusinessTypes.includes('sale')
+      ? 'stay'
+      : 'pos';
+  const [activeSection, setActiveSection] = useState<'pos' | 'stay'>(defaultSection);
   const [activeMainCategory, setActiveMainCategory] = useState<string>('');
   const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
   const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>(
@@ -73,7 +84,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   // Sau này có thể lấy từ Context hoặc Global State thực tế.
   const activeStoreId = 'store-001';
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!activeStoreId) return;
     setRefreshing(true);
 
@@ -95,29 +106,14 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCategories(cats);
       setRooms(roomsData);
 
+      // activeSection đã được set từ JWT (defaultSection), không cần override từ DB
+      // Chỉ tự động chọn category đầu tiên phù hợp với section hiện tại
       if (cats.length > 0 && !activeMainCategory) {
-        // Tìm danh mục gốc đầu tiên
         const rootCats = cats.filter(c => !c.parent_id || c.parent_id === c.id);
-        if (rootCats.length > 0) {
-          //Ưu tiên pos trước
-          const posRoot = rootCats.find(c => c.apply_to === 'pos');
-          if (posRoot) {
-            setActiveSection('pos');
-            setActiveMainCategory(posRoot.id);
-          } else {
-            const stayRoot = rootCats.find(
-              c =>
-                c.apply_to === 'accommodation' ||
-                c.apply_to === 'hostel' ||
-                c.apply_to === 'hotel',
-            );
-            if (stayRoot) {
-              setActiveSection('stay');
-              setActiveMainCategory(stayRoot.id);
-            } else {
-              setActiveMainCategory(rootCats[0].id);
-            }
-          }
+        const applyToKey = defaultSection === 'pos' ? 'pos' : 'accommodation';
+        const firstMatch = rootCats.find(c => c.apply_to === applyToKey) ?? rootCats[0];
+        if (firstMatch) {
+          setActiveMainCategory(firstMatch.id);
         }
       }
     } catch (err) {
@@ -125,18 +121,17 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [activeStoreId, activeMainCategory, defaultSection]);
 
   useEffect(() => {
     if (activeStoreId) {
       loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStoreId]);
+  }, [activeStoreId, loadData]);
 
   const onRefresh = useCallback(() => {
     loadData();
-  }, [activeStoreId]);
+  }, [loadData]);
 
   const handleRoomPress = useCallback((room: Room) => {
     console.log('[PosResident] handleRoomPress:', {
@@ -174,36 +169,30 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
   const [paymentVisible, setPaymentVisible] = useState(false);
 
+  // ─── availableSections: lấy từ JWT businessTypes (nguồn duy nhất) ──────────
+  // Quy tắc:
+  //   ['sale']                    → chỉ tab POS
+  //   ['accommodation']           → chỉ tab Lưu trú
+  //   ['sale', 'accommodation']   → tab POS + tab Lưu trú
   const availableSections = useMemo(() => {
-    const rawTypes = Array.from(
-      new Set(categories.map(c => c.apply_to).filter(Boolean)),
-    );
-    // Sắp xếp: POS luôn đứng đầu
-    const sortedTypes = rawTypes.sort((a, b) => {
-      if (a === 'pos') return -1;
-      if (b === 'pos') return 1;
-      return String(a).localeCompare(String(b));
-    });
+    const hasSale          = jwtBusinessTypes.includes('sale');
+    const hasAccommodation = jwtBusinessTypes.includes('accommodation');
 
-    return sortedTypes.map(rawValue => {
-      const type = String(rawValue);
-      return {
-        key: type,
-        // Lấy theo intern1/Qanhdev: dùng t() cho tất cả label lưu trú
-        label:
-          type === 'pos'
-            ? 'POS'
-            : type === 'accommodation'
-            ? t('pos.accommodation')
-            : type === 'hotel'
-            ? t('pos.hotel')
-            : type === 'hostel'
-            ? t('pos.hostel')
-            : type.charAt(0).toUpperCase() + type.slice(1),
-        icon: type === 'pos' ? 'shopping-basket' : 'hotel',
-      };
-    });
-  }, [categories, t]);
+    const sections: {key: string; label: string; icon: string}[] = [];
+
+    if (hasSale) {
+      sections.push({key: 'pos', label: 'POS', icon: 'shopping-basket'});
+    }
+    if (hasAccommodation) {
+      sections.push({
+        key: 'stay',
+        label: t('pos.accommodation'),
+        icon: 'hotel',
+      });
+    }
+
+    return sections;
+  }, [jwtBusinessTypes, t]);
 
   const mainCategories = useMemo(() => {
     // Lọc các danh mục chính theo section đang chọn
@@ -212,11 +201,6 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
         (!c.parent_id || c.parent_id === c.id) && c.apply_to === activeSection,
     );
   }, [categories, activeSection]);
-
-  const activeCategoryObj = useMemo(
-    () => categories.find(c => c.id === activeMainCategory),
-    [categories, activeMainCategory],
-  );
 
   const isRoomMode = activeSection !== 'pos';
 

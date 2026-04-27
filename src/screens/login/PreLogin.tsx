@@ -9,11 +9,13 @@ import {
   useWindowDimensions,
   TouchableOpacity,
   Linking,
-  Platform,
+  // Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Config } from '../../config';
 
-const WEB_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+// const WEB_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+const WEB_URL = Config.WEB_BASE;
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../hooks/useTheme';
 

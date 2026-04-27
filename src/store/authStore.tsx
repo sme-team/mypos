@@ -1,3 +1,16 @@
+/**
+ * src/store/authStore.tsx
+ *
+ * AuthContext – quản lý toàn bộ phiên đăng nhập của app.
+ *
+ * Token từ BE chứa:
+ *   { sub, username, role, shopId, businessTypes: "sale" | "accommodation" | "sale,accommodation" }
+ *
+ * Thay đổi so với version cũ:
+ *   - AuthUser thêm: fullName, avatarUrl (lấy từ API /users/me sau login)
+ *   - Thêm action UPDATE_PROFILE để cập nhật user trong store sau khi edit profile
+ */
+
 import React, {
   createContext,
   useCallback,
@@ -6,14 +19,14 @@ import React, {
   useReducer,
 } from 'react';
 import axios from 'axios';
-import {tokenManager} from '../services/token-manager';
-import {AUTH_API_BASE, API_V1} from '../services/api-client';
-import {createModuleLogger, AppModules} from '../logger';
+import { tokenManager } from '../services/token-manager';
+import { AUTH_API_BASE, API_V1 } from '../services/api-client';
+import { createModuleLogger, AppModules } from '../logger';
 
 const logger = createModuleLogger(AppModules.AUTH_STORE);
 
 // auth.controller.ts không có version → /api/auth/...
-const AUTH_BASE = `${AUTH_API_BASE}/api`;
+const AUTH_BASE = AUTH_API_BASE;           // đã có /api từ Config
 // users.controller.ts có version: '1' → /api/v1/users/...
 const API_V1_BASE = `${AUTH_API_BASE}${API_V1}`;
 
@@ -50,8 +63,8 @@ function parseBusinessTypes(raw: string | undefined): string[] {
 export interface AuthUser {
   id: string;
   username: string;
-  fullName?: string; // ← lấy từ /users/me
-  avatarUrl?: string; // ← lấy từ /users/me
+  fullName?: string;    // ← THÊM: lấy từ /users/me
+  avatarUrl?: string;   // ← THÊM: lấy từ /users/me
   role: string;
   shopId: string | null;
   businessTypes: string[];
@@ -77,21 +90,12 @@ const initialState: AuthState = {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 type Action =
-  | {
-      type: 'HYDRATE_DONE';
-      payload: {user: AuthUser; authMethod: 'credentials' | 'google'} | null;
-    }
-  | {
-      type: 'LOGIN_SUCCESS';
-      payload: {user: AuthUser; authMethod: 'credentials' | 'google'};
-    }
-  | {
-      type: 'UPDATE_PROFILE';
-      payload: Partial<Pick<AuthUser, 'fullName' | 'avatarUrl' | 'username'>>;
-    }
-  | {type: 'LOGOUT'}
-  | {type: 'SET_ERROR'; payload: string}
-  | {type: 'CLEAR_ERROR'};
+  | { type: 'HYDRATE_DONE'; payload: { user: AuthUser; authMethod: 'credentials' | 'google' } | null }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: AuthUser; authMethod: 'credentials' | 'google' } }
+  | { type: 'UPDATE_PROFILE'; payload: Partial<Pick<AuthUser, 'fullName' | 'avatarUrl' | 'username'>> }
+  | { type: 'LOGOUT' }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'CLEAR_ERROR' };
 
 function reducer(state: AuthState, action: Action): AuthState {
   switch (action.type) {
@@ -105,7 +109,7 @@ function reducer(state: AuthState, action: Action): AuthState {
           error: null,
         };
       }
-      return {...initialState, isLoading: false};
+      return { ...initialState, isLoading: false };
 
     case 'LOGIN_SUCCESS':
       return {
@@ -121,17 +125,17 @@ function reducer(state: AuthState, action: Action): AuthState {
       if (!state.user) return state;
       return {
         ...state,
-        user: {...state.user, ...action.payload},
+        user: { ...state.user, ...action.payload },
       };
 
     case 'LOGOUT':
-      return {...initialState, isLoading: false};
+      return { ...initialState, isLoading: false };
 
     case 'SET_ERROR':
-      return {...state, isLoading: false, error: action.payload};
+      return { ...state, isLoading: false, error: action.payload };
 
     case 'CLEAR_ERROR':
-      return {...state, error: null};
+      return { ...state, error: null };
 
     default:
       return state;
@@ -143,24 +147,18 @@ function reducer(state: AuthState, action: Action): AuthState {
 interface AuthContextValue {
   state: AuthState;
   loginCredentials: (username: string, password: string) => Promise<boolean>;
-  loginWithGoogleToken: (
-    idToken: string,
-    mode: 'login' | 'register',
-  ) => Promise<boolean>;
+  loginWithGoogleToken: (idToken: string, mode: 'login' | 'register') => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
-  updateProfileInStore: (
-    data: Partial<Pick<AuthUser, 'fullName' | 'avatarUrl'>>,
-  ) => void;
+  /** Cập nhật fullName / avatarUrl trong store (gọi sau khi save profile thành công) */
+  updateProfileInStore: (data: Partial<Pick<AuthUser, 'fullName' | 'avatarUrl'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   // ── Build AuthUser từ JWT + profile data ────────────────────────────────
@@ -174,8 +172,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         role: claims.role,
         shopId: claims.shopId ?? null,
         businessTypes: parseBusinessTypes(claims.businessTypes),
-        shopSetupDone,
-        fullName: undefined, // sẽ được load từ /users/me nếu cần
+        // Ưu tiên shopSetupDone từ JWT claims (BE đã nhúng), fallback về param
+        shopSetupDone: claims.shopSetupDone ?? shopSetupDone,
+        fullName: undefined,
         avatarUrl: undefined,
       };
     },
@@ -194,18 +193,18 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         if (savedUser && method) {
           dispatch({
             type: 'HYDRATE_DONE',
-            payload: {user: savedUser, authMethod: method},
+            payload: { user: savedUser, authMethod: method },
           });
           logger.info('[AuthStore] ✅ Hydrate thành công', {
             userId: savedUser.id,
             businessTypes: savedUser.businessTypes,
           });
         } else {
-          dispatch({type: 'HYDRATE_DONE', payload: null});
+          dispatch({ type: 'HYDRATE_DONE', payload: null });
         }
       } catch (err: any) {
         logger.error('[AuthStore] Hydrate error:', err?.message);
-        dispatch({type: 'HYDRATE_DONE', payload: null});
+        dispatch({ type: 'HYDRATE_DONE', payload: null });
       }
     };
 
@@ -215,15 +214,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
   // ── loginCredentials ─────────────────────────────────────────────────────
   const loginCredentials = useCallback(
     async (username: string, password: string): Promise<boolean> => {
-      dispatch({type: 'CLEAR_ERROR'});
+      dispatch({ type: 'CLEAR_ERROR' });
       try {
         logger.info('[AuthStore] 🔐 Đăng nhập credentials:', username);
 
         const response = await axios.get(
-          `${AUTH_BASE}/auth/login/${encodeURIComponent(
-            username,
-          )}/${encodeURIComponent(password)}`,
-          {timeout: 15000},
+          `${AUTH_BASE}/auth/login/${encodeURIComponent(username)}/${encodeURIComponent(password)}`,
+          { timeout: 15000 },
         );
 
         const data = response.data as {
@@ -234,19 +231,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         };
 
         if (!data.success || !data.access_token) {
-          dispatch({
-            type: 'SET_ERROR',
-            payload: data.message || 'Đăng nhập thất bại',
-          });
+          dispatch({ type: 'SET_ERROR', payload: data.message || 'Đăng nhập thất bại' });
           return false;
         }
 
-        const user = buildUserFromToken(
-          data.access_token,
-          data.shopSetupDone ?? false,
-        );
+        const user = buildUserFromToken(data.access_token, data.shopSetupDone ?? false);
         if (!user) {
-          dispatch({type: 'SET_ERROR', payload: 'Token không hợp lệ'});
+          dispatch({ type: 'SET_ERROR', payload: 'Token không hợp lệ' });
           return false;
         }
 
@@ -260,7 +251,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
 
         dispatch({
           type: 'LOGIN_SUCCESS',
-          payload: {user, authMethod: 'credentials'},
+          payload: { user, authMethod: 'credentials' },
         });
 
         logger.info('[AuthStore] ✅ Đăng nhập thành công', {
@@ -275,11 +266,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         return true;
       } catch (error: any) {
         const msg =
-          error.response?.data?.message ||
-          error.message ||
-          'Lỗi kết nối server';
+          error.response?.data?.message || error.message || 'Lỗi kết nối server';
         logger.error('[AuthStore] ❌ Đăng nhập thất bại:', msg);
-        dispatch({type: 'SET_ERROR', payload: msg});
+        dispatch({ type: 'SET_ERROR', payload: msg });
         return false;
       }
     },
@@ -289,15 +278,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
   // ── loginWithGoogleToken ─────────────────────────────────────────────────
   const loginWithGoogleToken = useCallback(
     async (idToken: string, mode: 'login' | 'register'): Promise<boolean> => {
-      dispatch({type: 'CLEAR_ERROR'});
+      dispatch({ type: 'CLEAR_ERROR' });
       try {
         logger.info('[AuthStore] 🔐 Đăng nhập Google token, mode:', mode);
 
         const response = await axios.post(
           `${AUTH_BASE}/auth/google/token`,
-          {idToken, mode},
+          { idToken, mode },
           {
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             timeout: 15000,
           },
         );
@@ -310,19 +299,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         };
 
         if (!data.success || !data.access_token) {
-          dispatch({
-            type: 'SET_ERROR',
-            payload: data.message || 'Google đăng nhập thất bại',
-          });
+          dispatch({ type: 'SET_ERROR', payload: data.message || 'Google đăng nhập thất bại' });
           return false;
         }
 
-        const user = buildUserFromToken(
-          data.access_token,
-          data.shopSetupDone ?? false,
-        );
+        const user = buildUserFromToken(data.access_token, data.shopSetupDone ?? false);
         if (!user) {
-          dispatch({type: 'SET_ERROR', payload: 'Token không hợp lệ'});
+          dispatch({ type: 'SET_ERROR', payload: 'Token không hợp lệ' });
           return false;
         }
 
@@ -336,7 +319,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
 
         dispatch({
           type: 'LOGIN_SUCCESS',
-          payload: {user, authMethod: 'google'},
+          payload: { user, authMethod: 'google' },
         });
 
         logger.info('[AuthStore] ✅ Google đăng nhập thành công', {
@@ -348,33 +331,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
 
         return true;
       } catch (error: any) {
-        let msg = 'Lỗi Google đăng nhập';
-
-        if (error.response?.data?.message) {
-          msg = error.response.data.message;
-        } else if (
-          error.code === 'ECONNREFUSED' ||
-          error.code === 'ENOTFOUND'
-        ) {
-          msg = `Không thể kết nối đến server (${AUTH_BASE}). Kiểm tra backend có chạy không?`;
-        } else if (
-          error.code === 'ETIMEDOUT' ||
-          error.message?.includes('timeout')
-        ) {
-          msg = `Kết nối timeout. Server ${AUTH_BASE} không phản hồi.`;
-        } else if (error.message?.includes('Network')) {
-          msg = `Lỗi mạng: ${error.message}`;
-        } else {
-          msg = error.message || msg;
-        }
-
-        logger.error('[AuthStore] ❌ Google đăng nhập thất bại:', {
-          error: error.message,
-          code: error.code,
-          url: `${AUTH_BASE}/auth/google/token`,
-          response: error.response?.data,
-        });
-        dispatch({type: 'SET_ERROR', payload: msg});
+        const msg =
+          error.response?.data?.message || error.message || 'Lỗi Google đăng nhập';
+        logger.error('[AuthStore] ❌ Google đăng nhập thất bại:', msg);
+        dispatch({ type: 'SET_ERROR', payload: msg });
         return false;
       }
     },
@@ -385,15 +345,15 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
   const logout = useCallback(async (): Promise<void> => {
     logger.info('[AuthStore] 🚪 Đăng xuất');
     await tokenManager.clearAll();
-    dispatch({type: 'LOGOUT'});
+    dispatch({ type: 'LOGOUT' });
   }, []);
 
-  const clearError = useCallback(() => dispatch({type: 'CLEAR_ERROR'}), []);
+  const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   // Cập nhật profile info trong store (fullName, avatarUrl)
   const updateProfileInStore = useCallback(
     (data: Partial<Pick<AuthUser, 'fullName' | 'avatarUrl'>>) => {
-      dispatch({type: 'UPDATE_PROFILE', payload: data});
+      dispatch({ type: 'UPDATE_PROFILE', payload: data });
       // Cập nhật cả trong tokenManager để persist
       const currentUser = tokenManager.getUser();
       if (currentUser) {
@@ -401,7 +361,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
           accessToken: tokenManager.getAccessToken() ?? '',
           refreshToken: tokenManager.getRefreshToken() ?? '',
           authMethod: tokenManager.getAuthMethod() ?? 'credentials',
-          user: {...currentUser, ...data},
+          user: { ...currentUser, ...data },
           expiresIn: 3600,
         });
       }
@@ -432,10 +392,11 @@ async function loadExtraProfile(
 ): Promise<void> {
   try {
     const res = await axios.get(`${API_V1_BASE}/users/me`, {
-      headers: {Authorization: `Bearer ${token}`},
+      headers: { Authorization: `Bearer ${token}` },
       timeout: 10000,
     });
-    const user = res.data?.user;
+    // BE trả { user: { _id, username, fullName, avatarUrl, ... } }
+    const user = res.data?.user ?? res.data;
     if (user) {
       dispatch({
         type: 'UPDATE_PROFILE',

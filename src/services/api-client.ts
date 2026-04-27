@@ -5,7 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import {tokenManager} from './token-manager';
-import {AUTH_API_BASE as ENV_AUTH_API_BASE} from '@env';
+import { Config } from '../config';
 
 import {createModuleLogger, AppModules} from '../logger';
 const logger = createModuleLogger(AppModules.API_CLIENT);
@@ -14,7 +14,8 @@ const logger = createModuleLogger(AppModules.API_CLIENT);
 // - Máy thật (cùng WiFi): dùng IP máy chủ BE (set trong .env)
 // - Emulator Android:      http://10.0.2.2:3001
 // - Simulator iOS:         http://127.0.0.1:3001
-export const AUTH_API_BASE = ENV_AUTH_API_BASE ?? 'http://192.168.1.76:3001';
+// export const AUTH_API_BASE = ENV_AUTH_API_BASE ?? 'http://192.168.1.120:3001';
+export const AUTH_API_BASE = Config.API_BASE;
 logger.trace('AUTH_API_BASE:', AUTH_API_BASE);
 
 // ─── Route prefix theo từng controller ──────────────────────────────────────────
@@ -25,9 +26,9 @@ logger.trace('AUTH_API_BASE:', AUTH_API_BASE);
 //   users.controller.ts     → @Controller({ version: '1' })           → /api/v1/users/...
 //
 // auth routes (login, register, google/token, shop/setup) KHÔNG có /v1
-const API_NO_VERSION = '/api';
+const API_NO_VERSION = '';
 // password / users routes CÓ /v1
-export const API_V1 = '/api/v1';
+export const API_V1 = '/v1';
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 

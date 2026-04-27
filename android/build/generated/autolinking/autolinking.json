@@ -1,50 +1,26 @@
 {
-  "root": "D:\\mypos2\\mypos",
-  "reactNativePath": "D:\\mypos2\\mypos\\node_modules\\react-native",
+  "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos",
+  "reactNativePath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native",
   "reactNativeVersion": "0.76",
   "dependencies": {
     "@react-native-async-storage/async-storage": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\@react-native-async-storage\\async-storage",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-async-storage\\async-storage",
       "name": "@react-native-async-storage/async-storage",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\RNCAsyncStorage.podspec",
-          "version": "2.2.0",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\RNCAsyncStorage.podspec",
+          "version": "1.23.1",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-async-storage\\async-storage\\android",
           "packageImportPath": "import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;",
           "packageInstance": "new AsyncStoragePackage()",
           "buildTypes": [],
           "libraryName": "rnasyncstorage",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
-          "cxxModuleCMakeListsModuleName": null,
-          "cxxModuleCMakeListsPath": null,
-          "cxxModuleHeaderName": null,
-          "isPureCxxDependency": false
-        }
-      }
-    },
-    "@react-native-ml-kit/text-recognition": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\@react-native-ml-kit\\text-recognition",
-      "name": "@react-native-ml-kit/text-recognition",
-      "platforms": {
-        "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\@react-native-ml-kit\\text-recognition\\RNMLKitTextRecognition.podspec",
-          "version": "2.0.0",
-          "configurations": [],
-          "scriptPhases": []
-        },
-        "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\@react-native-ml-kit\\text-recognition\\android",
-          "packageImportPath": "import com.rnmlkit.textrecognition.TextRecognitionPackage;",
-          "packageInstance": "new TextRecognitionPackage()",
-          "buildTypes": [],
-          "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/@react-native-ml-kit/text-recognition/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -53,17 +29,17 @@
       }
     },
     "@react-native-google-signin/google-signin": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\@react-native-google-signin\\google-signin",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-google-signin\\google-signin",
       "name": "@react-native-google-signin/google-signin",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\@react-native-google-signin\\google-signin\\RNGoogleSignin.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-google-signin\\google-signin\\RNGoogleSignin.podspec",
           "version": "16.1.2",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\@react-native-google-signin\\google-signin\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\@react-native-google-signin\\google-signin\\android",
           "packageImportPath": "import com.reactnativegooglesignin.RNGoogleSigninPackage;",
           "packageInstance": "new RNGoogleSigninPackage()",
           "buildTypes": [],
@@ -71,7 +47,7 @@
           "componentDescriptors": [
             "RNGoogleSigninButtonComponentDescriptor"
           ],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/@react-native-google-signin/google-signin/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/@react-native-google-signin/google-signin/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -80,23 +56,23 @@
       }
     },
     "react-native-bootsplash": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-bootsplash",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-bootsplash",
       "name": "react-native-bootsplash",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-bootsplash\\RNBootSplash.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-bootsplash\\RNBootSplash.podspec",
           "version": "7.2.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-bootsplash\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-bootsplash\\android",
           "packageImportPath": "import com.zoontek.rnbootsplash.RNBootSplashPackage;",
           "packageInstance": "new RNBootSplashPackage()",
           "buildTypes": [],
           "libraryName": "RNBootSplashSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-bootsplash/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-bootsplash/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -105,23 +81,23 @@
       }
     },
     "react-native-image-picker": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-image-picker",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-image-picker",
       "name": "react-native-image-picker",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-image-picker\\react-native-image-picker.podspec",
-          "version": "7.2.3",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-image-picker\\react-native-image-picker.podspec",
+          "version": "7.1.2",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-image-picker\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-image-picker\\android",
           "packageImportPath": "import com.imagepicker.ImagePickerPackage;",
           "packageInstance": "new ImagePickerPackage()",
           "buildTypes": [],
           "libraryName": "RNImagePickerSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -130,22 +106,22 @@
       }
     },
     "react-native-randombytes": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-randombytes",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-randombytes",
       "name": "react-native-randombytes",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-randombytes\\react-native-randombytes.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-randombytes\\react-native-randombytes.podspec",
           "version": "3.6.2",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-randombytes\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-randombytes\\android",
           "packageImportPath": "import com.bitgo.randombytes.RandomBytesPackage;",
           "packageInstance": "new RandomBytesPackage()",
           "buildTypes": [],
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-randombytes/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-randombytes/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -154,17 +130,17 @@
       }
     },
     "react-native-safe-area-context": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-safe-area-context",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-safe-area-context",
       "name": "react-native-safe-area-context",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-safe-area-context\\react-native-safe-area-context.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-safe-area-context\\react-native-safe-area-context.podspec",
           "version": "5.7.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-safe-area-context\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-safe-area-context\\android",
           "packageImportPath": "import com.th3rdwave.safeareacontext.SafeAreaContextPackage;",
           "packageInstance": "new SafeAreaContextPackage()",
           "buildTypes": [],
@@ -173,7 +149,7 @@
             "RNCSafeAreaProviderComponentDescriptor",
             "RNCSafeAreaViewComponentDescriptor"
           ],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -182,22 +158,22 @@
       }
     },
     "react-native-sqlite-storage": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-sqlite-storage",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-sqlite-storage",
       "name": "react-native-sqlite-storage",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-sqlite-storage\\react-native-sqlite-storage.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-sqlite-storage\\react-native-sqlite-storage.podspec",
           "version": "6.0.1",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-sqlite-storage\\platforms\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-sqlite-storage\\platforms\\android",
           "packageImportPath": "import org.pgsqlite.SQLitePluginPackage;",
           "packageInstance": "new SQLitePluginPackage()",
           "buildTypes": [],
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-sqlite-storage/platforms/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-sqlite-storage/platforms/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -206,72 +182,23 @@
       }
     },
     "react-native-vector-icons": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-vector-icons",
+      "root": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-vector-icons",
       "name": "react-native-vector-icons",
       "platforms": {
         "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-vector-icons\\RNVectorIcons.podspec",
+          "podspecPath": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-vector-icons\\RNVectorIcons.podspec",
           "version": "10.3.0",
           "configurations": [],
           "scriptPhases": []
         },
         "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-vector-icons\\android",
+          "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\node_modules\\react-native-vector-icons\\android",
           "packageImportPath": "import com.oblador.vectoricons.VectorIconsPackage;",
           "packageInstance": "new VectorIconsPackage()",
           "buildTypes": [],
           "libraryName": "RNVectorIconsSpec",
           "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
-          "cxxModuleCMakeListsModuleName": null,
-          "cxxModuleCMakeListsPath": null,
-          "cxxModuleHeaderName": null,
-          "isPureCxxDependency": false
-        }
-      }
-    },
-    "react-native-vision-camera": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-vision-camera",
-      "name": "react-native-vision-camera",
-      "platforms": {
-        "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-vision-camera\\VisionCamera.podspec",
-          "version": "4.7.3",
-          "configurations": [],
-          "scriptPhases": []
-        },
-        "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-vision-camera\\android",
-          "packageImportPath": "import com.mrousavy.camera.react.CameraPackage;",
-          "packageInstance": "new CameraPackage()",
-          "buildTypes": [],
-          "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-vision-camera/android/build/generated/source/codegen/jni/CMakeLists.txt",
-          "cxxModuleCMakeListsModuleName": null,
-          "cxxModuleCMakeListsPath": null,
-          "cxxModuleHeaderName": null,
-          "isPureCxxDependency": false
-        }
-      }
-    },
-    "react-native-worklets-core": {
-      "root": "D:\\mypos2\\mypos\\node_modules\\react-native-worklets-core",
-      "name": "react-native-worklets-core",
-      "platforms": {
-        "ios": {
-          "podspecPath": "D:\\mypos2\\mypos\\node_modules\\react-native-worklets-core\\react-native-worklets-core.podspec",
-          "version": "1.6.3",
-          "configurations": [],
-          "scriptPhases": []
-        },
-        "android": {
-          "sourceDir": "D:\\mypos2\\mypos\\node_modules\\react-native-worklets-core\\android",
-          "packageImportPath": "import com.worklets.WorkletsCorePackage;",
-          "packageInstance": "new WorkletsCorePackage()",
-          "buildTypes": [],
-          "libraryName": "RNWorkletsSpec",
-          "componentDescriptors": [],
-          "cmakeListsPath": "D:/mypos2/mypos/node_modules/react-native-worklets-core/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cmakeListsPath": "D:/Study/Co_Project/mypos-monorepo/mypos/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,
@@ -437,7 +364,7 @@
         {
           "name": "--path <path>",
           "description": "Path to the React Native project root.",
-          "default": "D:\\mypos2\\mypos"
+          "default": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos"
         },
         {
           "name": "--platform <string>",
@@ -723,17 +650,9 @@
   },
   "assets": [],
   "project": {
-    "ios": {
-      "sourceDir": "D:\\mypos2\\mypos\\ios",
-      "xcodeProject": {
-        "name": "myPos.xcworkspace",
-        "path": ".",
-        "isWorkspace": true
-      },
-      "assets": []
-    },
+    "ios": null,
     "android": {
-      "sourceDir": "D:\\mypos2\\mypos\\android",
+      "sourceDir": "D:\\Study\\Co_Project\\mypos-monorepo\\mypos\\android",
       "appName": "app",
       "packageName": "com.mypos",
       "applicationId": "com.mypos",

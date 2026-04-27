@@ -9,12 +9,14 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useTranslation} from 'react-i18next';
 import {useTheme} from '../../hooks/useTheme';
+import {useAuth} from '../../store/authStore';
 import PosCategoryManagement from './PosCategoryManagement';
 import RoomManagement from '../../screens/room/RoomManagement';
 
 interface Props {
   onOpenMenu: () => void;
-  storeId: string;
+  onBack?: () => void;
+  storeId?: string;
 }
 
 type SectionKey = 'selling' | 'stay';
@@ -24,16 +26,30 @@ const SECTIONS: {key: SectionKey; labelKey: string; label: string; icon: string}
   {key: 'stay',    labelKey: 'category.sectionStay',    label: 'Lưu trú', icon: 'bed'},
 ];
 
-export default function CategoryManagement({onOpenMenu, storeId}: Props) {
+export default function CategoryManagement({onOpenMenu, onBack, storeId = 'store-001'}: Props) {
   const {t} = useTranslation();
   const {isDark} = useTheme();
+  const {state: authState} = useAuth();
+  const jwtBusinessTypes = authState.user?.businessTypes ?? [];
+  const hasSale          = jwtBusinessTypes.includes('sale');
+  const hasAccommodation = jwtBusinessTypes.includes('accommodation');
+
+  // Chỉ show sections phù hợp với businessTypes từ JWT
+  const visibleSections = SECTIONS.filter(sec => {
+    if (sec.key === 'selling') return hasSale;
+    if (sec.key === 'stay')    return hasAccommodation;
+    return false;
+  });
 
   const bgColor   = isDark ? '#111827' : '#f5f7fa';
   const headerBg  = isDark ? '#1f2937' : '#f5f7fa';
   const textColor = isDark ? '#f9fafb' : '#111827';
   const borderColor = isDark ? '#374151' : '#c2c2c2';
 
-  const [activeSection, setActiveSection] = useState<SectionKey>('selling');
+  // Default tab theo JWT: nếu chỉ có accommodation thì mặc định 'stay'
+  const defaultSection: SectionKey =
+    hasAccommodation && !hasSale ? 'stay' : 'selling';
+  const [activeSection, setActiveSection] = useState<SectionKey>(defaultSection);
 
   const handleSwitchSection = (key: SectionKey) => {
     setActiveSection(key);
@@ -81,7 +97,8 @@ export default function CategoryManagement({onOpenMenu, storeId}: Props) {
           </Text>
         </View>
 
-        {/* Section pill tabs */}
+        {/* Section pill tabs — chỉ hiện khi có cả 2 loại */}
+        {visibleSections.length > 1 && (
         <View style={{paddingHorizontal: 16, paddingBottom: 16}}>
           <View
             style={{
@@ -90,7 +107,7 @@ export default function CategoryManagement({onOpenMenu, storeId}: Props) {
               borderRadius: 16,
               padding: 4,
             }}>
-            {SECTIONS.map(sec => {
+            {visibleSections.map(sec => {
               const isActive = activeSection === sec.key;
               return (
                 <TouchableOpacity
@@ -137,6 +154,7 @@ export default function CategoryManagement({onOpenMenu, storeId}: Props) {
             })}
           </View>
         </View>
+        )}
       </View>
 
       {/* ── Mode screens: completely independent ── */}

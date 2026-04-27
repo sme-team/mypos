@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { WEB_BASE_URL } from '@env';
+import { Config } from '../../config'; // ← thay thế import từ @env
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../store/authStore';
 import {
@@ -40,8 +40,8 @@ interface EditProfileScreenProps {
   onChangePassword?: () => void;
 }
 
-// URL trang đổi mật khẩu — fallback nếu .env chưa set
-const CHANGE_PASSWORD_URL = `${WEB_BASE_URL ?? 'http://localhost:3000'}/change-password`;
+// URL trang đổi mật khẩu — lấy từ Config (nguồn duy nhất)
+const CHANGE_PASSWORD_URL = `${Config.WEB_BASE}/change-password`;
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -173,7 +173,7 @@ export default function EditProfileScreen({ onBack, onSaved, onChangePassword }:
       onChangePassword();
       return;
     }
-    
+
     try {
       const canOpen = await Linking.canOpenURL(CHANGE_PASSWORD_URL);
       if (canOpen) {
@@ -351,11 +351,9 @@ export default function EditProfileScreen({ onBack, onSaved, onChangePassword }:
                     Cập nhật mật khẩu để bảo vệ tài khoản
                   </Text>
                 </View>
-                {/* "open in browser" icon thay cho chevron */}
                 <Icon name="open-in-new" size={18} color={colors.subText} />
               </TouchableOpacity>
 
-              {/* Hiển thị URL để user biết sẽ mở đâu */}
               <View style={[styles.urlHint, {
                 backgroundColor: colors.warningBg,
                 borderTopColor: colors.warningBorder,

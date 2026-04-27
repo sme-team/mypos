@@ -27,9 +27,10 @@ import { useAuth } from '../store/authStore';
 interface NoBusinessProps {
   registerUrl: string;
   isDark?: boolean;
+  onBack?: () => void;
 }
 
-function NoBusinessTypeScreen({ registerUrl, isDark = false }: NoBusinessProps) {
+function NoBusinessTypeScreen({ registerUrl, isDark = false, onBack }: NoBusinessProps) {
   const bg       = isDark ? '#0f172a' : '#f8fafc';
   const card     = isDark ? '#1e293b' : '#ffffff';
   const text     = isDark ? '#e2e8f0' : '#1e293b';
@@ -76,6 +77,19 @@ function NoBusinessTypeScreen({ registerUrl, isDark = false }: NoBusinessProps) 
           <Icon name="open-in-browser" size={20} color="#ffffff" style={noStyles.btnIcon} />
           <Text style={noStyles.btnText}>Đăng ký trên web</Text>
         </TouchableOpacity>
+
+        {/* Nút quay lại đăng nhập */}
+        {onBack && (
+          <TouchableOpacity
+            style={[noStyles.backBtn, { borderColor: isDark ? '#334155' : '#e2e8f0' }]}
+            onPress={onBack}
+            activeOpacity={0.75}>
+            <Icon name="arrow-back" size={18} color={isDark ? '#94a3b8' : '#64748b'} style={noStyles.btnIcon} />
+            <Text style={[noStyles.backBtnText, { color: isDark ? '#94a3b8' : '#64748b' }]}>
+              Quay lại đăng nhập
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -136,6 +150,19 @@ const noStyles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
@@ -230,6 +257,8 @@ interface NavigatorProps {
   /** URL trang web đăng ký – gắn từ App.tsx */
   registerUrl: string;
   onBusinessTypeSelected?: (type: 'sale' | 'accommodation') => void;
+  /** Callback quay lại màn hình đăng nhập */
+  onBack?: () => void;
 }
 
 export function BusinessTypeNavigator({
@@ -238,6 +267,7 @@ export function BusinessTypeNavigator({
   AccommodationScreen,
   registerUrl,
   onBusinessTypeSelected,
+  onBack,
 }: NavigatorProps) {
   const { screen } = useBusinessType();
   const [activeTab, setActiveTab] = React.useState<'sale' | 'accommodation'>('sale');
@@ -252,7 +282,7 @@ export function BusinessTypeNavigator({
   }, [screen, activeTab, onBusinessTypeSelected]);
 
   if (screen === 'setup') {
-    return <NoBusinessTypeScreen registerUrl={registerUrl} isDark={isDark} />;
+    return <NoBusinessTypeScreen registerUrl={registerUrl} isDark={isDark} onBack={onBack} />;
   }
 
   if (screen === 'sale') return <SaleScreen isDark={isDark} />;
@@ -260,14 +290,15 @@ export function BusinessTypeNavigator({
   if (screen === 'accommodation') return <AccommodationScreen isDark={isDark} />;
 
   if (screen === 'both') {
+    // Khi có cả 2 loại, businessType được xác định từ token → render màn hình tương ứng
+    // Tab bar đã được tích hợp bên trong từng màn hình (PosResident / PlaceScreen)
     const handleTabChange = (type: 'sale' | 'accommodation') => {
       setActiveTab(type);
       onBusinessTypeSelected?.(type);
     };
     return (
       <View style={{ flex: 1 }}>
-        <BusinessTabBar active={activeTab} onChange={handleTabChange} isDark={isDark} />
-        {activeTab === 'sale' ? <SaleScreen isDark={isDark} /> : <AccommodationScreen isDark={isDark} />}
+        {activeTab === 'sale' ? <SaleScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} /> : <AccommodationScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} />}
       </View>
     );
   }
