@@ -3,7 +3,7 @@
  * @description: Form nhập liệu cho loại hình lưu trú NGẮN HẠN (Theo ngày, khách vãng lai).
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SectionLabel, FieldLabel, Stepper, TimeStepper, AmountField } from '../ui/SharedFields';
@@ -22,18 +22,40 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Check if checkinDate is today to enforce minTime constraint
+  const isCheckinToday = form.checkinDate === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  // Auto-update checkinTime to current time every minute if checkinDate is today
+  useEffect(() => {
+    if (!isCheckinToday) return;
+
+    const updateTime = () => {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      updateForm({ checkinTime: currentTime });
+    };
+
+    // Update immediately
+    updateTime();
+
+    // Update every minute
+    const interval = setInterval(updateTime, 60000);
+
+    return () => clearInterval(interval);
+  }, [isCheckinToday]);
+
   // Hàm format thời gian đăng ký
   const formatStayDuration = useCallback(() => {
     const checkinDateTime = new Date(`${form.checkinDate}T${form.checkinTime}`);
     const checkoutDateTime = new Date(`${form.checkoutDate}T${form.checkoutTime}`);
     const totalMs = checkoutDateTime.getTime() - checkinDateTime.getTime();
-    
-    if (totalMs <= 0) return 'Chưa xác định';
-    
+
+    if (totalMs <= 0) {return 'Chưa xác định';}
+
     const totalHours = totalMs / (1000 * 60 * 60);
     const days = Math.floor(totalHours / 24);
     const hours = Math.ceil(totalHours % 24);
-    
+
     if (days === 0) {
       return `${hours} giờ`;
     } else if (hours === 0) {
@@ -63,7 +85,7 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
         <View style={{ flex: 1 }}>
           <FieldLabel text={t('booking.form.time')} />
           {/* Bộ chọn giờ chuyên biệt */}
-          <TimeStepper value={form.checkinTime} onChange={(v: any) => updateForm({ checkinTime: v })} themedColors={themedColors} />
+          <TimeStepper value={form.checkinTime} onChange={(v: any) => updateForm({ checkinTime: v })} themedColors={themedColors} minTime={isCheckinToday} />
         </View>
       </View>
 
@@ -135,7 +157,7 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
         selectedDate={new Date(form.checkinDate)}
         minDate={today}
         title={t('booking.form.checkin')}
-        onConfirm={(d) => { setIsInOpen(false); updateForm({ checkinDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }); }}
+        onConfirm={(d) => { setIsInOpen(false); updateForm({ checkinDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }); }}
         onCancel={() => setIsInOpen(false)}
       />
       <CalendarModal
@@ -143,7 +165,7 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
         selectedDate={new Date(form.checkoutDate)}
         minDate={new Date(form.checkinDate) > today ? new Date(form.checkinDate) : today}
         title={t('booking.form.checkout')}
-        onConfirm={(d) => { setIsOutOpen(false); updateForm({ checkoutDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }); }}
+        onConfirm={(d) => { setIsOutOpen(false); updateForm({ checkoutDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }); }}
         onCancel={() => setIsOutOpen(false)}
       />
     </View>

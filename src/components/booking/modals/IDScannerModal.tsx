@@ -25,7 +25,7 @@ import {
   Camera,
   useCameraDevice,
   useCameraPermission,
-  useCodeScanner
+  useCodeScanner,
 } from 'react-native-vision-camera';
 import { launchImageLibrary } from 'react-native-image-picker';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
@@ -86,11 +86,11 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
 
   // Yêu cầu quyền truy cập Camera
   useEffect(() => {
-    if (visible && !hasPermission) requestPermission();
+    if (visible && !hasPermission) {requestPermission();}
   }, [visible, hasPermission]);
 
   const parseCCCDQRCode = (rawString: string): CCCDData | null => {
-    if (!rawString) return null;
+    if (!rawString) {return null;}
     console.log('[IDScanner] Raw scanned string:', rawString);
 
     // Một số QR có thể bị dính ký tự lạ ở đầu/cuối
@@ -117,15 +117,15 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
 
   /** Định dạng ngày DDMMYYYY → DD/MM/YYYY */
   const formatDate = (raw: string): string => {
-    if (!raw || raw.length < 8) return raw;
+    if (!raw || raw.length < 8) {return raw;}
     return `${raw.substring(0, 2)}/${raw.substring(2, 4)}/${raw.substring(4)}`;
   };
 
   /** Dịch giới tính từ tiếng Anh hoặc mã số */
   const formatGender = (raw: string): string => {
     const lower = raw.toLowerCase();
-    if (lower === 'male' || lower === 'nam' || lower === '1') return 'Nam';
-    if (lower === 'female' || lower === 'nữ' || lower === '0') return 'Nữ';
+    if (lower === 'male' || lower === 'nam' || lower === '1') {return 'Nam';}
+    if (lower === 'female' || lower === 'nữ' || lower === '0') {return 'Nữ';}
     return raw;
   };
 
@@ -151,13 +151,13 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
           }
         }
       }
-    }
+    },
   });
 
   // ─── OCR (chọn ảnh từ thư viện) ─────────────────────────────────────────
   const handlePickImage = async () => {
     const result = await launchImageLibrary({ mediaType: 'photo', includeBase64: false });
-    if (!result.assets?.[0]?.uri) return;
+    if (!result.assets?.[0]?.uri) {return;}
 
     setIsProcessing(true);
     try {
@@ -265,8 +265,8 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
       const genderMatch = text.match(/(Nam|Nữ|Male|Female|Giới tính|Gender)/i);
       if (genderMatch) {
         const genderText = genderMatch[0].toLowerCase();
-        if (genderText.includes('nam') || genderText.includes('male')) gender = 'Nam';
-        else if (genderText.includes('nữ') || genderText.includes('female')) gender = 'Nữ';
+        if (genderText.includes('nam') || genderText.includes('male')) {gender = 'Nam';}
+        else if (genderText.includes('nữ') || genderText.includes('female')) {gender = 'Nữ';}
       }
       // Fallback: tìm "Nam" hoặc "Nữ" đứng riêng hoặc sau từ khóa
       if (!gender) {
@@ -275,15 +275,15 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
           if (lower.includes('giới tính') || lower.includes('gioi tinh') || lower.includes('sex') || lower.includes('gender')) {
             // Kiểm tra dòng hiện tại và dòng tiếp theo
             const checkText = (lines[i] + ' ' + (lines[i + 1] ?? '')).toLowerCase();
-            if (checkText.includes('nam')) gender = 'Nam';
-            else if (checkText.includes('nữ') || checkText.includes('nu')) gender = 'Nữ';
+            if (checkText.includes('nam')) {gender = 'Nam';}
+            else if (checkText.includes('nữ') || checkText.includes('nu')) {gender = 'Nữ';}
             break;
           }
         }
       }
       if (!gender) {
-        if (text.includes(' Nam ')) gender = 'Nam';
-        else if (text.includes(' Nữ ')) gender = 'Nữ';
+        if (text.includes(' Nam ')) {gender = 'Nam';}
+        else if (text.includes(' Nữ ')) {gender = 'Nữ';}
       }
 
       // Tìm Quê quán (Place of origin) - TRƯỜNG MỚI
@@ -310,7 +310,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
            l.toLowerCase().includes('city')) &&
           l.length > 10 && l.length < 100
         );
-        if (originLikeLine) placeOfOrigin = originLikeLine;
+        if (originLikeLine) {placeOfOrigin = originLikeLine;}
       }
 
       // Tìm Địa chỉ thường trú (thường sau từ khóa "Địa chỉ" hoặc "Nơi thường trú")
@@ -337,7 +337,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
            l.toLowerCase().includes('tỉnh') || l.toLowerCase().includes('street') ||
            l.toLowerCase().includes('district') || l.toLowerCase().includes('ward'))
         );
-        if (addressLikeLine) address = addressLikeLine;
+        if (addressLikeLine) {address = addressLikeLine;}
       }
 
       const scannedResult: CCCDData = {
@@ -394,7 +394,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
     }
   };
 
-  if (!visible) return null;
+  if (!visible) {return null;}
 
   // ─── Màn hình xác nhận (sau khi quét xong) ──────────────────────────────
   if (scannedData) {
@@ -407,7 +407,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={editMode ? handleCancelEdit : handleRescan} style={styles.closeBtn}>
-              <Icon name={editMode ? "close" : "arrow-back"} size={24} color={themedColors.text} />
+              <Icon name={editMode ? 'close' : 'arrow-back'} size={24} color={themedColors.text} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: themedColors.text }]}>
               {editMode ? t('idScanner.editTitle') : t('idScanner.confirmTitle')}
@@ -422,7 +422,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
             automaticallyAdjustContentInsets={false}>
             {/* Icon thành công / Edit mode */}
             <View style={[styles.successBadge, { backgroundColor: editMode ? themedColors.warningLight : themedColors.primaryLight }]}>
-              <Icon name={editMode ? "edit" : "verified-user"} size={48} color={editMode ? themedColors.warning : themedColors.primary} />
+              <Icon name={editMode ? 'edit' : 'verified-user'} size={48} color={editMode ? themedColors.warning : themedColors.primary} />
               <Text style={[styles.successTitle, { color: editMode ? themedColors.warning : themedColors.primary }]}>
                 {editMode ? t('idScanner.editTitle') : t('idScanner.successTitle')}
               </Text>

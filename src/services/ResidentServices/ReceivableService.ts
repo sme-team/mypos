@@ -44,7 +44,7 @@ export class ReceivableServiceClass extends BaseService {
    */
   async generateReceivableCode(storeId: string): Promise<string> {
     const db = DatabaseManager.get('pos');
-    if (!db) throw new Error('Database not found');
+    if (!db) {throw new Error('Database not found');}
 
     const now = new Date();
     const yearMonth = `${now.getFullYear()}${String(

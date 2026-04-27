@@ -7,7 +7,7 @@ import DatabaseManager from '../database/DBManagers';
  */
 export async function generateCustomerCode(storeId: string): Promise<string> {
   const db = DatabaseManager.get('pos');
-  if (!db) throw new Error('Database not found');
+  if (!db) {throw new Error('Database not found');}
 
   const storePrefix = storeId.substring(0, 4);
   const prefix = `KH-${storePrefix}-`;
@@ -36,7 +36,7 @@ export async function generateCustomerCode(storeId: string): Promise<string> {
  */
 export async function generateContractCode(storeId: string): Promise<string> {
   const db = DatabaseManager.get('pos');
-  if (!db) throw new Error('Database not found');
+  if (!db) {throw new Error('Database not found');}
 
   const year = new Date().getFullYear();
   const prefix = `HD-${year}-`;
@@ -65,7 +65,7 @@ export async function generateContractCode(storeId: string): Promise<string> {
  */
 export async function generateBillNumber(storeId: string): Promise<string> {
   const db = DatabaseManager.get('pos');
-  if (!db) throw new Error('Database not found');
+  if (!db) {throw new Error('Database not found');}
 
   const now = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -95,7 +95,7 @@ export async function generateBillNumber(storeId: string): Promise<string> {
  */
 export async function generateReceivableCode(storeId: string): Promise<string> {
   const db = DatabaseManager.get('pos');
-  if (!db) throw new Error('Database not found');
+  if (!db) {throw new Error('Database not found');}
 
   const now = new Date();
   const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;

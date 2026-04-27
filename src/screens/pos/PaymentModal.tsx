@@ -55,11 +55,12 @@ export default function PaymentModal({
   }, [total]);
 
   const handleConfirm = async () => {
-    // ❗ 1. Check giỏ hàng
+    // Check giỏ hàng
     if (isEmptyCart) {
-      Alert.alert('Lỗi', 'Chưa có sản phẩm để thanh toán');
+      Alert.alert(t('alert.error'), t('alert.emptyCart'));
       return;
     }
+
     try {
       await PaymentService.createOrder({
         cartItems,
@@ -69,18 +70,19 @@ export default function PaymentModal({
         customerId: selectedCustomer?.id || null,
       });
 
-      // 3. Thông báo + xử lý
-      Alert.alert('Thành công', 'Thanh toán thành công', [
+      //  Thành công
+      Alert.alert(t('alert.success'), t('alert.paymentSuccess'), [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: () => {
-            onClose(); // đóng modal
-            onSuccess(); // clear cart
+            onSuccess();
+            onClose();
           },
         },
       ]);
     } catch (error) {
-      Alert.alert('Lỗi', 'Thanh toán thất bại');
+      //  Thất bại
+      Alert.alert(t('alert.error'), t('alert.paymentFailed'));
     }
   };
   return (

@@ -20,11 +20,11 @@ export const EditCategoryModal: React.FC<Props> = ({
   const [name, setName] = useState(initialName);
 
   useEffect(() => {
-    if (visible) setName(initialName);
+    if (visible) {setName(initialName);}
   }, [visible, initialName]);
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {return;}
     onSave(name.trim());
   };
 

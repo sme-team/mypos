@@ -21,6 +21,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import ResponsivePanel from '../../components/pos/ResponsivePanel';
 import ProductCard from '../../components/pos/ProductCard';
 import RoomCard from '../../components/pos/RoomCard';
+import RoomDetailBottomSheet from '../../components/booking/ui/RoomDetailBottomSheet';
 import CartItemRow from '../../components/pos/CartItemRow';
 import {
   Customer,
@@ -60,6 +61,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const {width: screenWidth} = useWindowDimensions();
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
+
   // Default section theo JWT: nếu chỉ có accommodation thì mặc định 'stay', còn lại 'pos'
   const defaultSection: 'pos' | 'stay' =
     jwtBusinessTypes.includes('accommodation') && !jwtBusinessTypes.includes('sale')
@@ -67,6 +69,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       : 'pos';
   const [activeSection, setActiveSection] = useState<'pos' | 'stay'>(defaultSection);
   const [activeMainCategory, setActiveMainCategory] = useState<string>('');
+
   const [activeSubCategory, setActiveSubCategory] = useState<string>('all'); // 'all' or specific sub category ID
   const [activeRoomStatus, setActiveRoomStatus] = useState<RoomStatus | 'all'>(
     'all',
@@ -84,8 +87,11 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   // Sau này có thể lấy từ Context hoặc Global State thực tế.
   const activeStoreId = 'store-001';
 
-  const loadData = useCallback(async () => {
-    if (!activeStoreId) return;
+
+  const loadData = async () => {
+    if (!activeStoreId) {
+      return;
+    }
     setRefreshing(true);
 
     try {
@@ -104,7 +110,6 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
       setProducts(prods);
       setCategories(cats);
-      setRooms(roomsData);
 
       // activeSection đã được set từ JWT (defaultSection), không cần override từ DB
       // Chỉ tự động chọn category đầu tiên phù hợp với section hiện tại
@@ -116,12 +121,52 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           setActiveMainCategory(firstMatch.id);
         }
       }
+
+      // Map RoomGridItem to Room interface
+      const mappedRooms = roomsData.map(group => ({
+        title: group.title,
+        data: group.data.map((item: any): Room => {
+          console.log(
+            '[PosResident Mapping] item.id:',
+            item.id,
+            'item.status:',
+            item.status,
+            'item.contract_id:',
+            item.contract_id,
+            'item.start_date:',
+            item.start_date,
+            'item.end_date:',
+            item.end_date,
+          );
+          return {
+            id: item.id,
+            status: item.status,
+            name: item.name,
+            label: item.label,
+            product_name: item.product_name,
+            monthly_price: item.monthly_price,
+            displayPriceText: item.displayPriceText,
+            floor: item.floor,
+            customer_name: item.customer_name,
+            product_id: item.product_id,
+            attributes: item.attributes,
+            borderColor: item.borderColor,
+            tag: undefined,
+            contract_id: item.contract_id,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            checkInTime: item.checkInTime,
+          };
+        }),
+      }));
+
+      setRooms(mappedRooms);
     } catch (err) {
       console.error('[PosResident] Error in loadData:', err);
     } finally {
       setRefreshing(false);
     }
-  }, [activeStoreId, activeMainCategory, defaultSection]);
+  }, [activeStoreId, activeMainCategory, defaultSection],);
 
   useEffect(() => {
     if (activeStoreId) {
@@ -139,7 +184,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       status: room.status,
       label: room.label,
     });
-    if (room.status === 'available') {
+    if (room.status === 'available' || room.status === 'booked') {
       setBookingRoom(room);
     } else if (room.status === 'occupied') {
       setSelectedRoom(room);
@@ -167,6 +212,11 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
+  // Room Detail Bottom Sheet
+  const [roomDetailVisible, setRoomDetailVisible] = useState(false);
+  const [selectedRoomForDetail, setSelectedRoomForDetail] =
+    useState<Room | null>(null);
+
   const [paymentVisible, setPaymentVisible] = useState(false);
 
   // ─── availableSections: lấy từ JWT businessTypes (nguồn duy nhất) ──────────
@@ -177,6 +227,20 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const availableSections = useMemo(() => {
     const hasSale          = jwtBusinessTypes.includes('sale');
     const hasAccommodation = jwtBusinessTypes.includes('accommodation');
+    const rawTypes = Array.from(
+      new Set(categories.map(c => c.apply_to).filter(Boolean)),
+    );
+    // Sắp xếp: POS luôn đứng đầu
+    const sortedTypes = rawTypes.sort((a, b) => {
+      if (a === 'pos') {
+        return -1;
+      }
+      if (b === 'pos') {
+        return 1;
+      }
+      return String(a).localeCompare(String(b));
+    });
+
 
     const sections: {key: string; label: string; icon: string}[] = [];
 
@@ -218,6 +282,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     () => [
       {key: 'all', label: t('pos.status_all')},
       {key: 'available', label: t('pos.status_empty')},
+      {key: 'booked', label: t('pos.status_booked', 'Đã đặt')},
       {key: 'occupied', label: t('pos.status_occupied')},
     ],
     [t],
@@ -228,6 +293,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const cardWidth = (screenWidth - 32 - GAP * (numCols - 1)) / numCols;
 
   const filteredProducts = products.filter(p => {
+    if (activeMainCategory === '__all__') {
+      return p.name.toLowerCase().includes(searchText.toLowerCase());
+    }
     let allowedCategoryIds: string[] = [];
     if (activeSubCategory !== 'all') {
       allowedCategoryIds = [activeSubCategory];
@@ -267,7 +335,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     const types = new Set<string>();
     rooms.forEach(g =>
       g.data.forEach(r => {
-        if (r.product_name) types.add(r.product_name);
+        if (r.product_name) {
+          types.add(r.product_name);
+        }
       }),
     );
     return Array.from(types).sort();
@@ -276,7 +346,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   const handleAdd = useCallback(
     async (id: string) => {
       const product = products.find(p => p.id === id);
-      if (!product) return;
+      if (!product) {
+        return;
+      }
 
       // Nếu sản phẩm đã có trong giỏ → chỉ tăng số lượng, không fetch lại
       setCartItems(prev => {
@@ -299,7 +371,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCartItems(prev => {
         const existing = prev.find(i => i.product.id === id);
         // Nếu đã có variants (thêm lần 2+) thì không fetch
-        if (existing && existing.variants.length > 0) return prev;
+        if (existing && existing.variants.length > 0) {
+          return prev;
+        }
         return prev; // giữ nguyên, fetch dưới đây
       });
 
@@ -314,9 +388,13 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
 
         setCartItems(prev =>
           prev.map(i => {
-            if (i.product.id !== id) return i;
+            if (i.product.id !== id) {
+              return i;
+            }
             // Nếu user đã chọn variant thủ công trước khi fetch xong → giữ nguyên
-            if (i.selectedVariant) return {...i, variants: data};
+            if (i.selectedVariant) {
+              return {...i, variants: data};
+            }
             return {
               ...i,
               variants: data,
@@ -377,7 +455,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     } else {
       setCartItems(prev => {
         const item = prev.find(i => i.product.id === id);
-        if (!item) return prev;
+        if (!item) {
+          return prev;
+        }
         const diff = quantity - item.quantity;
         setCartCount(c => Math.max(0, c + diff));
         return prev.map(i => (i.product.id === id ? {...i, quantity} : i));
@@ -390,8 +470,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
       setCustomerSearch(text);
       setSelectedCustomer(null);
 
-      if (customerSearchTimeout.current)
+      if (customerSearchTimeout.current) {
         clearTimeout(customerSearchTimeout.current);
+      }
 
       if (!text.trim()) {
         setCustomerResults([]);
@@ -668,6 +749,41 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
               paddingBottom: 10,
               gap: 12,
             }}>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveMainCategory('__all__');
+                setActiveSubCategory('all');
+              }}
+              style={{
+                flexDirection: 'row',
+                height: 40,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                backgroundColor:
+                  activeMainCategory === '__all__' ? '#3b82f6' : cardBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                elevation: activeMainCategory === '__all__' ? 4 : 1,
+                borderWidth: activeMainCategory === '__all__' ? 0 : 1,
+                borderColor: borderColor,
+              }}>
+              <Icon
+                name="category"
+                size={18}
+                color={activeMainCategory === '__all__' ? '#fff' : '#3b82f6'}
+              />
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color:
+                    activeMainCategory === '__all__' ? '#fff' : subTextColor,
+                }}>
+                {t('pos.all')}
+              </Text>
+            </TouchableOpacity>
+
             {mainCategories.map(cat => {
               const isActive = activeMainCategory === cat.id;
 
@@ -734,7 +850,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           </ScrollView>
         )}
 
-        {/* Sub-categories (Chỉ hiện cho POS) - Lấy theo intern1/Qanhdev */}
+        {/* Sub-categories (Chỉ hiện cho POS) */}
         {!isRoomMode && subCategories.length > 0 && (
           <ScrollView
             horizontal
@@ -904,7 +1020,9 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           renderItem={({item, index, section}) => {
             // Because SectionList doesn't support numColumns, we handle the grid manually
             // by only rendering the start of each row.
-            if (index % numCols !== 0) return null;
+            if (index % numCols !== 0) {
+              return null;
+            }
 
             const rowItems = section.data.slice(index, index + numCols);
 
@@ -922,6 +1040,14 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                     room={room}
                     cardWidth={cardWidth}
                     onPress={() => handleRoomPress(room)}
+                    onTimelinePress={() => {
+                      console.log(
+                        '[PosResident] onTimelinePress - room:',
+                        room,
+                      );
+                      setSelectedRoomForDetail(room);
+                      setRoomDetailVisible(true);
+                    }}
                   />
                 ))}
               </View>
@@ -1010,9 +1136,25 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
               alignItems: 'center',
               backgroundColor: cardBg,
             }}>
-            <Text style={{fontSize: 20, fontWeight: '600', color: textColor}}>
-              {t('pos.cart')}
-            </Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+              <TouchableOpacity
+                onPress={() => setPanelVisible(false)} // Đóng panel khi nhấn nút back
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon name="arrow-back" size={20} color={textColor} />
+              </TouchableOpacity>
+
+              <Text style={{fontSize: 20, fontWeight: '600', color: textColor}}>
+                {t('pos.cart')}
+              </Text>
+            </View>
             <TouchableOpacity onPress={handleClearCart}>
               <Text style={{fontSize: 14, color: '#ef4444', fontWeight: '600'}}>
                 {t('payment.clear')}
@@ -1347,7 +1489,12 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
         visible={paymentVisible}
         onClose={() => setPaymentVisible(false)}
         onSuccess={() => {
-          handleClearCart(); // 🔥 reset giỏ hàng
+          handleClearCart(); // reset giỏ hàng
+          setSelectedCustomer(null); // xoá khách hàng đã chọn
+          setCustomerSearch(''); // xoá ô tìm kiếm
+          setCustomerResults([]); // xoá kết quả tìm kiếm
+          setActiveCustomerTab(t('pos.guest')); // về tab Khách vãng lai
+          setPanelVisible(false); // đóng panel, về màn hình bán hàng
         }}
         cartItems={cartItems}
         selectedCustomer={selectedCustomer}
@@ -1552,6 +1699,13 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
           />
         )}
       </Modal>
+
+      {/* Room Detail Bottom Sheet */}
+      <RoomDetailBottomSheet
+        visible={roomDetailVisible}
+        room={selectedRoomForDetail}
+        onClose={() => setRoomDetailVisible(false)}
+      />
     </SafeAreaView>
   );
 }

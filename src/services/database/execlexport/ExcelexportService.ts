@@ -75,7 +75,7 @@ class BillExportService extends BaseService {
       },
     );
     return rows.filter((b: any) => {
-      if (b.deleted_at) return false;
+      if (b.deleted_at) {return false;}
       const d = b.issued_at ? b.issued_at.split('T')[0] : '';
       return d >= from && d <= to;
     });
@@ -88,7 +88,7 @@ class BillDetailExportService extends BaseService {
   }
 
   async getDetailsByBillIds(billIds: string[]): Promise<any[]> {
-    if (billIds.length === 0) return [];
+    if (billIds.length === 0) {return [];}
     const BATCH = 20;
     const all: any[] = [];
     for (let i = 0; i < billIds.length; i += BATCH) {
@@ -129,7 +129,7 @@ class PaymentExportService extends BaseService {
   }
 
   async getPaymentsByBillIds(billIds: string[]): Promise<any[]> {
-    if (billIds.length === 0) return [];
+    if (billIds.length === 0) {return [];}
     const BATCH = 20;
     const all: any[] = [];
     for (let i = 0; i < billIds.length; i += BATCH) {
@@ -196,9 +196,9 @@ class ContractExportService extends BaseService {
       },
     );
     return rows.filter((c: any) => {
-      if (c.deleted_at) return false;
-      if (c.start_date > to) return false;
-      if (c.end_date && c.end_date < from) return false;
+      if (c.deleted_at) {return false;}
+      if (c.start_date > to) {return false;}
+      if (c.end_date && c.end_date < from) {return false;}
       return true;
     });
   }
@@ -210,7 +210,7 @@ class CustomerExportService extends BaseService {
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {return [];}
     const results = await Promise.all(
       [...new Set(ids)].map(id =>
         this.findAll({id}, {columns: ['id', 'full_name', 'phone']}),
@@ -226,7 +226,7 @@ class ProductExportService extends BaseService {
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {return [];}
     const results = await Promise.all(
       [...new Set(ids)].map(id =>
         this.findAll({id}, {columns: ['id', 'name']}),
@@ -242,7 +242,7 @@ class ProductVariantExportService extends BaseService {
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {return [];}
     const results = await Promise.all(
       [...new Set(ids)]
         .filter(Boolean)
@@ -258,7 +258,7 @@ class UnitExportService extends BaseService {
   }
 
   async getByIds(ids: string[]): Promise<any[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {return [];}
     const results = await Promise.all(
       [...new Set(ids)]
         .filter(Boolean)
@@ -298,7 +298,7 @@ class ReceivableExportService extends BaseService {
       },
     );
     return rows.filter((r: any) => {
-      if (r.deleted_at) return false;
+      if (r.deleted_at) {return false;}
       const d = r.due_date ?? '';
       return d >= from && d <= to;
     });
@@ -405,11 +405,11 @@ class ExcelExportServiceClass {
   ): Promise<ExportRow[]> {
     let bills = await this.billSvc.getBillsInRange(storeId, fromDate, toDate);
     if (template === 'bills_paid')
-      bills = bills.filter((b: any) => b.bill_status === 'paid');
+      {bills = bills.filter((b: any) => b.bill_status === 'paid');}
     if (template === 'bills_unpaid')
-      bills = bills.filter((b: any) =>
+      {bills = bills.filter((b: any) =>
         ['draft', 'issued', 'partial', 'overdue'].includes(b.bill_status),
-      );
+      );}
 
     const customerIds = [
       ...new Set(bills.map((b: any) => b.customer_id).filter(Boolean)),
@@ -489,11 +489,11 @@ class ExcelExportServiceClass {
       bills.map((b: any) => b.id),
     );
     if (template === 'payments_cash')
-      payments = payments.filter((p: any) => p.payment_method === 'cash');
+      {payments = payments.filter((p: any) => p.payment_method === 'cash');}
     if (template === 'payments_transfer')
-      payments = payments.filter(
+      {payments = payments.filter(
         (p: any) => p.payment_method === 'bank_transfer',
-      );
+      );}
 
     const billMap = buildLookup(bills);
     return payments.map(
@@ -524,7 +524,7 @@ class ExcelExportServiceClass {
       toDate,
     );
     if (template === 'contracts_active')
-      contracts = contracts.filter((c: any) => c.status === 'active');
+      {contracts = contracts.filter((c: any) => c.status === 'active');}
 
     const customerIds = [
       ...new Set(contracts.map((c: any) => c.customer_id).filter(Boolean)),
@@ -568,9 +568,9 @@ class ExcelExportServiceClass {
       toDate,
     );
     if (template === 'receivables_pending')
-      rows = rows.filter((r: any) => r.status === 'pending');
+      {rows = rows.filter((r: any) => r.status === 'pending');}
     if (template === 'receivables_overdue')
-      rows = rows.filter((r: any) => r.status === 'overdue');
+      {rows = rows.filter((r: any) => r.status === 'overdue');}
 
     const customerIds = [
       ...new Set(rows.map((r: any) => r.customer_id).filter(Boolean)),

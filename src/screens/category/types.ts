@@ -1,6 +1,11 @@
 export type TabType = 'selling' | 'storage';
 export type UnitPickerTarget = 'add' | 'editVariant';
 
+export interface UnitOption {
+  id: string;
+  name: string;
+}
+
 export interface Variant {
   id: string;
   name: string;
@@ -12,6 +17,7 @@ export interface Variant {
 export interface CategoryItem {
   id: string;
   name: string;
+  imageUri?: string;
   variants: Variant[];
 }
 

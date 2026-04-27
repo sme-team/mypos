@@ -5,7 +5,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface RevenueCardProps {
   total: number;
-  growthPercent: number;
   isPositive: boolean;
   isDark?: boolean;
 }
@@ -16,7 +15,6 @@ const formatCurrency = (amount: number): string => {
 
 export const RevenueCard: React.FC<RevenueCardProps> = ({
   total,
-  growthPercent,
   isPositive,
   isDark = false,
 }) => {
@@ -46,20 +44,6 @@ export const RevenueCard: React.FC<RevenueCardProps> = ({
           }`}>
           {formatCurrency(total)}
         </Text>
-        <View className="flex-row items-center mt-0.5">
-          <Icon
-            name={isPositive ? 'trending-up' : 'trending-down'}
-            size={14}
-            color={isPositive ? '#22C55E' : '#EF4444'}
-          />
-          <Text
-            className={`text-xs font-semibold ml-0.5 ${
-              isPositive ? 'text-green-500' : 'text-red-500'
-            }`}>
-            {isPositive ? '+' : '-'}
-            {growthPercent}%
-          </Text>
-        </View>
       </View>
     </View>
   );

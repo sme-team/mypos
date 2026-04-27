@@ -14,7 +14,7 @@ export function useImagePicker({
   const [imageUri, setImageUri] = useState<string | undefined>(initialUri);
 
   const requestCameraPermission = async (): Promise<boolean> => {
-    if (Platform.OS !== 'android') return true;
+    if (Platform.OS !== 'android') {return true;}
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.CAMERA,
     );
@@ -25,7 +25,7 @@ export function useImagePicker({
     launchImageLibrary(
       {mediaType: 'photo', quality: 0.8, selectionLimit: 1},
       response => {
-        if (response.didCancel || response.errorCode) return;
+        if (response.didCancel || response.errorCode) {return;}
         const uri = response.assets?.[0]?.uri;
         if (uri) {
           setImageUri(uri);
@@ -45,7 +45,7 @@ export function useImagePicker({
     launchCamera(
       {mediaType: 'photo', quality: 0.8, cameraType: 'back'},
       response => {
-        if (response.didCancel) return;
+        if (response.didCancel) {return;}
         if (response.errorCode) {
           Alert.alert('Lỗi camera', response.errorMessage || '');
           return;
@@ -67,5 +67,5 @@ export function useImagePicker({
     ]);
   };
 
-  return {imageUri, chooseImage, pickFromLibrary, takePhoto};
+  return {imageUri, setImageUri, chooseImage, pickFromLibrary, takePhoto};
 }

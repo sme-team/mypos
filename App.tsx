@@ -46,6 +46,7 @@ import PlaceScreen from './src/screens/booking/Place';
 import Setting from './src/screens/setting/Setting';
 import Report from './src/screens/report/Report';
 import ReportExport from './src/screens/excel-export/ExcelExport';
+import ExportHistory from './src/screens/excel-export/ExportHistory';
 import CategoryManagement from './src/screens/category/CategoryManagement';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import EditProfileScreen from './src/screens/profile/EditProfileScreen';
@@ -76,11 +77,12 @@ type Screen =
   | 'report'
   | 'report_export'
   | 'setting'
-  | 'profile'        // ← MÀN HÌNH HỒ SƠ CÁ NHÂN
-  | 'edit_profile';  // ← MÀN HÌNH CHỈNH SỬA HỒ SƠ
+  | 'pos_resident'
+  | 'place_resident'
+  | 'customer'
+  | 'report_export';
 
-// ─── AppContent ───────────────────────────────────────────────────────────────
-
+// ─── Inner app ────────────────────────────────────────────────────────────────
 const AppContent: React.FC = () => {
   const { state: auth, logout } = useAuth();
   const { isDark } = useTheme();
@@ -97,11 +99,16 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
+        console.log('[App] Starting database initialization...');
         await initDatabase();
+        console.log('[App] Database initialized successfully');
         setDbReady(true);
       } catch (err) {
-        logger.error('[App] Database init failed:', err);
-        Alert.alert('Lỗi', 'Không thể khởi tạo cơ sở dữ liệu. Vui lòng thử lại.');
+        logger.error('[App] Database initialization failed:', err);
+        Alert.alert(
+          'Lỗi',
+          'Không thể khởi tạo cơ sở dữ liệu. Vui lòng thử lại sau.',
+        );
       }
     })();
   }, []);
@@ -277,6 +284,15 @@ const AppContent: React.FC = () => {
         <ReportExport
           onOpenMenu={() => setIsSidebarVisible(true)}
           onBack={() => setScreen('report')}
+          onHistory={() => setScreen('report_export_history')}
+        />
+      )}
+
+      {/* ── Report Export History ───────────────────────────────── */}
+      {screen === 'report_export_history' && (
+        <ExportHistory
+          onOpenMenu={() => setIsSidebarVisible(true)}
+          onBack={() => setScreen('report_export')}
         />
       )}
 

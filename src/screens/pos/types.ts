@@ -23,7 +23,7 @@ export interface PosCategory {
   apply_to?: string;
 }
 
-export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
+export type RoomStatus = 'available' | 'occupied' | 'booked' | 'cleaning' | 'maintenance';
 
 export interface Room {
   id: string; // product_variants.id
@@ -39,6 +39,10 @@ export interface Room {
   attributes: Record<string, any>;
   borderColor: string;
   tag?: string; // Nhãn hiển thị (Hết hạn, v.v.)
+  contract_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  checkInTime?: string; // Giờ check-in từ contract metadata (HH:mm)
 }
 
 export interface CartItem {

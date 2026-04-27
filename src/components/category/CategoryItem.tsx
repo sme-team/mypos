@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, TouchableOpacity, Image} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import VariantItem from './VariantItem';
 import type {CategoryItem as CategoryItemType} from '../../screens/category/types';
@@ -77,6 +77,34 @@ const CategoryItem: React.FC<Props> = ({
           color="#9ca3af"
           style={{marginRight: 8}}
         />
+      )}
+
+      {/* Ảnh sản phẩm */}
+      {item.imageUri ? (
+        <Image
+          source={{uri: item.imageUri}}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            marginRight: 12,
+            backgroundColor: '#f3f4f6',
+          }}
+          resizeMode="cover"
+        />
+      ) : (
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            backgroundColor: '#f3f4f6',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+          }}>
+          <Icon name="inventory-2" size={20} color="#c4c9d4" />
+        </View>
       )}
 
       <Text

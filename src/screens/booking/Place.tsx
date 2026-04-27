@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  RefreshControl,
   StatusBar,
   ActivityIndicator,
   TextInput,
@@ -18,6 +19,7 @@ import {RoomQueryService} from '../../services/ResidentServices/RoomQueryService
 // We'll import RoomDetailScreen once we create it.
 import RoomDetailScreen from './RoomDetailScreen';
 import BookingScreen from './BookingScreen';
+import RoomDetailBottomSheet from '../../components/booking/ui/RoomDetailBottomSheet';
 
 const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   onOpenMenu,
@@ -27,6 +29,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const responsive = useResponsive();
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [activeFloor, setActiveFloor] = useState<string>('all');
   const [activeStatus, setActiveStatus] = useState<string>('all');
@@ -36,6 +39,10 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
 
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [bookingRoom, setBookingRoom] = useState<any | null>(null);
+
+  // Bottom sheet for timeline
+  const [roomDetailVisible, setRoomDetailVisible] = useState(false);
+  const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<any | null>(null);
 
   const loadRooms = async () => {
     console.log('[PlaceScreen] loadRooms called');
@@ -47,7 +54,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
         console.log('[PlaceScreen] Sample room price data:', {
           id: dbRooms[0].id,
           name: dbRooms[0].name,
-          displayPriceText: dbRooms[0].displayPriceText
+          displayPriceText: dbRooms[0].displayPriceText,
         });
       }
       setRooms(dbRooms);
@@ -58,6 +65,12 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
     }
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadRooms();
+    setRefreshing(false);
+  }, []);
+
   useEffect(() => {
     loadRooms();
   }, []);
@@ -65,12 +78,57 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   console.log('[PlaceScreen] Render state:', {
     roomsCount: rooms.length,
     activeFloor,
-    loading
+    loading,
   });
 
   const formatPrice = (price: number | null | undefined) => {
-    if (price == null) return '0đ';
+    if (price == null) {return '0đ';}
     return price.toLocaleString('vi-VN') + 'đ';
+  };
+
+  /**
+   * Tính thời gian còn lại đến giờ check-in
+   * Trả về text hiển thị countdown hoặc ngày
+   */
+  const getTimeUntilCheckIn = (startDate: string | null, checkInTime: string | undefined): string => {
+    if (!startDate) return '';
+
+    const now = new Date();
+    const checkInDate = new Date(startDate);
+
+    // Nếu check-in không phải hôm nay → hiển thị ngày
+    const today = now.toISOString().split('T')[0];
+    if (startDate !== today) {
+      return checkInDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    }
+
+    // Nếu là hôm nay nhưng không có giờ check-in → hiển thị ngày
+    if (!checkInTime) {
+      return checkInDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    }
+
+    // Tính thời gian còn lại
+    const [checkInHour, checkInMin] = checkInTime.split(':').map(Number);
+    const checkInDateTime = new Date(now);
+    checkInDateTime.setHours(checkInHour, checkInMin, 0, 0);
+
+    const diffMs = checkInDateTime.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    // Đã qua giờ check-in
+    if (diffMinutes <= 0) {
+      return 'Đã đến giờ';
+    }
+
+    // Tính giờ và phút
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+
+    if (hours > 0) {
+      return minutes > 0 ? `Còn ${hours}h ${minutes}p` : `Còn ${hours}h`;
+    } else {
+      return `Còn ${minutes}p`;
+    }
   };
 
   // Responsive calculations
@@ -311,9 +369,14 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
       marginRight: 8,
     },
     tenantAvatarText: {
-      color: '#fff',
-      fontSize: 11,
+      color: '#1565C0',
+      fontSize: 10,
       fontWeight: '700',
+    },
+    timelineIconBtn: {
+      padding: 4,
+      backgroundColor: '#E3F2FD',
+      borderRadius: 6,
     },
     tenantName: {
       fontSize: responsive.rv({
@@ -362,8 +425,8 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const floors = Array.from(
     new Set(rooms.map(r => String(r.floor || '?'))),
   ).sort((a, b) => {
-    if (a === '?') return 1;
-    if (b === '?') return -1;
+    if (a === '?') {return 1;}
+    if (b === '?') {return -1;}
     return a.localeCompare(b, undefined, { numeric: true });
   });
 
@@ -371,15 +434,15 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
   const roomStatuses = [
     { key: 'all', label: 'Tất cả' },
     { key: 'available', label: 'Phòng trống' },
+    { key: 'booked', label: 'Phòng đã đặt' },
     { key: 'occupied', label: 'Đang ở' },
-    { key: 'cleaning', label: 'Đang dọn' },
   ];
 
   const filteredRooms = rooms.filter(r => {
     const matchFloor = activeFloor === 'all' ? true : String(r.floor) === activeFloor;
     const matchStatus = activeStatus === 'all' ? true : r.status === activeStatus;
     const matchType = activeRoomType === 'all' ? true : (r.product_name || '') === activeRoomType;
-    
+
     const price = r.displayPriceValue || 0;
     const minP = minPrice ? parseInt(minPrice.replace(/\D/g, '')) || 0 : 0;
     const maxP = maxPrice ? parseInt(maxPrice.replace(/\D/g, '')) || Infinity : Infinity;
@@ -539,7 +602,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
         keyboardShouldPersistTaps="handled"
         removeClippedSubviews={true}
         scrollEventThrottle={16}
-        automaticallyAdjustContentInsets={false}>
+        automaticallyAdjustContentInsets={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }>
         {loading ? (
           <ActivityIndicator
             size="large"
@@ -564,10 +633,10 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                     console.log('[PlaceScreen] Clicked room:', { id: room.id, name: room.name, status: room.status });
                     if (room.status === 'occupied') {
                       setSelectedRoom(room);
-                    } else if (room.status === 'available') {
+                    } else if (room.status === 'available' || room.status === 'booked') {
                       setBookingRoom(room);
                     } else {
-                      console.log('[PlaceScreen] Room status is not occupied or available, doing nothing.');
+                      console.log('[PlaceScreen] Room status is not occupied, available or booked, doing nothing.');
                     }
                   }}
                   style={[
@@ -590,9 +659,28 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                           color={occupied ? '#1565C0' : '#7CB342'}
                         />
                       </View>
-                      <View style={{marginLeft: 8}}>
-                        <Text style={styles.roomName}>{room.label}</Text>
+                      <View style={{marginLeft: 8, flex: 1}}>
+                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                          <Text style={styles.roomName}>{room.label}</Text>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setSelectedRoomForDetail(room);
+                              setRoomDetailVisible(true);
+                            }}
+                            style={styles.timelineIconBtn}
+                          >
+                            <Icon name="event-note" size={18} color="#1565C0" />
+                          </TouchableOpacity>
+                        </View>
                         <Text style={styles.roomType}>{room.product_name}</Text>
+                        {room.status === 'booked' && room.start_date && (
+                          <View style={{marginTop: 4}}>
+                            <Text style={styles.checkoutText}>
+                              Nhận: {getTimeUntilCheckIn(room.start_date, room.checkInTime)}
+                            </Text>
+                          </View>
+                        )}
                         {occupied && (
                           <View style={{marginTop: 4}}>
                             {room.start_date && (
@@ -619,7 +707,7 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
                           styles.badgeText,
                           {color: occupied ? '#fff' : '#2E7D32'},
                         ]}>
-                        {occupied ? 'ĐANG THUÊ' : 'TRỐNG'}
+                        {room.status === 'occupied' ? 'ĐANG THUÊ' : room.status === 'booked' ? 'ĐÃ ĐẶT' : 'TRỐNG'}
                       </Text>
                     </View>
                   </View>
@@ -652,6 +740,13 @@ const PlaceScreen: React.FC<{onOpenMenu?: () => void; onBack?: () => void}> = ({
       <TouchableOpacity activeOpacity={0.85} style={styles.fab}>
         <Icon name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* Room Detail Bottom Sheet for Timeline */}
+      <RoomDetailBottomSheet
+        visible={roomDetailVisible}
+        room={selectedRoomForDetail}
+        onClose={() => setRoomDetailVisible(false)}
+      />
     </SafeAreaView>
   );
 };

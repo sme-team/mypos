@@ -40,7 +40,7 @@ class PaymentServiceClass {
   private generatePaymentId = () =>
     generateSequentialId(this.paymentSvc, 'pay');
   private async generateBillDetailIds(count: number): Promise<string[]> {
-    if (count === 0) return [];
+    if (count === 0) {return [];}
 
     // Query DB 1 lần để lấy start number
     const firstId = await generateSequentialId(this.billDetailSvc, 'bdet');

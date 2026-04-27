@@ -20,7 +20,7 @@ export class DatabaseSeeder {
   private readonly AVAILABLE_TABLES = [
     'categories', 'units', 'products', 'product_variants', 'prices',
     'customers', 'bill_cycles', 'bills', 'bill_details', 'payments',
-    'receivables', 'contracts', 'contract_members', 'residents', 'import_logs'
+    'receivables', 'contracts', 'contract_members', 'residents', 'import_logs',
   ];
 
   // Track rows that were rejected due to validation errors to explain subsequent FK failures
@@ -56,7 +56,7 @@ export class DatabaseSeeder {
       'name', 'short_name', 'description', 'image_url',
       'product_type', 'pricing_type', 'is_active_pos',
       'is_trackable', 'tax_rate', 'sort_order',
-      'status', 'sync_status', 'created_at', 'updated_at'
+      'status', 'sync_status', 'created_at', 'updated_at',
     ],
     product_variants: ['id', 'store_id', 'product_id', 'variant_code', 'name', 'attributes', 'image_url', 'is_default', 'sort_order', 'status', 'sync_status'],
     prices: ['id', 'store_id', 'variant_id', 'unit_id', 'price_list_name', 'price', 'cost_price', 'effective_from', 'effective_to', 'sort_order'],
@@ -72,7 +72,7 @@ export class DatabaseSeeder {
       'rent_amount', 'deposit_amount',
       'electric_rate', 'water_rate', 'billing_day', 'cycle_id',  // ← thêm cả block này
       'electric_reading_init', 'water_reading_init',
-      'status', 'notes', 'created_at', 'updated_at'
+      'status', 'notes', 'created_at', 'updated_at',
     ],
     contract_members: ['id', 'store_id', 'contract_id', 'customer_id', 'is_primary', 'joined_date', 'left_date'],
     residents: [
@@ -80,7 +80,7 @@ export class DatabaseSeeder {
       'id_card_front_url', 'id_card_back_url', 'portrait_url',  // ← thêm portrait_url
       'temp_residence_from', 'temp_residence_to',              // ← thêm block tạm trú
       'temp_residence_status', 'police_ref_number',
-      'approved_by', 'approved_date', 'note', 'status', 'created_at', 'updated_at'
+      'approved_by', 'approved_date', 'note', 'status', 'created_at', 'updated_at',
     ],
   };
 
@@ -89,7 +89,7 @@ export class DatabaseSeeder {
     'customers', 'bill_cycles',
     'contracts', 'contract_members', 'residents',
     'bills', 'bill_details', 'receivables', 'payments',
-    'import_logs'
+    'import_logs',
   ];
 
   private async generateUUID(): Promise<string> {
@@ -164,12 +164,12 @@ export class DatabaseSeeder {
       return vietnameseMap[stripped];
     }
 
-    // Final strategy: Substring match only for very specific cases if needed, 
+    // Final strategy: Substring match only for very specific cases if needed,
     // but here we restrict it to avoid the "contract" matching "categories" error.
     // We only check if the stripped name IS A FULL WORD within the table name or vice-versa
     const tableMatch = this.AVAILABLE_TABLES.find(table => {
-      // If sheet name is "prices" and table is "product_prices", we might want it, 
-      // but for now, exact/stripped is safer. 
+      // If sheet name is "prices" and table is "product_prices", we might want it,
+      // but for now, exact/stripped is safer.
       return false;
     });
 
@@ -177,7 +177,7 @@ export class DatabaseSeeder {
     // Strategy 3: Levenshtein distance (fuzzy matching)
     const scores = this.AVAILABLE_TABLES.map(table => ({
       table,
-      score: this.levenshteinDistance(normalized, table)
+      score: this.levenshteinDistance(normalized, table),
     }));
 
     // Sort by score (lower is better)
@@ -250,7 +250,7 @@ export class DatabaseSeeder {
     if (tableName === 'products') {
       mappedRow.is_active_pos = 1;
 
-      const rawType = String(rawRow['product_type'] || '').toLowerCase().trim();
+      const rawType = String(rawRow.product_type || '').toLowerCase().trim();
 
       // Danh sách các loại được coi là "room"
       const roomTypes = ['room', 'room_service'];
@@ -270,19 +270,19 @@ export class DatabaseSeeder {
       // Tra cứu xem parent product có phải là room không
       const isRoom = this.productIsRoomMap.get(mappedRow.product_id);
 
-      if (isRoom && rawRow['attributes']) {
+      if (isRoom && rawRow.attributes) {
         try {
-          const attr = JSON.parse(rawRow['attributes']);
+          const attr = JSON.parse(rawRow.attributes);
           const normalizedAttr: any = { ...attr };
 
           // Chuẩn hóa keys: area -> area_m2, bed -> beds
-          if (attr['area']) {
-            normalizedAttr['area_m2'] = attr['area'];
-            delete normalizedAttr['area'];
+          if (attr.area) {
+            normalizedAttr.area_m2 = attr.area;
+            delete normalizedAttr.area;
           }
-          if (attr['bed']) {
-            normalizedAttr['beds'] = attr['bed'];
-            delete normalizedAttr['bed'];
+          if (attr.bed) {
+            normalizedAttr.beds = attr.bed;
+            delete normalizedAttr.bed;
           }
 
           mappedRow.attributes = JSON.stringify(normalizedAttr);
@@ -294,7 +294,7 @@ export class DatabaseSeeder {
       mappedRow.status = 'active';
 
       //  ƯU TIÊN PHÂN LOẠI THEO apply_to TỪ SHEET
-      const rawApplyTo = String(rawRow['apply_to'] || '').toLowerCase().trim();
+      const rawApplyTo = String(rawRow.apply_to || '').toLowerCase().trim();
       if (rawApplyTo) {
         mappedRow.apply_to = rawApplyTo;
       }
@@ -305,7 +305,7 @@ export class DatabaseSeeder {
     const isAccountingSheet = ['s1a', 's2a'].some(s =>
       sheetName.toLowerCase().includes(s)
     );
-    if (isAccountingSheet) return null;
+    if (isAccountingSheet) {return null;}
 
     const rowKeys = Object.keys(rawRow);
 
@@ -315,17 +315,17 @@ export class DatabaseSeeder {
     if (hasNamedKeys) {
       for (const dbCol of schema) {
         const rawValue = rawRow[dbCol];
-        if (rawValue == null || String(rawValue).trim() === '') continue;
+        if (rawValue == null || String(rawValue).trim() === '') {continue;}
         mappedRow[dbCol] = this.convertValue(dbCol, rawValue);
       }
 
       // THÊM: Ghi đè default nếu sheet có giá trị thực (từ version 1)
-      if (rawRow['id']) mappedRow.id = String(rawRow['id']).trim();
-      if (rawRow['store_id']) mappedRow.store_id = String(rawRow['store_id']).trim();
-      if (rawRow['status']) mappedRow.status = String(rawRow['status']).trim();
-      if (rawRow['sync_status']) mappedRow.sync_status = String(rawRow['sync_status']).trim();
-      if (rawRow['created_at']) mappedRow.created_at = String(rawRow['created_at']).trim();
-      if (rawRow['updated_at']) mappedRow.updated_at = String(rawRow['updated_at']).trim();
+      if (rawRow.id) {mappedRow.id = String(rawRow.id).trim();}
+      if (rawRow.store_id) {mappedRow.store_id = String(rawRow.store_id).trim();}
+      if (rawRow.status) {mappedRow.status = String(rawRow.status).trim();}
+      if (rawRow.sync_status) {mappedRow.sync_status = String(rawRow.sync_status).trim();}
+      if (rawRow.created_at) {mappedRow.created_at = String(rawRow.created_at).trim();}
+      if (rawRow.updated_at) {mappedRow.updated_at = String(rawRow.updated_at).trim();}
 
       return mappedRow;
     }
@@ -370,7 +370,7 @@ export class DatabaseSeeder {
 
       if (dbCol && schema.includes(dbCol)) {
         const rawValue = rawRow[excelCol];
-        if (rawValue == null || String(rawValue).trim() === '') continue;
+        if (rawValue == null || String(rawValue).trim() === '') {continue;}
         mappedRow[dbCol] = this.convertValue(dbCol, rawValue);
       }
     }
@@ -379,7 +379,7 @@ export class DatabaseSeeder {
   }
   // ─── Helper: convert giá trị theo tên cột ─────────────────────────────────
   private convertValue(dbCol: string, value: any): any {
-    if (value == null) return null;
+    if (value == null) {return null;}
 
     const str = String(value).trim();
 
@@ -412,7 +412,7 @@ export class DatabaseSeeder {
     // 4. Boolean
     // ===================================================================
     if (/^(is_default|is_primary|is_active_pos|is_trackable|auto_generate|is_offline)$/i.test(dbCol)) {
-      if (typeof value === 'boolean') return value ? 1 : 0;
+      if (typeof value === 'boolean') {return value ? 1 : 0;}
       return ['1', 'true', 'yes', 'có'].includes(str.toLowerCase()) ? 1 : 0;
     }
 
@@ -420,7 +420,7 @@ export class DatabaseSeeder {
     // 5. Ngày (date only)
     // ===================================================================
     if (/^(effective_from|effective_to|start_date|end_date|date_of_birth|signed_date|joined_date|left_date|due_date|billing_date)$/i.test(dbCol)) {
-      if (value instanceof Date) return value.toISOString().split('T')[0];
+      if (value instanceof Date) {return value.toISOString().split('T')[0];}
       const parsed = new Date(str);
       return isNaN(parsed.getTime()) ? str : parsed.toISOString().split('T')[0];
     }
@@ -429,7 +429,7 @@ export class DatabaseSeeder {
     // 6. Timestamp
     // ===================================================================
     if (/^(created_at|updated_at|paid_at|issued_at|due_at)$/i.test(dbCol)) {
-      if (value instanceof Date) return value.toISOString();
+      if (value instanceof Date) {return value.toISOString();}
       const parsed = new Date(str);
       return isNaN(parsed.getTime()) ? str : parsed.toISOString();
     }
@@ -439,11 +439,11 @@ export class DatabaseSeeder {
   }
 
   private async cleanData(tableName: string, sheetName: string, rawRows: any[]): Promise<any[]> {
-    if (!rawRows || rawRows.length === 0) return [];
+    if (!rawRows || rawRows.length === 0) {return [];}
 
     // CẢI TIẾN: Filter out metadata/empty rows + JUNK ID PATTERNS
     const dataRows = rawRows.filter(row => {
-      if (!row || Object.values(row).every(v => v == null || String(v).trim() === '')) return false;
+      if (!row || Object.values(row).every(v => v == null || String(v).trim() === '')) {return false;}
 
       // CẢI TIẾN: Filter residents linh hoạt hơn (không case-sensitive, không bắt buộc key tiếng Việt)
       if (tableName === 'residents') {
@@ -456,11 +456,11 @@ export class DatabaseSeeder {
       }
       //  Fix: id của data thực luôn có pattern cụ thể (cat-001, prod-001, v.v.)
       // Còn row rác thì id = "Mã danh mục", "varchar", "Khóa chính"
-      const idVal = String(row['id'] ?? '').trim().toLowerCase();
+      const idVal = String(row.id ?? '').trim().toLowerCase();
 
       const JUNK_ID_PATTERNS = [
         /^mã /,           // "Mã danh mục", "Mã sản phẩm"
-        /^varchar/,       // "varchar", "varchar(30)"  
+        /^varchar/,       // "varchar", "varchar(30)"
         /^khóa/,          // "Khóa chính"
         /^fk/,            // "FK → stores.id"
         /^null/,          // "NULL = gốc"
@@ -501,7 +501,7 @@ export class DatabaseSeeder {
             console.warn(`[INVALID] ${tableName}: Row validation failed -`, {
               id: mapped.id,
               hasData: Object.values(mapped).some(v => v != null && String(v).trim() !== ''),
-              keys: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
+              keys: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== ''),
             });
           }
         }
@@ -521,7 +521,7 @@ export class DatabaseSeeder {
   private validateMappedRow(tableName: string, mapped: any): boolean {
     // Check if row has any meaningful data
     const hasData = Object.values(mapped).some(v => v != null && String(v).trim() !== '');
-    if (!hasData) return false;
+    if (!hasData) {return false;}
 
     // Table-specific validation rules
     const requiredFields: Record<string, string[]> = {
@@ -549,7 +549,7 @@ export class DatabaseSeeder {
       if (!hasRequired) {
         console.warn(`[VALIDATION] ${tableName}: Missing required fields`, {
           required: tableRequired,
-          present: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== '')
+          present: Object.keys(mapped).filter(k => mapped[k] != null && String(mapped[k]).trim() !== ''),
         });
         return false;
       }
@@ -623,7 +623,7 @@ export class DatabaseSeeder {
               table: tableName,
               rowId,
               message: validationResult.error || 'Data validation failed',
-              skippedColumns: validationResult.skippedColumns
+              skippedColumns: validationResult.skippedColumns,
             });
             console.warn(`[VALIDATION-ERROR] ${tableName}[${rowId}]: ${validationResult.error}`);
             continue;
@@ -684,7 +684,7 @@ export class DatabaseSeeder {
         return {
           valid: false,
           error: `Missing required fields: ${missingRequired.join(', ')}`,
-          skippedColumns: missingRequired
+          skippedColumns: missingRequired,
         };
       }
     }
@@ -729,7 +729,7 @@ export class DatabaseSeeder {
    */
   private async diagnoseForeignKeyError(row: any, columns: string[]): Promise<string> {
     const db = DatabaseManager.get('pos');
-    if (!db) return 'Invalid reference: Related record not found';
+    if (!db) {return 'Invalid reference: Related record not found';}
 
     // Map of foreign key columns to their parent tables
     const fkMap: Record<string, string> = {
@@ -871,7 +871,7 @@ export class DatabaseSeeder {
         totalFailed,
         errors,
         summary,
-        importedTables
+        importedTables,
       };
     } catch (error: any) {
       logger.error(` Import failed: ${error.message}`);
@@ -881,7 +881,7 @@ export class DatabaseSeeder {
         totalFailed: 0,
         errors: [{ table: 'global', rowId: 'N/A', message: error.message }],
         summary: `Global error: ${error.message}`,
-        importedTables: {}
+        importedTables: {},
       };
     }
   }

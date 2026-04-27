@@ -63,10 +63,10 @@ export const RevenueBarChart: React.FC<RevenueBarChartProps> = ({
     const fraction = value / Math.pow(10, exponent);
 
     let niceFraction;
-    if (fraction <= 1) niceFraction = 1;
-    else if (fraction <= 2) niceFraction = 2;
-    else if (fraction <= 5) niceFraction = 5;
-    else niceFraction = 10;
+    if (fraction <= 1) {niceFraction = 1;}
+    else if (fraction <= 2) {niceFraction = 2;}
+    else if (fraction <= 5) {niceFraction = 5;}
+    else {niceFraction = 10;}
 
     return niceFraction * Math.pow(10, exponent);
   }
@@ -190,7 +190,7 @@ export const RevenueBarChart: React.FC<RevenueBarChartProps> = ({
                             : 0;
 
                         if (barH === 0)
-                          return <View key={g.key} style={{width: 14}} />;
+                          {return <View key={g.key} style={{width: 14}} />;}
 
                         return (
                           <View key={g.key} style={{alignItems: 'center'}}>

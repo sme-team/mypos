@@ -6,22 +6,20 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  Image,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useTranslation} from 'react-i18next';
-import {useImagePicker} from '../../../hooks/useImagePicker';
 import {UnitPickerModal} from './UnitPickerModal';
-import type {CategoryItem} from '../types';
+import type {CategoryItem, UnitOption} from '../types';
 
 interface Props {
   visible: boolean;
   initialItemId?: string;
   allItems: CategoryItem[];
-  units: string[];
+  units: UnitOption[];
   onClose: () => void;
   onSave: (
     itemId: string,
@@ -41,14 +39,13 @@ export const AddVariantModal: React.FC<Props> = ({
   onSave,
 }) => {
   const {t} = useTranslation();
-  const {imageUri, chooseImage} = useImagePicker();
 
   const [productSearch, setProductSearch] = useState('');
   const [productId, setProductId] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [unit, setUnit] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<UnitOption | null>(null);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
 
   useEffect(() => {
@@ -74,7 +71,7 @@ export const AddVariantModal: React.FC<Props> = ({
     setShowSuggestions(false);
     setName('');
     setPrice('');
-    setUnit('');
+    setSelectedUnit(null);
     onClose();
   };
 
@@ -83,7 +80,7 @@ export const AddVariantModal: React.FC<Props> = ({
       Alert.alert('Lỗi', 'Vui lòng chọn sản phẩm');
       return;
     }
-    if (!name.trim() || !price.trim() || !unit.trim()) {
+    if (!name.trim() || !price.trim() || !selectedUnit) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
     }
@@ -92,7 +89,7 @@ export const AddVariantModal: React.FC<Props> = ({
       Alert.alert('Lỗi', 'Giá phải là số hợp lệ');
       return;
     }
-    onSave(productId, name.trim(), parsedPrice, unit.trim(), imageUri);
+    onSave(productId, name.trim(), parsedPrice, selectedUnit.name);
     handleClose();
   };
 
@@ -131,58 +128,6 @@ export const AddVariantModal: React.FC<Props> = ({
                 <Icon name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
-
-            {/* Ảnh */}
-            <TouchableOpacity
-              onPress={chooseImage}
-              activeOpacity={0.8}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginBottom: 16,
-                backgroundColor: '#f9fafb',
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: '#e5e7eb',
-                padding: 12,
-              }}>
-              <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 12,
-                  backgroundColor: '#e8d5b0',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 14,
-                  overflow: 'hidden',
-                }}>
-                {imageUri ? (
-                  <Image
-                    source={{uri: imageUri}}
-                    style={{width: '100%', height: '100%'}}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Icon name="add-photo-alternate" size={28} color="#b8975a" />
-                )}
-              </View>
-              <View style={{flex: 1}}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: 2,
-                  }}>
-                  {imageUri ? 'Đổi ảnh' : 'Thêm ảnh biến thể'}
-                </Text>
-                <Text style={{fontSize: 12, color: '#9ca3af'}}>
-                  Chụp ảnh hoặc chọn từ thư viện
-                </Text>
-              </View>
-              <Icon name="chevron-right" size={20} color="#d1d5db" />
-            </TouchableOpacity>
 
             {/* Tìm sản phẩm */}
             <Text
@@ -300,7 +245,7 @@ export const AddVariantModal: React.FC<Props> = ({
               )}
             </View>
 
-            {/* Tên biến thể */}
+            {/* Tên loại */}
             <Text
               style={{
                 fontSize: 13,
@@ -308,7 +253,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 color: '#374151',
                 marginBottom: 6,
               }}>
-              {t('category.variantName')}
+              Tên loại
             </Text>
             <TextInput
               style={{
@@ -320,7 +265,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 marginBottom: 16,
                 color: '#111827',
               }}
-              placeholder={t('category.variantName')}
+              placeholder="Nhập tên loại"
               value={name}
               onChangeText={setName}
             />
@@ -388,9 +333,9 @@ export const AddVariantModal: React.FC<Props> = ({
                   <Text
                     style={{
                       fontSize: 14,
-                      color: unit ? '#111827' : '#9ca3af',
+                      color: selectedUnit ? '#111827' : '#9ca3af',
                     }}>
-                    {unit || 'Chọn đơn vị'}
+                    {selectedUnit ? selectedUnit.name : 'Chọn đơn vị'}
                   </Text>
                   <Icon name="keyboard-arrow-down" size={20} color="#6b7280" />
                 </TouchableOpacity>
@@ -432,10 +377,10 @@ export const AddVariantModal: React.FC<Props> = ({
 
       <UnitPickerModal
         visible={showUnitPicker}
-        selected={unit}
+        selected={selectedUnit?.id ?? ''}
         units={units}
         onSelect={u => {
-          setUnit(u);
+          setSelectedUnit(u);
           setShowUnitPicker(false);
         }}
         onClose={() => setShowUnitPicker(false)}

@@ -438,7 +438,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
         '0',
       )}-${String(d.getDate()).padStart(2, '0')}`;
     })(),
-    checkinTime: '14:00',
+    checkinTime: (() => {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    })(),
     checkoutDate: (() => {
       const d = new Date(Date.now() + 86400000);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
@@ -467,7 +470,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
 
   const clearError = useCallback((key: string) => {
     setErrors(prev => {
-      if (!prev[key]) return prev;
+      if (!prev[key]) {return prev;}
       const copy = {...prev};
       delete copy[key];
       return copy;
@@ -508,7 +511,54 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   // Tính giá ngắn hạn khi form thay đổi
   useEffect(() => {
     const calculateShortTermPrice = async () => {
-      if (form.stayType !== 'short_term' || !room?.id) return;
+      if (form.stayType !== 'short_term' || !room?.id) {return;}
+
+      // Kiểm tra duration trước khi gọi service
+      const checkinDateTime = new Date(
+        `${form.checkinDate}T${form.checkinTime}`,
+      );
+      const checkoutDateTime = new Date(
+        `${form.checkoutDate}T${form.checkoutTime}`,
+      );
+      const totalMs = checkoutDateTime.getTime() - checkinDateTime.getTime();
+      const totalDays = totalMs / (1000 * 60 * 60 * 24);
+
+      // Nếu duration >= 30 ngày, hiển thị thông báo chuyển sang dài hạn
+      if (totalDays >= 30) {
+        setLoadingShortTermPrice(false);
+        Alert.alert(
+          'Lưu trú dài hạn',
+          'Thời gian bạn chọn thuộc loại lưu trú dài hạn (≥30 ngày). Giá và điều khoản sẽ khác với lưu trú ngắn hạn.\n\nBạn có muốn chuyển sang hình thức lưu trú dài hạn không?',
+          [
+            {
+              text: 'Không, chọn lại ngày',
+              onPress: () => {
+                // Reset checkout date về ngày mai (ngắn hạn mặc định)
+                const tomorrow = new Date(Date.now() + 86400000);
+                updateForm({
+                  checkoutDate: `${tomorrow.getFullYear()}-${String(
+                    tomorrow.getMonth() + 1,
+                  ).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(
+                    2,
+                    '0',
+                  )}`,
+                });
+              },
+            },
+            {
+              text: 'Có, chuyển dài hạn',
+              onPress: () => {
+                // Chuyển sang long_term mode
+                updateForm({
+                  stayType: 'long_term',
+                  contractStart: form.checkinDate,
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
 
       setLoadingShortTermPrice(true);
       try {
@@ -543,7 +593,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
 
   // Logic lọc tìm kiếm khách hàng
   const filteredCustomers = useMemo(() => {
-    if (!form.searchQuery) return customers.slice(0, 5);
+    if (!form.searchQuery) {return customers.slice(0, 5);}
     const q = form.searchQuery.toLowerCase();
     return customers.filter(
       (c: any) =>
@@ -554,7 +604,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   }, [customers, form.searchQuery]);
 
   const formatVND = useCallback((val: number) => {
-    if (val === undefined || val === null) return '0đ';
+    if (val === undefined || val === null) {return '0đ';}
     return val.toLocaleString('vi-VN') + 'đ';
   }, []);
 
@@ -618,7 +668,28 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
     try {
       if (form.stayType === 'long_term') {
         // Xử lý Check-in Dài hạn
-        const duration = parseInt(form.contractDuration, 10) || 12;
+        const durationValue = parseInt(form.contractDuration, 10) || 12;
+
+        // Map giá trị UI sang số tháng thực tế: '1' = 12 tháng (1 năm), '2' = 24 tháng (2 năm), số khác = chính nó
+        let durationMonths: number;
+        if (durationValue === 1) {
+          durationMonths = 12; // 1 năm = 12 tháng
+        } else if (durationValue === 2) {
+          durationMonths = 24; // 2 năm = 24 tháng
+        } else {
+          durationMonths = durationValue; // 3, 6 tháng giữ nguyên
+        }
+
+        // Tính endDate: nếu 12 tháng thì +365 ngày, nếu không thì + số tháng
+        const startDate = new Date(form.contractStart);
+        const endDate = new Date(startDate);
+        if (durationMonths === 12) {
+          endDate.setDate(startDate.getDate() + 365);
+        } else {
+          endDate.setMonth(startDate.getMonth() + durationMonths);
+        }
+        const endDateStr = endDate.toISOString().split('T')[0];
+
         await RoomActionService.checkInLongTerm({
           storeId,
           variantId: room.id,
@@ -635,7 +706,8 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
           address: form.address,
 
           startDate: form.contractStart,
-          durationMonths: duration,
+          endDate: endDateStr,
+          durationMonths: durationMonths,
           rentAmount: form.monthlyPrice,
           depositAmount: form.deposit,
           electricReadingInit: parseInt(form.electricStart, 10) || 0,
@@ -647,8 +719,12 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             name: s.name,
             quantity: s.qty,
             unitPrice: s.unitPrice,
+            taxRate: s.taxRate || 0, // FIX #8: Thêm taxRate từ sản phẩm
           })),
           notes: form.note,
+          // FIX #8: Thêm thông tin session (có thể lấy từ auth context sau)
+          cashierUserId: undefined,
+          sessionId: undefined,
         });
       } else {
         // Xử lý Check-in Ngắn hạn
@@ -680,13 +756,17 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
             name: s.name,
             quantity: s.qty,
             unitPrice: s.unitPrice,
+            taxRate: s.taxRate || 0, // FIX #8: Thêm taxRate từ sản phẩm
           })),
           notes: form.note,
+          // FIX #8: Thêm thông tin session (có thể lấy từ auth context sau)
+          cashierUserId: undefined,
+          sessionId: undefined,
         });
       }
       Alert.alert('Thành công', 'Đăng ký cư trú đã được ghi nhận.');
-      if (onConfirmProp) onConfirmProp();
-      else onClose();
+      if (onConfirmProp) {onConfirmProp();}
+      else {onClose();}
     } catch (err) {
       Alert.alert('Lỗi', String(err));
     } finally {
@@ -755,7 +835,7 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
   };
 
   // ─── Phần giao diện ─────────────────────────────────────────────────────
-  if (!room) return null;
+  if (!room) {return null;}
 
   return (
     <SafeAreaView style={screenStyles.safeArea}>
@@ -933,42 +1013,32 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
                   </Text>
                 </View>
               </>
-            ) : loadingShortTermPrice ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 8,
-                }}>
-                <ActivityIndicator size="small" color={themedColors.primary} />
-                <Text style={{fontSize: 13, color: themedColors.textSecondary}}>
-                  Đang tính giá...
-                </Text>
-              </View>
-            ) : shortTermPrice && shortTermPrice.breakdown.length > 0 ? (
+            ) : shortTermPrice ? (
               <View style={{marginBottom: 8}}>
-                {shortTermPrice.breakdown.map((item, index) => (
-                  <View
-                    key={index}
-                    style={[screenStyles.summaryRow, {marginBottom: 4}]}>
-                    <Text
-                      style={[
-                        screenStyles.summaryLabel,
-                        {color: themedColors.textSecondary},
-                      ]}>
-                      • {item.description}
-                    </Text>
-                    <Text style={[screenStyles.summaryValue, {fontSize: 13}]}>
-                      {formatVND(item.amount)}
-                    </Text>
-                  </View>
-                ))}
+                <View style={screenStyles.summaryRow}>
+                  <Text style={screenStyles.summaryLabel}>Giá phòng:</Text>
+                  <Text style={screenStyles.summaryValue}>
+                    {formatVND(shortTermPrice.totalAmount)}
+                  </Text>
+                </View>
+                
+                <View style={screenStyles.summaryRow}>
+                  <Text style={screenStyles.summaryLabel}>Tiền dịch vụ:</Text>
+                  <Text style={screenStyles.summaryValue}>
+                    {formatVND(
+                      form.services.reduce(
+                        (sum, s) => sum + s.qty * s.unitPrice,
+                        0,
+                      ),
+                    )}
+                  </Text>
+                </View>
+
                 <View
                   style={[
                     screenStyles.summaryRow,
                     {
-                      borderTopWidth: 1,
+                      borderTopWidth: 0.5,
                       borderTopColor: themedColors.border,
                       paddingTop: 8,
                       marginTop: 4,
@@ -976,14 +1046,28 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
                   ]}>
                   <Text
                     style={[screenStyles.summaryLabel, {fontWeight: '600'}]}>
-                    Giá phòng:
+                    Tạm tính:
                   </Text>
+                  <Text
+                    style={[screenStyles.summaryValue, {fontWeight: '700'}]}>
+                    {formatVND(
+                      (shortTermPrice?.totalAmount || 0) +
+                        form.services.reduce(
+                          (sum, s) => sum + s.qty * s.unitPrice,
+                          0,
+                        ),
+                    )}
+                  </Text>
+                </View>
+
+                <View style={screenStyles.summaryRow}>
+                  <Text style={screenStyles.summaryLabel}>Tiền cọc:</Text>
                   <Text
                     style={[
                       screenStyles.summaryValue,
-                      {color: themedColors.primary, fontWeight: '700'},
+                      {color: themedColors.danger},
                     ]}>
-                    {formatVND(shortTermPrice.totalAmount)}
+                    - {formatVND(form.deposit)}
                   </Text>
                 </View>
               </View>
@@ -999,24 +1083,10 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
               </View>
             )}
 
-            {form.services.length > 0 && (
-              <View style={screenStyles.summaryRow}>
-                <Text style={screenStyles.summaryLabel}>
-                  {t('booking.summary.serviceAdd')} ({form.services.length})
-                </Text>
-                <Text style={screenStyles.summaryValue}>
-                  {formatVND(
-                    form.services.reduce(
-                      (sum, s) => sum + s.qty * s.unitPrice,
-                      0,
-                    ),
-                  )}
-                </Text>
-              </View>
-            )}
-
             <View style={screenStyles.summaryTotal}>
-              <Text style={screenStyles.summaryTotalLabel}>Tổng cộng:</Text>
+              <Text style={screenStyles.summaryTotalLabel}>
+                {form.stayType === 'long_term' ? 'Tổng cộng:' : 'Số tiền cần thanh toán:'}
+              </Text>
               <Text style={screenStyles.summaryTotalValue}>
                 {form.stayType === 'long_term'
                   ? formatVND(
@@ -1028,11 +1098,11 @@ const BookingScreen = ({route, navigation, ...props}: any) => {
                         ),
                     )
                   : formatVND(
-                      (shortTermPrice?.totalAmount || 0) +
+                      Math.max(0, (shortTermPrice?.totalAmount || 0) +
                         form.services.reduce(
                           (sum, s) => sum + s.qty * s.unitPrice,
                           0,
-                        ),
+                        ) - form.deposit),
                     )}
               </Text>
             </View>

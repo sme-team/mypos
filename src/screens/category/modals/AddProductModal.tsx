@@ -9,15 +9,17 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useImagePicker} from '../../../hooks/useImagePicker';
 import type {CategoryGroup} from '../types';
 
 interface Props {
   visible: boolean;
   groups: CategoryGroup[];
   onClose: () => void;
-  onSave: (categoryId: string, name: string) => void;
+  onSave: (categoryId: string, name: string, imageUri?: string) => void;
 }
 
 export const AddProductModal: React.FC<Props> = ({
@@ -26,6 +28,7 @@ export const AddProductModal: React.FC<Props> = ({
   onClose,
   onSave,
 }) => {
+  const {imageUri, chooseImage} = useImagePicker();
   const [name, setName] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -56,7 +59,7 @@ export const AddProductModal: React.FC<Props> = ({
       Alert.alert('Lỗi', 'Vui lòng chọn danh mục');
       return;
     }
-    onSave(categoryId, name.trim());
+    onSave(categoryId, name.trim(), imageUri);
     handleClose();
   };
 
@@ -95,29 +98,68 @@ export const AddProductModal: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
+          {/* Ảnh + Tên sản phẩm — nằm ngang */}
           <Text
             style={{
               fontSize: 13,
               fontWeight: '500',
               color: '#374151',
-              marginBottom: 6,
+              marginBottom: 8,
             }}>
             Tên sản phẩm
           </Text>
-          <TextInput
+          <View
             style={{
-              borderWidth: 1,
-              borderColor: '#d1d5db',
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
               marginBottom: 16,
-              color: '#111827',
-            }}
-            placeholder="Nhập tên sản phẩm"
-            value={name}
-            onChangeText={setName}
-          />
+            }}>
+            {/* Ảnh sản phẩm */}
+            <TouchableOpacity
+              onPress={chooseImage}
+              activeOpacity={0.8}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                backgroundColor: '#f3f4f6',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1.5,
+                borderColor: '#e5e7eb',
+                borderStyle: imageUri ? 'solid' : 'dashed',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}>
+              {imageUri ? (
+                <Image
+                  source={{uri: imageUri}}
+                  style={{width: '100%', height: '100%'}}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Icon name="add-photo-alternate" size={24} color="#9ca3af" />
+              )}
+            </TouchableOpacity>
+
+            {/* Input tên */}
+            <TextInput
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: '#d1d5db',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                color: '#111827',
+                fontSize: 15,
+              }}
+              placeholder="Nhập tên sản phẩm"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
           <Text
             style={{

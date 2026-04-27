@@ -184,11 +184,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ── Hydrate: khôi phục session khi app khởi động ─────────────────────────
   useEffect(() => {
     const hydrate = async () => {
+
+      console.log('[AuthStore] Starting hydrate...');
+      dispatch({type: 'HYDRATE_START'});
+
       try {
         await tokenManager.init();
-        const info = tokenManager.getAuthInfo();
+        console.log('[AuthStore] Token manager initialized');
+        const user = tokenManager.getAuthInfo()?.user;
         const method = tokenManager.getAuthMethod();
-        const savedUser = info?.user as AuthUser | null;
+        console.log('[AuthStore] User:', user, 'Method:', method);
+
 
         if (savedUser && method) {
           dispatch({
@@ -200,9 +206,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             businessTypes: savedUser.businessTypes,
           });
         } else {
-          dispatch({ type: 'HYDRATE_DONE', payload: null });
+
+          console.log('[AuthStore] No user found, setting to unauthenticated');
+          dispatch({type: 'HYDRATE_DONE', payload: null});
         }
       } catch (err: any) {
+        console.error('[AuthStore] Hydrate error:', err);
         logger.error('[AuthStore] Hydrate error:', err?.message);
         dispatch({ type: 'HYDRATE_DONE', payload: null });
       }

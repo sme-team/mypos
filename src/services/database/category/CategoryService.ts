@@ -8,6 +8,7 @@ import type {
   CategoryGroup,
   CategoryItem,
   Variant,
+  UnitOption,
 } from '../../../screens/category/types';
 
 const logger = createModuleLogger(AppModules.DATABASE);
@@ -47,16 +48,16 @@ class UnitBaseService extends BaseService {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function applyToToTabs(applyTo: string | null): TabType[] {
-  if (!applyTo || applyTo === 'all') return ['selling', 'storage'];
-  if (applyTo === 'pos') return ['selling'];
+  if (!applyTo || applyTo === 'all') {return ['selling', 'storage'];}
+  if (applyTo === 'pos') {return ['selling'];}
   return ['storage'];
 }
 
 function tabsToApplyTo(tabs: TabType[]): string {
   const hasSelling = tabs.includes('selling');
   const hasStorage = tabs.includes('storage');
-  if (hasSelling && hasStorage) return 'all';
-  if (hasSelling) return 'pos';
+  if (hasSelling && hasStorage) {return 'all';}
+  if (hasSelling) {return 'pos';}
   return 'hostel';
 }
 
@@ -106,13 +107,20 @@ class CategoryServiceClass {
         logger.error('[CategoryService] Error fetching categories:', err);
       }
 
-      if (!groupRows || groupRows.length === 0) return [];
+      if (!groupRows || groupRows.length === 0) {return [];}
 
       // 2. Products
       let productRows: any[] = [];
       try {
         productRows = await QueryBuilder.table('products', db.getInternalDAO())
-          .select(['id', 'name', 'category_id', 'store_id', 'status'])
+          .select([
+            'id',
+            'name',
+            'category_id',
+            'store_id',
+            'status',
+            'image_url',
+          ])
           .where('store_id', storeId)
           .where('status', 'active')
           .whereNull('deleted_at')
@@ -180,6 +188,7 @@ class CategoryServiceClass {
             (prod): CategoryItem => ({
               id: prod.id,
               name: prod.name ?? 'Chưa có tên',
+              imageUri: prod.image_url ?? undefined,
               variants: variantsByProduct.get(prod.id) ?? [],
             }),
           ),
@@ -204,7 +213,7 @@ class CategoryServiceClass {
    */
   searchGroups(groups: CategoryGroup[], query: string): CategoryGroup[] {
     const q = query.trim().toLowerCase();
-    if (!q) return groups;
+    if (!q) {return groups;}
 
     const result: CategoryGroup[] = [];
 
@@ -219,7 +228,7 @@ class CategoryServiceClass {
 
       // Lọc items
       const matchedItems = group.items.filter(item => {
-        if (item.name.toLowerCase().includes(q)) return true;
+        if (item.name.toLowerCase().includes(q)) {return true;}
         // Kiểm tra variant names
         return item.variants.some(v => v.name.toLowerCase().includes(q));
       });
@@ -233,22 +242,25 @@ class CategoryServiceClass {
   }
 
   /**
-   * Load danh sách tên đơn vị tính từ bảng units
+   * Load danh sách đơn vị tính từ bảng units, chỉ lấy unit_type = 'count' hoặc 'weight'
    */
-  async loadUnits(storeId: string): Promise<string[]> {
+  async loadUnits(storeId: string): Promise<UnitOption[]> {
     try {
       const db = DatabaseManager.get('pos');
-      if (!db) return [];
+      if (!db) {return [];}
 
       const rows = await QueryBuilder.table('units', db.getInternalDAO())
-        .select(['name'])
+        .select(['id', 'name', 'unit_type'])
         .where('store_id', storeId)
         .where('status', 'active')
         .whereNull('deleted_at')
+        .whereIn('unit_type', ['count', 'weight'])
         .orderBy('sort_order', 'ASC')
         .get();
 
-      return rows.map(r => r.name as string).filter(Boolean);
+      return rows
+        .filter((r: any) => r.id && r.name)
+        .map((r: any) => ({id: r.id as string, name: r.name as string}));
     } catch (err) {
       logger.error('[CategoryService] loadUnits error:', err);
       return [];
@@ -321,6 +333,7 @@ class CategoryServiceClass {
     storeId: string,
     categoryId: string,
     name: string,
+    imageUrl?: string,
   ): Promise<void> {
     const now = new Date().toISOString();
     const id = await this.generateProductId();
@@ -335,7 +348,7 @@ class CategoryServiceClass {
       name: name.trim(),
       short_name: null,
       description: null,
-      image_url: null,
+      image_url: imageUrl ?? null,
       product_type: 'product',
       pricing_type: 'fixed',
       is_active_pos: true,
@@ -348,6 +361,23 @@ class CategoryServiceClass {
       created_at: now,
       updated_at: now,
       deleted_at: null,
+    });
+  }
+
+  async updateProduct(
+    productId: string,
+    name: string,
+    categoryId: string,
+    imageUrl?: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+
+    await this.productSvc.update(productId, {
+      name: name.trim(),
+      category_id: categoryId,
+      image_url: imageUrl ?? null,
+      sync_status: 'local',
+      updated_at: now,
     });
   }
 

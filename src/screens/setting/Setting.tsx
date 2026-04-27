@@ -22,15 +22,9 @@ const SHEET_LINK_KEY = 'GOOGLE_SHEET_URL';
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
-  onNavigateProfile: () => void;
 }
-
-export default function Setting({
-  onOpenMenu,
-  onBack,
-  onNavigateProfile,
-}: SettingProps) {
-  const {t, i18n} = useTranslation();
+export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
+  const { t, i18n } = useTranslation();
   const [sheetLink, setSheetLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -51,13 +45,7 @@ export default function Setting({
 
   const handleSync = (strategy: 'merge' | 'overwrite') => {
     if (!sheetLink) {
-      Alert.alert(
-        t('error', 'Lỗi'),
-        t(
-          'settings.sheetLinkRequired',
-          'Vui lòng nhập đường dẫn Google Sheets.',
-        ),
-      );
+      Alert.alert(t('error', 'Lỗi'), t('settings.sheetLinkRequired', 'Vui lòng nhập đường dẫn Google Sheets.'));
       return;
     }
 
@@ -70,10 +58,7 @@ export default function Setting({
     databaseSeeder
       .seedRunner(sheetLink, strategy)
       .then(() => {
-        Alert.alert(
-          t('success', 'Thành công'),
-          t('settings.syncSuccess', 'Đồng bộ dữ liệu thành công!'),
-        );
+        Alert.alert(t('success', 'Thành công'), t('settings.syncSuccess', 'Đồng bộ dữ liệu thành công!'));
       })
       .catch((error: any) => {
         Alert.alert(
@@ -124,16 +109,6 @@ export default function Setting({
       title: 'settings.profile',
       desc: 'settings.profileDesc',
       onPress: onNavigateProfile,
-    },
-    {
-      icon: 'wallet-outline',
-      title: 'settings.currency',
-      desc: 'settings.currencyDesc',
-    },
-    {
-      icon: 'business-outline',
-      title: 'settings.organization',
-      desc: 'settings.organizationDesc',
     },
     {
       icon: 'time-outline',

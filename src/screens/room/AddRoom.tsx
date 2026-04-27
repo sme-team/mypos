@@ -8,8 +8,10 @@
  *  3. Category picker hiển thị tối đa 3-4 item rồi scroll
  *  4. Lưu giá vào bảng prices qua RoomService.saveVariantPrices
  *  5. Cho phép tạo mới Danh mục phòng (RoomType) ngay trong form
+ *  6. Giá hiển thị đúng thứ tự: Giờ đầu (HOURFIRST) → Theo giờ (HOUR) → Qua ngày (DAY) → Một tháng (MONTH)
+ *     và điền sẵn khi mở màn hình edit
  */
-import React, {useState, useCallback, memo} from 'react';
+import React, {useState, useCallback, memo, useEffect} from 'react';
 import {
   View,
   Text,
@@ -30,6 +32,9 @@ import {
   RoomType,
   RoomPriceInput,
 } from '../../services/database/room/RoomCategoryService';
+import {createModuleLogger, AppModules} from '../../logger';
+
+const logger = createModuleLogger(AppModules.STORE_SERVICE);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,32 +42,33 @@ export interface AddRoomPayload {
   category: string;
   name: string;
   floor: string;
-  priceOvernight: string;
-  priceHalfDay: string;
+  /** Giá qua ngày (DAY) */
+  priceListed: string;
+  /** Giá giờ đầu (HOURFIRST) */
+  priceHourFirst: string;
+  /** Giá theo giờ (HOUR) */
   priceHour: string;
+  /** Giá một tháng (MONTH) */
   priceMonth: string;
 }
 
 export interface RoomDetailInitialData {
-  variantId?: string; // để update giá khi edit
+  variantId?: string;
   typeId: string;
   name: string;
   floor: string;
-  priceOvernight: string;
-  priceHalfDay: string;
+  /** Giá qua ngày – unit_code = DAY */
+  priceListed: string;
+  priceListedId?: string; // id của row prices.DAY — dùng để UPDATE trực tiếp
+  /** Giá giờ đầu – unit_code = HOURFIRST */
+  priceHourFirst: string;
+  priceHourFirstId?: string; // id của row prices.HOURFIRST
+  /** Giá theo giờ – unit_code = HOUR */
   priceHour: string;
+  priceHourId?: string; // id của row prices.HOUR
+  /** Giá một tháng – unit_code = MONTH */
   priceMonth: string;
-}
-
-/**
- * Map unit_code → unit_id (lấy từ bảng units đã seed)
- * Nên truyền từ ngoài vào qua props nếu có thể, hoặc dùng hardcode tạm.
- */
-export interface UnitIds {
-  ovnight: string; // unit_code = OVNIGHT
-  halfday: string; // unit_code = HALFDAY
-  hour: string; // unit_code = HOUR
-  month: string; // unit_code = MONTH
+  priceMonthId?: string; // id của row prices.MONTH
 }
 
 interface Props {
@@ -74,8 +80,6 @@ interface Props {
   onRoomTypeCreated?: (newType: RoomType) => void;
   mode?: 'add' | 'edit';
   initialData?: RoomDetailInitialData;
-  /** Unit IDs từ bảng units (truyền vào để tránh hardcode) */
-  unitIds?: UnitIds;
 }
 
 // ─── Sub-components (khai báo NGOÀI component chính để tránh re-mount) ────────
@@ -161,6 +165,70 @@ const FieldLabel = memo(({children, subTextColor}: FieldLabelProps) => (
   </Text>
 ));
 
+// ─── PriceField – 1 ô nhập giá với badge unit_code ───────────────────────────
+
+interface PriceFieldProps {
+  label: string;
+  unitCode: string;
+  value: string;
+  onChange: (v: string) => void;
+  inputBg: string;
+  textColor: string;
+  borderColor: string;
+  isDark: boolean;
+  subTextColor: string;
+}
+
+const PriceField = memo(
+  ({
+    label,
+    value,
+    onChange,
+    inputBg,
+    borderColor,
+    isDark,
+    subTextColor,
+  }: PriceFieldProps) => (
+    <View>
+      <FieldLabel subTextColor={subTextColor}>{label}</FieldLabel>
+      <View style={{position: 'relative'}}>
+        {/* Badge unit_code bên trái */}
+        <TextInput
+          style={{
+            width: '100%',
+            backgroundColor: inputBg,
+            borderRadius: 12,
+            paddingLeft: 18, // chừa chỗ cho badge bên trái
+            paddingRight: 52, // chừa chỗ cho "VND" bên phải
+            paddingVertical: 12,
+            fontSize: 14,
+            fontWeight: '700',
+            color: '#3b82f6',
+            borderWidth: isDark ? 1 : 0,
+            borderColor,
+          }}
+          keyboardType="numeric"
+          value={value}
+          onChangeText={onChange}
+          placeholder="0"
+          placeholderTextColor="#9ca3af"
+        />
+        <Text
+          style={{
+            position: 'absolute',
+            right: 16,
+            top: 14,
+            fontSize: 9,
+            fontWeight: '900',
+            color: '#94a3b8',
+          }}>
+          VNĐ
+        </Text>
+      </View>
+    </View>
+  ),
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AddRoom({
@@ -171,15 +239,16 @@ export default function AddRoom({
   onRoomTypeCreated,
   mode = 'add',
   initialData,
-  unitIds,
 }: Props) {
   const {t} = useTranslation();
   const {isDark} = useTheme();
 
+  logger.trace(`[AddRoom] render, mode=${mode}, storeId=${storeId}`);
+
   // ── Theme ──────────────────────────────────────────────────────────────────
   const bgColor = isDark ? '#111827' : '#f5f7fa';
   const headerBg = isDark ? '#1f2937' : '#f5f7fa';
-  const cardBg = isDark ? '#1f2937' : '#ffffff'; // ← trắng ở light mode
+  const cardBg = isDark ? '#1f2937' : '#ffffff';
   const textColor = isDark ? '#f9fafb' : '#111827';
   const subTextColor = isDark ? '#9ca3af' : '#374151';
   const borderColor = isDark ? '#374151' : '#e5e7eb';
@@ -192,15 +261,63 @@ export default function AddRoom({
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [name, setName] = useState(initialData?.name ?? '');
   const [floor, setFloor] = useState(initialData?.floor ?? '');
-  const [priceOvernight, setPriceOvernight] = useState(
-    initialData?.priceOvernight ?? '',
-  );
-  const [priceHalfDay, setPriceHalfDay] = useState(
-    initialData?.priceHalfDay ?? '',
+
+  // Giá – thứ tự chuẩn: HOURFIRST → HOUR → DAY → MONTH
+  const [priceHourFirst, setPriceHourFirst] = useState(
+    initialData?.priceHourFirst ?? '',
   );
   const [priceHour, setPriceHour] = useState(initialData?.priceHour ?? '');
+  const [priceListed, setPriceListed] = useState(
+    initialData?.priceListed ?? '',
+  );
   const [priceMonth, setPriceMonth] = useState(initialData?.priceMonth ?? '');
+
   const [saving, setSaving] = useState(false);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  // ── Load giá từ DB khi mở edit (initialData chưa có giá điền sẵn) ─────────
+  useEffect(() => {
+    if (mode !== 'edit' || !initialData?.variantId) return;
+
+    // Nếu initialData đã có giá rồi thì không cần fetch lại
+    const hasPrefilledPrice =
+      initialData.priceHourFirst ||
+      initialData.priceHour ||
+      initialData.priceListed ||
+      initialData.priceMonth;
+    if (hasPrefilledPrice) return;
+
+    let cancelled = false;
+    const fetchPrices = async () => {
+      logger.debug(
+        `[AddRoom] useEffect: fetching prices for variantId=${initialData.variantId}`,
+      );
+      setLoadingPrices(true);
+      try {
+        const priceMap = await RoomService.loadVariantPriceMap(
+          initialData.variantId!,
+        );
+        if (cancelled) return;
+        logger.info(
+          `[AddRoom] useEffect: prices loaded: ${JSON.stringify(priceMap)}`,
+        );
+        if (priceMap.HOURFIRST) setPriceHourFirst(priceMap.HOURFIRST);
+        if (priceMap.HOUR) setPriceHour(priceMap.HOUR);
+        if (priceMap.DAY) setPriceListed(priceMap.DAY);
+        if (priceMap.MONTH) setPriceMonth(priceMap.MONTH);
+      } catch (err) {
+        logger.error('[AddRoom] useEffect: failed to load prices', err);
+      } finally {
+        if (!cancelled) setLoadingPrices(false);
+      }
+    };
+
+    fetchPrices();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, initialData?.variantId]);
 
   // ── Create new category modal state ────────────────────────────────────────
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -211,23 +328,58 @@ export default function AddRoom({
   const isEdit = mode === 'edit';
   const selectedType = roomTypes.find(rt => rt.id === selectedTypeId);
 
-  // ── Build price inputs từ unitIds + form values ────────────────────────────
+  // ── Build price inputs từ form values ────────────────────────────────────
   const buildPriceInputs = useCallback((): RoomPriceInput[] => {
-    if (!unitIds) return [];
-    const entries: Array<{unitId: string; value: string}> = [
-      {unitId: unitIds.ovnight, value: priceOvernight},
-      {unitId: unitIds.halfday, value: priceHalfDay},
-      {unitId: unitIds.hour, value: priceHour},
-      {unitId: unitIds.month, value: priceMonth},
-    ];
-    return entries
+    const entries: Array<{unitCode: string; value: string; priceId?: string}> =
+      [
+        {
+          unitCode: 'HOURFIRST',
+          value: priceHourFirst,
+          priceId: initialData?.priceHourFirstId,
+        },
+        {unitCode: 'HOUR', value: priceHour, priceId: initialData?.priceHourId},
+        {
+          unitCode: 'DAY',
+          value: priceListed,
+          priceId: initialData?.priceListedId,
+        },
+        {
+          unitCode: 'MONTH',
+          value: priceMonth,
+          priceId: initialData?.priceMonthId,
+        },
+      ];
+
+    logger.debug(
+      `[AddRoom] buildPriceInputs: HOURFIRST="${priceHourFirst}"(id=${initialData?.priceHourFirstId}), ` +
+        `HOUR="${priceHour}"(id=${initialData?.priceHourId}), ` +
+        `DAY="${priceListed}"(id=${initialData?.priceListedId}), ` +
+        `MONTH="${priceMonth}"(id=${initialData?.priceMonthId})`,
+    );
+
+    const result = entries
       .filter(e => e.value.trim() !== '' && !isNaN(Number(e.value)))
-      .map(e => ({unitId: e.unitId, price: Number(e.value)}));
-  }, [unitIds, priceOvernight, priceHalfDay, priceHour, priceMonth]);
+      .map(e => ({
+        unitCode: e.unitCode,
+        price: Number(e.value),
+        priceId: e.priceId, // truyền thẳng id → saveVariantPrices UPDATE đúng row
+      }));
+
+    logger.debug(
+      `[AddRoom] buildPriceInputs: ${result.length} valid entries - ${result
+        .map(r => `${r.unitCode}=${r.price}(id=${r.priceId ?? 'new'})`)
+        .join(', ')}`,
+    );
+    return result;
+  }, [priceHourFirst, priceHour, priceListed, priceMonth, initialData]);
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
+    logger.info(
+      `[AddRoom] handleSave called, mode=${mode}, name="${name}", selectedTypeId=${selectedTypeId}`,
+    );
     if (!name.trim()) {
+      logger.warn('[AddRoom] handleSave validation failed: name is empty');
       Alert.alert(
         t('common.missingInfo', 'Thiếu thông tin'),
         t('room.nameRequired', 'Vui lòng nhập tên phòng.'),
@@ -235,6 +387,9 @@ export default function AddRoom({
       return;
     }
     if (!selectedTypeId) {
+      logger.warn(
+        '[AddRoom] handleSave validation failed: selectedTypeId is empty',
+      );
       Alert.alert(
         t('common.missingInfo', 'Thiếu thông tin'),
         t('room.categoryRequired', 'Vui lòng chọn hạng mục phòng.'),
@@ -245,18 +400,33 @@ export default function AddRoom({
     setSaving(true);
     try {
       const priceInputs = buildPriceInputs();
+      logger.info(
+        `[AddRoom] handleSave proceeding with ${priceInputs.length} price inputs`,
+      );
 
       if (isEdit && initialData?.variantId) {
-        // Cập nhật giá nếu có unitIds
+        logger.info(
+          `[AddRoom] handleSave: updating variant prices, variantId=${initialData.variantId}, ${priceInputs.length} prices`,
+        );
+        // Cập nhật giá
         if (priceInputs.length > 0) {
           await RoomService.updateVariantPrices(
             initialData.variantId,
             storeId,
             priceInputs,
           );
+        } else {
+          logger.warn(
+            `[AddRoom] handleSave: No prices provided in edit mode for variantId=${initialData.variantId}`,
+          );
         }
         // TODO: update variant name/floor nếu cần
       } else {
+        logger.info(
+          `[AddRoom] handleSave: creating new room variant, productId=${selectedTypeId}, name="${name.trim()}", with ${
+            priceInputs.length
+          } prices`,
+        );
         // Tạo mới phòng + giá
         await RoomService.createRoomVariant(
           {
@@ -269,17 +439,18 @@ export default function AddRoom({
         );
       }
 
+      logger.info('[AddRoom] handleSave success, calling onSave callback');
       onSave({
         category: selectedType?.name ?? '',
         name,
         floor,
-        priceOvernight,
-        priceHalfDay,
+        priceListed,
+        priceHourFirst,
         priceHour,
         priceMonth,
       });
     } catch (err) {
-      console.error('[AddRoom] save error:', err);
+      logger.error('[AddRoom] save error:', err);
       Alert.alert(
         t('common.error', 'Lỗi'),
         t('room.saveError', 'Không thể lưu phòng.'),
@@ -291,7 +462,13 @@ export default function AddRoom({
 
   // ── Create new category ────────────────────────────────────────────────────
   const handleCreateCategory = async () => {
+    logger.info(
+      `[AddRoom] handleCreateCategory called, name="${newCategoryName.trim()}"`,
+    );
     if (!newCategoryName.trim()) {
+      logger.warn(
+        '[AddRoom] handleCreateCategory validation failed: name is empty',
+      );
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên hạng mục phòng.');
       return;
     }
@@ -302,20 +479,23 @@ export default function AddRoom({
         name: newCategoryName.trim(),
         description: newCategoryDesc.trim() || undefined,
       });
+      logger.info(
+        `[AddRoom] handleCreateCategory success, newType.id=${newType.id}, name="${newType.name}"`,
+      );
       setShowNewCategoryModal(false);
       setNewCategoryName('');
       setNewCategoryDesc('');
       setSelectedTypeId(newType.id);
       onRoomTypeCreated?.(newType);
     } catch (err) {
-      console.error('[AddRoom] createCategory error:', err);
+      logger.error('[AddRoom] createCategory error:', err);
       Alert.alert('Lỗi', 'Không thể tạo hạng mục phòng.');
     } finally {
       setCreatingCategory(false);
     }
   };
 
-  // ── Shared input style builder (stable reference) ──────────────────────────
+  // ── Shared input style ──────────────────────────────────────────────────────
   const inputStyle = {
     width: '100%' as const,
     backgroundColor: inputBg,
@@ -408,7 +588,7 @@ export default function AddRoom({
             />
           </TouchableOpacity>
 
-          {/* Dropdown: tối đa 4 items rồi scroll, + nút "Tạo mới" */}
+          {/* Dropdown */}
           {showCategoryPicker && (
             <View
               style={{
@@ -419,7 +599,6 @@ export default function AddRoom({
                 borderColor,
                 overflow: 'hidden',
               }}>
-              {/* Danh sách cuộn — max-height = 4 × ~50px = 200 */}
               <ScrollView
                 style={{maxHeight: 200}}
                 nestedScrollEnabled
@@ -436,6 +615,9 @@ export default function AddRoom({
                     <TouchableOpacity
                       key={rt.id}
                       onPress={() => {
+                        logger.debug(
+                          `[AddRoom] category selected: id=${rt.id}, name="${rt.name}"`,
+                        );
                         setSelectedTypeId(rt.id);
                         setShowCategoryPicker(false);
                       }}
@@ -485,9 +667,10 @@ export default function AddRoom({
                 )}
               </ScrollView>
 
-              {/* Divider + nút tạo mới */}
+              {/* Nút tạo mới hạng mục */}
               <TouchableOpacity
                 onPress={() => {
+                  logger.debug('[AddRoom] open new category modal');
                   setShowCategoryPicker(false);
                   setShowNewCategoryModal(true);
                 }}
@@ -555,7 +738,8 @@ export default function AddRoom({
           </View>
         </SectionCard>
 
-        {/* ── Section 3: Giá ── */}
+        {/* ── Section 3: Giá khởi tạo ── */}
+        {/* Thứ tự cố định: Giờ đầu → Theo giờ → Qua ngày → Một tháng */}
         <SectionCard
           icon="payments"
           title={t('room.initialPricing', 'Giá khởi tạo')}
@@ -563,67 +747,74 @@ export default function AddRoom({
           subTextColor={subTextColor}
           borderColor={borderColor}
           isDark={isDark}>
-          <View style={{gap: 16}}>
-            {[
-              {
-                label: t('room.priceOvernight', 'Giá qua đêm (VNĐ)'),
-                value: priceOvernight,
-                set: setPriceOvernight,
-              },
-              {
-                label: t('room.priceHalfDay', 'Giá nửa ngày (VNĐ)'),
-                value: priceHalfDay,
-                set: setPriceHalfDay,
-              },
-              {
-                label: t('room.priceHour', 'Giá một giờ (VNĐ)'),
-                value: priceHour,
-                set: setPriceHour,
-              },
-              {
-                label: t('room.priceMonth', 'Giá một tháng (VNĐ)'),
-                value: priceMonth,
-                set: setPriceMonth,
-              },
-            ].map(f => (
-              <View key={f.label}>
-                <FieldLabel subTextColor={subTextColor}>{f.label}</FieldLabel>
-                <View>
-                  <TextInput
-                    style={{
-                      width: '100%',
-                      backgroundColor: inputBg,
-                      borderRadius: 12,
-                      paddingLeft: 16,
-                      paddingRight: 56,
-                      paddingVertical: 12,
-                      fontSize: 14,
-                      fontWeight: '700',
-                      color: '#3b82f6',
-                      borderWidth: isDark ? 1 : 0,
-                      borderColor,
-                    }}
-                    keyboardType="numeric"
-                    value={f.value}
-                    onChangeText={f.set}
-                    placeholder="0"
-                    placeholderTextColor="#9ca3af"
-                  />
-                  <Text
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: 14,
-                      fontSize: 9,
-                      fontWeight: '900',
-                      color: '#94a3b8',
-                    }}>
-                    VND
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
+          {loadingPrices ? (
+            <View
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 32,
+                gap: 10,
+              }}>
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <Text style={{fontSize: 12, color: '#9ca3af'}}>
+                Đang tải giá...
+              </Text>
+            </View>
+          ) : (
+            <View style={{gap: 16}}>
+              {/* 1. Giá giờ đầu – HOURFIRST */}
+              <PriceField
+                label={t('room.priceHourFirst', 'Giá giờ đầu')}
+                unitCode="HOURFIRST"
+                value={priceHourFirst}
+                onChange={setPriceHourFirst}
+                inputBg={inputBg}
+                textColor={textColor}
+                borderColor={borderColor}
+                isDark={isDark}
+                subTextColor={subTextColor}
+              />
+
+              {/* 2. Giá theo giờ – HOUR */}
+              <PriceField
+                label={t('room.priceHour', 'Giá theo giờ')}
+                unitCode="HOUR"
+                value={priceHour}
+                onChange={setPriceHour}
+                inputBg={inputBg}
+                textColor={textColor}
+                borderColor={borderColor}
+                isDark={isDark}
+                subTextColor={subTextColor}
+              />
+
+              {/* 3. Giá qua ngày – DAY */}
+              <PriceField
+                label={t('room.priceListed', 'Giá qua ngày')}
+                unitCode="DAY"
+                value={priceListed}
+                onChange={setPriceListed}
+                inputBg={inputBg}
+                textColor={textColor}
+                borderColor={borderColor}
+                isDark={isDark}
+                subTextColor={subTextColor}
+              />
+
+              {/* 4. Giá một tháng – MONTH */}
+              <PriceField
+                label={t('room.priceMonth', 'Giá một tháng')}
+                unitCode="MONTH"
+                value={priceMonth}
+                onChange={setPriceMonth}
+                inputBg={inputBg}
+                textColor={textColor}
+                borderColor={borderColor}
+                isDark={isDark}
+                subTextColor={subTextColor}
+              />
+            </View>
+          )}
         </SectionCard>
       </ScrollView>
 

@@ -14,19 +14,19 @@ const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1522708323590-d24db
  * Component hiển thị tóm tắt toàn bộ thông tin hợp đồng dài hạn để khách hàng xác nhận.
  */
 export const LongTermSummary = React.memo(({ form, room, selectedCustomer, onEdit, onConfirm, formatVND, agreedTerms, setAgreedTerms, confirming, themedColors, t }: any) => {
-  
+
   // Tính toán các đầu mục kinh tế
   const serviceTotal = form.services.reduce((sum: number, s: any) => sum + (s.qty * s.unitPrice), 0);
   const grandTotal = form.monthlyPrice + form.deposit + serviceTotal;
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.scrollView, { backgroundColor: themedColors.bg }]}
       removeClippedSubviews={true}
       scrollEventThrottle={16}
       automaticallyAdjustContentInsets={false}>
       <View style={styles.summaryContent}>
-        
+
         {/* Tóm tắt phòng */}
         <View style={styles.summarySectionHeader}>
           <Text style={[styles.summarySectionTitle, { color: themedColors.text }]}>{t('booking.summary.roomSummary')}</Text>

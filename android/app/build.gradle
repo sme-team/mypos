@@ -23,6 +23,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        ndk {
+        abiFilters "arm64-v8a"  // ✅ Chỉ ARM64, để emulator tự translate
+    }
     }
     signingConfigs {
         debug {
@@ -62,6 +65,10 @@ dependencies {
     implementation project(':react-native-worklets-core')
    
     implementation project(':react-native-google-signin_google-signin')
+
+    implementation project(':react-native-fs')
+    implementation project(':react-native-share')
+    
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

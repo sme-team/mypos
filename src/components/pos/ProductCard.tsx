@@ -7,6 +7,7 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {Product} from '../../screens/pos/types';
 import {useTheme} from '../../hooks/useTheme';
 
@@ -20,6 +21,39 @@ interface ProductCardProps {
   cardWidth: number;
   quantity: number;
 }
+
+const ProductImage = ({
+  uri,
+  isDark,
+}: {
+  uri?: string | null;
+  isDark: boolean;
+}) => {
+  const [failed, setFailed] = useState(false);
+  const placeholderBg = isDark ? '#2a2a3a' : '#f0f2f5';
+  const iconColor = isDark ? '#4b5563' : '#c0c4cc';
+
+  if (!uri || failed) {
+    return (
+      <View
+        style={[
+          styles.image,
+          styles.placeholder,
+          {backgroundColor: placeholderBg},
+        ]}>
+        <Icon name="image" size={40} color={iconColor} />
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{uri}}
+      style={styles.image}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
+  );
+};
 
 const ProductCard: React.FC<ProductCardProps> = React.memo(
   ({product, onAdd, onDecrease, onSetQuantity, cardWidth, quantity}) => {
@@ -54,11 +88,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(
     return (
       <View style={[styles.card, {width: cardWidth, backgroundColor: cardBg}]}>
         <View style={styles.imageContainer}>
-          <Image
-            source={{uri: product.image}}
-            style={styles.image}
-            resizeMode="cover"
-          />
+          <ProductImage uri={product.image} isDark={isDark} />
           {quantity > 0 && (
             <View style={styles.badgeContainer}>
               <Text style={styles.badgeText}>{quantity}</Text>
@@ -142,6 +172,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {position: 'relative'},
   image: {width: '100%', height: 130},
+  placeholder: {alignItems: 'center', justifyContent: 'center'},
   badgeContainer: {
     position: 'absolute',
     top: 8,

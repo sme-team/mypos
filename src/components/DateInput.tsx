@@ -99,7 +99,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
     ...Array.from({length: daysInMonth}, (_, i) => i + 1),
   ];
   // Pad to full weeks
-  while (cells.length % 7 !== 0) cells.push(null);
+  while (cells.length % 7 !== 0) {cells.push(null);}
 
   const isDisabled = (day: number) => {
     const d = new Date(viewYear, viewMonth, day);
@@ -107,12 +107,12 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
       minDate &&
       d < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())
     )
-      return true;
+      {return true;}
     if (
       maxDate &&
       d > new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
     )
-      return true;
+      {return true;}
     return false;
   };
 
@@ -120,14 +120,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear(y => y - 1);
-    } else setViewMonth(m => m - 1);
+    } else {setViewMonth(m => m - 1);}
   };
 
   const nextMonth = () => {
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear(y => y + 1);
-    } else setViewMonth(m => m + 1);
+    } else {setViewMonth(m => m + 1);}
   };
 
   const currentYear = new Date().getFullYear();
@@ -225,7 +225,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                     day != null ? `day-${day}` : `empty-${row}-${col}`;
 
                   if (day == null)
-                    return <View key={cellKey} className="flex-1 h-9" />;
+                    {return <View key={cellKey} className="flex-1 h-9" />;}
 
                   const cellDate = new Date(viewYear, viewMonth, day);
                   cellDate.setHours(0, 0, 0, 0);

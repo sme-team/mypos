@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useImagePicker} from '../../../hooks/useImagePicker';
 import type {CategoryGroup, CategoryItem} from '../types';
 
 interface Props {
@@ -19,7 +20,12 @@ interface Props {
   itemId: string;
   groups: CategoryGroup[];
   onClose: () => void;
-  onSave: (itemId: string, name: string, groupId: string) => void;
+  onSave: (
+    itemId: string,
+    name: string,
+    groupId: string,
+    imageUri?: string,
+  ) => void;
   onAddVariant: (itemId: string) => void;
   onEditVariant: (
     itemId: string,
@@ -43,6 +49,7 @@ export const EditProductModal: React.FC<Props> = ({
   const [groupSearch, setGroupSearch] = useState('');
   const [groupId, setGroupId] = useState('');
   const [showGroupSuggestions, setShowGroupSuggestions] = useState(false);
+  const {imageUri, setImageUri, chooseImage} = useImagePicker();
 
   const item: CategoryItem | undefined = useMemo(
     () => groups.flatMap(g => g.items).find(i => i.id === itemId),
@@ -59,8 +66,9 @@ export const EditProductModal: React.FC<Props> = ({
       setName(item.name);
       setGroupId(currentGroup.id);
       setGroupSearch(currentGroup.label);
+      setImageUri(item.imageUri);
     }
-  }, [visible, item, currentGroup]);
+  }, [visible, item, currentGroup, setImageUri]);
 
   const groupSuggestions = useMemo(
     () =>
@@ -75,7 +83,7 @@ export const EditProductModal: React.FC<Props> = ({
       Alert.alert('Lỗi', 'Vui lòng nhập tên sản phẩm');
       return;
     }
-    onSave(itemId, name.trim(), groupId);
+    onSave(itemId, name.trim(), groupId, imageUri ?? undefined);
     onClose();
   };
 
@@ -116,33 +124,70 @@ export const EditProductModal: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Tên sản phẩm */}
+          {/* Ảnh + Tên sản phẩm — nằm ngang */}
           <Text
             style={{
               fontSize: 13,
               fontWeight: '500',
               color: '#374151',
-              marginBottom: 6,
+              marginBottom: 8,
             }}>
             Tên sản phẩm
           </Text>
-          <TextInput
+          <View
             style={{
-              borderWidth: 1,
-              borderColor: '#e5e7eb',
-              borderRadius: 12,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              fontSize: 15,
-              fontWeight: '600',
-              color: '#111827',
-              backgroundColor: '#f9fafb',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
               marginBottom: 16,
-            }}
-            placeholder="Nhập tên sản phẩm"
-            value={name}
-            onChangeText={setName}
-          />
+            }}>
+            {/* Ảnh sản phẩm */}
+            <TouchableOpacity
+              onPress={chooseImage}
+              activeOpacity={0.8}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                backgroundColor: '#f3f4f6',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1.5,
+                borderColor: '#e5e7eb',
+                borderStyle: imageUri ? 'solid' : 'dashed',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}>
+              {imageUri ? (
+                <Image
+                  source={{uri: imageUri}}
+                  style={{width: '100%', height: '100%'}}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Icon name="add-photo-alternate" size={24} color="#9ca3af" />
+              )}
+            </TouchableOpacity>
+
+            {/* Input tên */}
+            <TextInput
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: '#e5e7eb',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                fontSize: 15,
+                fontWeight: '600',
+                color: '#111827',
+                backgroundColor: '#f9fafb',
+              }}
+              placeholder="Nhập tên sản phẩm"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
           {/* Danh mục */}
           <Text
@@ -293,27 +338,6 @@ export const EditProductModal: React.FC<Props> = ({
                   padding: 12,
                   marginBottom: 8,
                 }}>
-                <View
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 10,
-                    backgroundColor: '#e8d5b0',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12,
-                    overflow: 'hidden',
-                  }}>
-                  {v.imageUri ? (
-                    <Image
-                      source={{uri: v.imageUri}}
-                      style={{width: '100%', height: '100%'}}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Icon name="receipt-long" size={22} color="#b8975a" />
-                  )}
-                </View>
                 <View style={{flex: 1}}>
                   <Text
                     style={{
