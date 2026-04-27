@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * App.tsx – Entry point
  *
@@ -21,13 +23,11 @@
  */
 
 import './src/i18n/index';
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   StatusBar,
   View,
-  Text,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -36,7 +36,6 @@ import {
 } from 'react-native';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import PreLogin from './src/screens/login/PreLogin';
 import { UILogin } from './src/screens/login/UILogin';
@@ -69,24 +68,22 @@ logger.trace('App started…');
 type Screen =
   | 'landing'
   | 'login'
-  | 'main'           // BusinessTypeNavigator xử lý (selector / pos / booking / setup)
+  | 'main'
   | 'dashboard'
   | 'pos_resident'
   | 'booking'
   | 'categories'
   | 'report'
   | 'report_export'
+  | 'report_export_history'  // ← thêm cái này
   | 'setting'
-  | 'pos_resident'
-  | 'place_resident'
-  | 'customer'
-  | 'report_export';
+  | 'profile'
+  | 'edit_profile';
 
 // ─── Inner app ────────────────────────────────────────────────────────────────
 const AppContent: React.FC = () => {
   const { state: auth, logout } = useAuth();
   const { isDark } = useTheme();
-  const { t } = useTranslation();
 
   const [screen, setScreen] = useState<Screen>('landing');
   const [dbReady, setDbReady] = useState(false);

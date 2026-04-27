@@ -259,6 +259,10 @@ interface NavigatorProps {
   onBusinessTypeSelected?: (type: 'sale' | 'accommodation') => void;
   /** Callback quay lại màn hình đăng nhập */
   onBack?: () => void;
+  /** Extra props forwarded to SaleScreen */
+  saleScreenProps?: Record<string, any>;
+  /** Extra props forwarded to AccommodationScreen */
+  accommodationScreenProps?: Record<string, any>;
 }
 
 export function BusinessTypeNavigator({
@@ -268,6 +272,8 @@ export function BusinessTypeNavigator({
   registerUrl,
   onBusinessTypeSelected,
   onBack,
+  saleScreenProps,
+  accommodationScreenProps,
 }: NavigatorProps) {
   const { screen } = useBusinessType();
   const [activeTab, setActiveTab] = React.useState<'sale' | 'accommodation'>('sale');
@@ -285,9 +291,9 @@ export function BusinessTypeNavigator({
     return <NoBusinessTypeScreen registerUrl={registerUrl} isDark={isDark} onBack={onBack} />;
   }
 
-  if (screen === 'sale') return <SaleScreen isDark={isDark} />;
+  if (screen === 'sale') return <SaleScreen isDark={isDark} {...saleScreenProps} />;
 
-  if (screen === 'accommodation') return <AccommodationScreen isDark={isDark} />;
+  if (screen === 'accommodation') return <AccommodationScreen isDark={isDark} {...accommodationScreenProps} />;
 
   if (screen === 'both') {
     // Khi có cả 2 loại, businessType được xác định từ token → render màn hình tương ứng
@@ -298,7 +304,7 @@ export function BusinessTypeNavigator({
     };
     return (
       <View style={{ flex: 1 }}>
-        {activeTab === 'sale' ? <SaleScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} /> : <AccommodationScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} />}
+        {activeTab === 'sale' ? <SaleScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} {...saleScreenProps} /> : <AccommodationScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} {...accommodationScreenProps} />}
       </View>
     );
   }

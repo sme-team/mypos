@@ -22,6 +22,7 @@ const SHEET_LINK_KEY = 'GOOGLE_SHEET_URL';
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
+  onNavigateProfile: () => void; // Thêm dòng này
 }
 export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
   const { t, i18n } = useTranslation();
