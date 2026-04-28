@@ -1,6 +1,8 @@
 import React from 'react';
 import {Modal, View, Text, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTheme} from '../../hooks/useTheme';
+import {useTranslation} from 'react-i18next';
 
 interface ConfirmDeleteModalProps {
   visible: boolean;
@@ -16,6 +18,9 @@ export function ConfirmDeleteModal({
   onConfirm,
   onCancel,
 }: ConfirmDeleteModalProps) {
+  const {isDark} = useTheme();
+  const {t} = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -32,7 +37,7 @@ export function ConfirmDeleteModal({
         }}>
         <View
           style={{
-            backgroundColor: 'white',
+            backgroundColor: isDark ? '#1f2937' : 'white',
             borderRadius: 16,
             width: '100%',
             padding: 24,
@@ -44,32 +49,32 @@ export function ConfirmDeleteModal({
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                backgroundColor: '#fef2f2',
+                backgroundColor: isDark ? '#451a1a' : '#fef2f2',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 12,
               }}>
               <Icon name="delete-outline" size={32} color="#ef4444" />
             </View>
-            <Text style={{fontSize: 17, fontWeight: '700', color: '#111827'}}>
-              Xác nhận xóa
+            <Text style={{fontSize: 17, fontWeight: '700', color: isDark ? '#f1f5f9' : '#111827'}}>
+              {t('common.confirm_delete', 'Xác nhận xóa')}
             </Text>
           </View>
 
           {/* Message */}
           <Text
             style={{
-              color: '#6b7280',
+              color: isDark ? '#94a3b8' : '#6b7280',
               textAlign: 'center',
               marginBottom: 24,
               fontSize: 14,
               lineHeight: 20,
             }}>
-            Bạn có chắc chắn muốn xóa{' '}
-            <Text style={{fontWeight: '700', color: '#111827'}}>
+            {t('common.confirm_delete_msg1', 'Bạn có chắc chắn muốn xóa')}{' '}
+            <Text style={{fontWeight: '700', color: isDark ? '#f1f5f9' : '#111827'}}>
               {targetLabel}
             </Text>
-            ?{'\n'}Hành động này không thể hoàn tác.
+            ?{'\n'}{t('common.cannot_undo', 'Hành động này không thể hoàn tác.')}
           </Text>
 
           {/* Buttons */}
@@ -80,11 +85,11 @@ export function ConfirmDeleteModal({
                 paddingVertical: 12,
                 borderRadius: 12,
                 alignItems: 'center',
-                backgroundColor: '#f3f4f6',
+                backgroundColor: isDark ? '#374151' : '#f3f4f6',
               }}
               onPress={onCancel}>
-              <Text style={{color: '#374151', fontSize: 15, fontWeight: '600'}}>
-                Hủy
+              <Text style={{color: isDark ? '#d1d5db' : '#374151', fontSize: 15, fontWeight: '600'}}>
+                {t('common.cancel', 'Hủy')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -97,7 +102,7 @@ export function ConfirmDeleteModal({
               }}
               onPress={onConfirm}>
               <Text style={{color: '#fff', fontSize: 15, fontWeight: '700'}}>
-                Xóa
+                {t('common.delete', 'Xóa')}
               </Text>
             </TouchableOpacity>
           </View>

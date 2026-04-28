@@ -20,6 +20,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../../../hooks/useTheme';
+import i18n from '../../../i18n';
+import { useTranslation } from 'react-i18next';
 import { Room } from '../../../screens/pos/types';
 import { RoomQueryService } from '../../../services/ResidentServices/RoomQueryService';
 import { RoomActionService } from '../../../services/ResidentServices/RoomActionService';
@@ -53,8 +55,10 @@ export default function RoomDetailBottomSheet({
   room,
   onClose,
 }: RoomDetailBottomSheetProps) {
-  console.log('[RoomDetailBottomSheet] Render - visible:', visible, 'room:', room);
+   console.log('[RoomDetailBottomSheet] Render - visible:', visible, 'room:', room);
   const { isDark } = useTheme();
+  const { t } = useTranslation();
+  const currentLocale = i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US';
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [days, setDays] = useState<DayInfo[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -79,7 +83,15 @@ export default function RoomDetailBottomSheet({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayInfos: DayInfo[] = [];
-    const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const weekdays = [
+      t('calendar.days.sun'),
+      t('calendar.days.mon'),
+      t('calendar.days.tue'),
+      t('calendar.days.wed'),
+      t('calendar.days.thu'),
+      t('calendar.days.fri'),
+      t('calendar.days.sat'),
+    ];
 
     for (let i = 0; i < 30; i++) {
       const currentDate = new Date(today);
@@ -109,12 +121,12 @@ export default function RoomDetailBottomSheet({
 
   const handleCancelBooking = (bookingId: string) => {
     Alert.alert(
-      'Xác nhận hủy',
-      'Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không thể hoàn tác.',
+      t('booking.cancel_confirm'),
+      t('booking.cancel_confirm_msg'),
       [
-        { text: 'Đóng', style: 'cancel' },
+        { text: t('common.close'), style: 'cancel' },
         {
-          text: 'Hủy đặt phòng',
+          text: t('booking.btn_cancel'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -124,10 +136,10 @@ export default function RoomDetailBottomSheet({
                 await fetchRoomContracts(room.id);
               }
               setSelectedBooking(null);
-              Alert.alert('Thành công', 'Đã hủy đặt phòng thành công.');
+              Alert.alert(t('common.success'), t('booking.cancel_success'));
             } catch (error) {
               console.error('[RoomDetailBottomSheet] Cancel error:', error);
-              Alert.alert('Lỗi', 'Không thể hủy đặt phòng. Vui lòng thử lại.');
+              Alert.alert(t('common.error'), t('booking.cancel_error'));
             } finally {
               setLoading(false);
             }
@@ -165,7 +177,15 @@ export default function RoomDetailBottomSheet({
       weeks.push(days.slice(i, i + 7));
     }
 
-    const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const weekdays = [
+      t('calendar.days.sun'),
+      t('calendar.days.mon'),
+      t('calendar.days.tue'),
+      t('calendar.days.wed'),
+      t('calendar.days.thu'),
+      t('calendar.days.fri'),
+      t('calendar.days.sat'),
+    ];
 
     return (
       <View style={styles.timelineContainer}>
@@ -283,11 +303,11 @@ export default function RoomDetailBottomSheet({
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#BBDEFB' }]} />
-            <Text style={styles.legendText}>Đã xác nhận</Text>
+            <Text style={styles.legendText}>{t('booking.status.confirmed')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#FFF3E0' }]} />
-            <Text style={styles.legendText}>Đang chờ</Text>
+            <Text style={styles.legendText}>{t('booking.status.pending')}</Text>
           </View>
         </View>
       </View>
@@ -299,7 +319,7 @@ export default function RoomDetailBottomSheet({
       return (
         <View style={styles.emptyBooking}>
           <Icon name="event-busy" size={48} color="#9CA3AF" />
-          <Text style={styles.emptyBookingText}>Chưa có booking nào</Text>
+          <Text style={styles.emptyBookingText}>{t('booking.no_booking')}</Text>
         </View>
       );
     }
@@ -351,7 +371,7 @@ export default function RoomDetailBottomSheet({
                           booking.status === 'occupied' ? '#B71C1C' : '#0D47A1',
                       },
                     ]}>
-                    {booking.status === 'occupied' ? 'Đang ở' : 'Đã đặt'}
+                    {booking.status === 'occupied' ? t('booking.status.staying') : t('booking.status.booked')}
                   </Text>
                 </View>
               </View>
@@ -359,14 +379,14 @@ export default function RoomDetailBottomSheet({
                 <View style={styles.bookingCardRow}>
                   <Icon name="calendar-today" size={16} color="#6B7280" />
                   <Text style={styles.bookingCardText}>
-                    {startDate.toLocaleDateString('vi-VN', {
+                    {startDate.toLocaleDateString(currentLocale, {
                       day: '2-digit',
                       month: '2-digit',
                       year: '2-digit',
                     })}
                     {booking.checkInTime ? ` (${booking.checkInTime})` : ''}
                     {' → '}
-                    {endDate.toLocaleDateString('vi-VN', {
+                    {endDate.toLocaleDateString(currentLocale, {
                       day: '2-digit',
                       month: '2-digit',
                       year: '2-digit',
@@ -376,7 +396,7 @@ export default function RoomDetailBottomSheet({
                 </View>
                 <View style={styles.bookingCardRow}>
                   <Icon name="nightlight" size={16} color="#6B7280" />
-                  <Text style={styles.bookingCardText}>{nights} đêm</Text>
+                  <Text style={styles.bookingCardText}>{nights} {t('common.nights')}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -445,13 +465,13 @@ export default function RoomDetailBottomSheet({
       // Calculate fee info
       const feeInfo = calculateEarlyCheckInFee();
       if (!feeInfo) {
-        Alert.alert('Lỗi', 'Không thể tính phí phụ thu.');
+        Alert.alert(t('common.error'), t('booking.early_checkin_fee_error'));
         return;
       }
 
       // Validate input
       if (!surchargeValue || parseFloat(surchargeValue) <= 0) {
-        Alert.alert('Lỗi', 'Vui lòng nhập giá trị phụ thu.');
+        Alert.alert(t('common.error'), t('booking.early_checkin_value_required'));
         return;
       }
 
@@ -481,8 +501,12 @@ export default function RoomDetailBottomSheet({
       setBasePrice(0);
 
       Alert.alert(
-        'Thành công',
-        `Đã check-in sớm cho khách ${selectedBooking.customerName}. Phụ thu: ${result.surchargeAmount.toLocaleString('vi-VN')}đ (${result.hoursEarly} giờ sớm)`
+        t('common.success'),
+        t('booking.early_checkin_success', {
+          customerName: selectedBooking.customerName,
+          amount: result.surchargeAmount.toLocaleString(currentLocale),
+          hours: result.hoursEarly,
+        })
       );
 
       // Refresh room contracts to get updated data
@@ -491,7 +515,7 @@ export default function RoomDetailBottomSheet({
       }
     } catch (error) {
       console.error('[RoomDetailBottomSheet] Early check-in error:', error);
-      Alert.alert('Lỗi', String(error));
+      Alert.alert(t('common.error'), String(error));
     } finally {
       setLoading(false);
     }
@@ -539,7 +563,7 @@ export default function RoomDetailBottomSheet({
             </View>
             <View style={styles.tooltipContent}>
               <View style={styles.tooltipRow}>
-                <Text style={styles.tooltipLabel}>Trạng thái:</Text>
+                <Text style={styles.tooltipLabel}>{t('common.status')}:</Text>
                 <View
                   style={[
                     styles.tooltipBadge,
@@ -560,14 +584,14 @@ export default function RoomDetailBottomSheet({
                             : '#0D47A1',
                       },
                     ]}>
-                    {selectedBooking.status === 'occupied' ? 'Đang ở' : 'Đã đặt'}
+                    {selectedBooking.status === 'occupied' ? t('booking.status.staying') : t('booking.status.booked')}
                   </Text>
                 </View>
               </View>
               <View style={styles.tooltipRow}>
-                <Text style={styles.tooltipLabel}>Check-in:</Text>
+                <Text style={styles.tooltipLabel}>{t('booking.checkin_label')}:</Text>
                 <Text style={styles.tooltipValue}>
-                  {startDate.toLocaleDateString('vi-VN', {
+                  {startDate.toLocaleDateString(currentLocale, {
                     day: '2-digit',
                     month: '2-digit',
                     year: '2-digit',
@@ -576,9 +600,9 @@ export default function RoomDetailBottomSheet({
                 </Text>
               </View>
               <View style={styles.tooltipRow}>
-                <Text style={styles.tooltipLabel}>Check-out:</Text>
+                <Text style={styles.tooltipLabel}>{t('booking.checkout_label')}:</Text>
                 <Text style={styles.tooltipValue}>
-                  {endDate.toLocaleDateString('vi-VN', {
+                  {endDate.toLocaleDateString(currentLocale, {
                     day: '2-digit',
                     month: '2-digit',
                     year: '2-digit',
@@ -587,8 +611,8 @@ export default function RoomDetailBottomSheet({
                 </Text>
               </View>
               <View style={styles.tooltipRow}>
-                <Text style={styles.tooltipLabel}>Số đêm:</Text>
-                <Text style={styles.tooltipValue}>{nights} đêm</Text>
+                <Text style={styles.tooltipLabel}>{t('booking.nights_label')}:</Text>
+                <Text style={styles.tooltipValue}>{nights} {t('common.nights')}</Text>
               </View>
             </View>
 
@@ -602,18 +626,18 @@ export default function RoomDetailBottomSheet({
                   <View style={styles.earlyCheckInRow}>
                     <Icon name="schedule" size={16} color="#185FA5" />
                     <Text style={styles.earlyCheckInLabel}>
-                      Sớm {feeInfo.hoursEarly} giờ
+                      {t('booking.early_checkin_hours', { hours: feeInfo.hoursEarly })}
                     </Text>
                   </View>
                   <View style={styles.earlyCheckInRow}>
                     <Text style={styles.earlyCheckInSubLabel}>
-                      {new Date(feeInfo.actualCheckinDateTime).toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})} → {new Date(feeInfo.scheduledCheckinDateTime).toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})}
+                      {new Date(feeInfo.actualCheckinDateTime).toLocaleString(currentLocale, {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})} → {new Date(feeInfo.scheduledCheckinDateTime).toLocaleString(currentLocale, {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})}
                     </Text>
                   </View>
                   <View style={styles.earlyCheckInRow}>
                     <Icon name="info" size={16} color="#6B7280" />
                     <Text style={styles.earlyCheckInSubLabel}>
-                      Giá tương ứng: {feeInfo.baseAmount.toLocaleString('vi-VN')}đ
+                      {t('booking.equivalent_price')}: {feeInfo.baseAmount.toLocaleString(currentLocale)}{t('pos.currency_symbol')}
                     </Text>
                   </View>
 
@@ -632,7 +656,7 @@ export default function RoomDetailBottomSheet({
                         styles.surchargeModeText,
                         surchargeMode === 'percentage' && styles.surchargeModeTextActive,
                       ]}>
-                        Nhập %
+                        {t('common.input_percent')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -648,7 +672,7 @@ export default function RoomDetailBottomSheet({
                         styles.surchargeModeText,
                         surchargeMode === 'fixed' && styles.surchargeModeTextActive,
                       ]}>
-                        Nhập giá
+                        {t('common.input_price')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -656,7 +680,7 @@ export default function RoomDetailBottomSheet({
                   {/* Surcharge Input */}
                   <View style={styles.surchargeInputContainer}>
                     <Text style={styles.surchargeInputLabel}>
-                      {surchargeMode === 'percentage' ? 'Phụ thu (% giá phòng):' : 'Phụ thu (số tiền):'}
+                      {surchargeMode === 'percentage' ? t('booking.surcharge_percent_label') : t('booking.surcharge_fixed_label')}
                     </Text>
                     <View style={styles.surchargeInputRow}>
                       <TextInput
@@ -664,31 +688,31 @@ export default function RoomDetailBottomSheet({
                         value={surchargeValue}
                         onChangeText={setSurchargeValue}
                         keyboardType="numeric"
-                        placeholder={surchargeMode === 'percentage' ? 'Nhập % (VD: 50)' : 'Nhập số tiền (VD: 100000)'}
+                        placeholder={surchargeMode === 'percentage' ? t('booking.surcharge_percent_placeholder') : t('booking.surcharge_fixed_placeholder')}
                         placeholderTextColor="#9CA3AF"
                       />
                       <Text style={styles.surchargeInputSuffix}>
-                        {surchargeMode === 'percentage' ? '%' : 'đ'}
+                        {surchargeMode === 'percentage' ? '%' : t('pos.currency_symbol')}
                       </Text>
                     </View>
                     {surchargeMode === 'fixed' && (
                       <Text style={styles.surchargeInfoText}>
-                        Tương đương: {feeInfo.surchargePercent}% giá ngày
+                        {t('booking.equivalent')}: {feeInfo.surchargePercent}% {t('booking.daily_price')}
                       </Text>
                     )}
                   </View>
 
                   <View style={[styles.earlyCheckInRow, styles.earlyCheckInTotalRow]}>
-                    <Text style={styles.earlyCheckInTotalLabel}>Tổng phí phụ thu:</Text>
+                    <Text style={styles.earlyCheckInTotalLabel}>{t('booking.total_surcharge')}:</Text>
                     <Text style={styles.earlyCheckInTotalValue}>
-                      {feeInfo.surchargeAmount.toLocaleString('vi-VN')}đ
+                      {feeInfo.surchargeAmount.toLocaleString(currentLocale)}{t('pos.currency_symbol')}
                     </Text>
                   </View>
                   <View style={styles.earlyCheckInActions}>
                     <TouchableOpacity
                       style={[styles.tooltipBtn, styles.tooltipPrimaryBtn]}
                       onPress={() => handleConfirmEarlyCheckIn()}>
-                      <Text style={[styles.tooltipPrimaryBtnText, { color: '#FFFFFF', fontSize: 16 }]}>Xác nhận</Text>
+                      <Text style={[styles.tooltipPrimaryBtnText, { color: '#FFFFFF', fontSize: 16 }]}>{t('common.confirm')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -700,12 +724,12 @@ export default function RoomDetailBottomSheet({
                 <TouchableOpacity
                   style={[styles.tooltipBtn, styles.tooltipPrimaryBtn]}
                   onPress={() => handleEarlyCheckIn()}>
-                  <Text style={styles.tooltipPrimaryBtnText}>Check-in sớm</Text>
+                  <Text style={styles.tooltipPrimaryBtnText}>{t('booking.btn_early_checkin')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.tooltipBtn, styles.tooltipCancelBtn]}
                   onPress={() => handleCancelBooking(selectedBooking.id)}>
-                  <Text style={styles.tooltipCancelBtnText}>Huỷ đặt phòng</Text>
+                  <Text style={styles.tooltipCancelBtnText}>{t('booking.btn_cancel')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -739,7 +763,7 @@ export default function RoomDetailBottomSheet({
                   <View style={styles.roomInfoContainer}>
                     <Text style={styles.roomName}>{room.label}</Text>
                     <Text style={styles.roomMeta}>
-                      Tầng {room.floor} · {room.product_name}
+                      {t('common.floor')} {room.floor} · {room.product_name}
                     </Text>
                   </View>
                   <View style={styles.headerActions}>
@@ -776,10 +800,10 @@ export default function RoomDetailBottomSheet({
                       },
                     ]}>
                     {room.status === 'occupied'
-                      ? 'Đang ở'
+                      ? t('booking.status.staying')
                       : room.status === 'booked'
-                        ? 'Đã đặt'
-                        : 'Trống'}
+                        ? t('booking.status.booked')
+                        : t('booking.status.empty')}
                   </Text>
                 </View>
               </View>
@@ -792,19 +816,19 @@ export default function RoomDetailBottomSheet({
                 {loading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#185FA5" />
-                    <Text style={styles.loadingText}>Đang tải thông tin booking...</Text>
+                    <Text style={styles.loadingText}>{t('booking.loading_info')}</Text>
                   </View>
                 ) : (
                   <>
                     {/* Timeline */}
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Timeline 30 ngày</Text>
+                      <Text style={styles.sectionTitle}>{t('booking.timeline_title')}</Text>
                       {renderTimeline()}
                     </View>
 
                     {/* Booking List */}
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Danh sách booking</Text>
+                      <Text style={styles.sectionTitle}>{t('booking.list_title')}</Text>
                       {renderBookingList()}
                     </View>
                   </>

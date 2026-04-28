@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTranslation} from 'react-i18next';
 import {useImagePicker} from '../../../hooks/useImagePicker';
 import type {CategoryGroup, CategoryItem} from '../types';
 
@@ -45,6 +46,7 @@ export const EditProductModal: React.FC<Props> = ({
   onAddVariant,
   onEditVariant,
 }) => {
+  const {t} = useTranslation();
   const [name, setName] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -80,7 +82,7 @@ export const EditProductModal: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên sản phẩm');
+      Alert.alert(t('alert.error'), t('pos.category.nameRequired'));
       return;
     }
     onSave(itemId, name.trim(), groupId, imageUri ?? undefined);
@@ -117,7 +119,7 @@ export const EditProductModal: React.FC<Props> = ({
               marginBottom: 20,
             }}>
             <Text style={{fontSize: 18, fontWeight: '700', color: '#111827'}}>
-              Chỉnh sửa sản phẩm
+              {t('pos.category.editProduct')}
             </Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#6b7280" />
@@ -132,7 +134,7 @@ export const EditProductModal: React.FC<Props> = ({
               color: '#374151',
               marginBottom: 8,
             }}>
-            Tên sản phẩm
+            {t('pos.category.productName')}
           </Text>
           <View
             style={{
@@ -183,7 +185,7 @@ export const EditProductModal: React.FC<Props> = ({
                 color: '#111827',
                 backgroundColor: '#f9fafb',
               }}
-              placeholder="Nhập tên sản phẩm"
+              placeholder={t('pos.category.productNamePlaceholder')}
               value={name}
               onChangeText={setName}
             />
@@ -197,7 +199,7 @@ export const EditProductModal: React.FC<Props> = ({
               color: '#374151',
               marginBottom: 6,
             }}>
-            Danh mục
+            {t('pos.category.belongsToCategory')}
           </Text>
           <View style={{position: 'relative', marginBottom: 20}}>
             <TouchableOpacity
@@ -219,7 +221,7 @@ export const EditProductModal: React.FC<Props> = ({
                   color: groupId ? '#1d4ed8' : '#374151',
                   fontWeight: groupId ? '600' : '400',
                 }}>
-                {groupSearch || 'Chọn danh mục'}
+                {groupSearch || t('pos.category.selectCategory')}
               </Text>
               <Icon
                 name="keyboard-arrow-down"
@@ -304,7 +306,7 @@ export const EditProductModal: React.FC<Props> = ({
                 color: '#9ca3af',
                 letterSpacing: 1.2,
               }}>
-              QUẢN LÝ BIẾN THỂ
+              {t('pos.category.manageVariants')}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -314,7 +316,7 @@ export const EditProductModal: React.FC<Props> = ({
               style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
               <Icon name="add-circle-outline" size={18} color="#3b82f6" />
               <Text style={{fontSize: 13, fontWeight: '600', color: '#3b82f6'}}>
-                Thêm mới
+                {t('pos.category.addNew')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -350,7 +352,7 @@ export const EditProductModal: React.FC<Props> = ({
                   </Text>
                   <Text
                     style={{fontSize: 13, color: '#3b82f6', fontWeight: '700'}}>
-                    {v.price.toLocaleString('vi-VN')}đ / {v.unit}
+                    {v.price.toLocaleString('vi-VN')}{t('pos.currency_symbol')} / {v.unit}
                   </Text>
                 </View>
                 <Icon name="chevron-right" size={20} color="#d1d5db" />
@@ -370,7 +372,7 @@ export const EditProductModal: React.FC<Props> = ({
               }}
               onPress={onClose}>
               <Text style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                Hủy
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -383,7 +385,7 @@ export const EditProductModal: React.FC<Props> = ({
               }}
               onPress={handleSave}>
               <Text style={{color: '#fff', fontWeight: '600', fontSize: 15}}>
-                Lưu thay đổi
+                {t('pos.category.saveChanges')}
               </Text>
             </TouchableOpacity>
           </View>

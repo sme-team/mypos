@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useTranslation} from 'react-i18next';
+import {useTheme} from '../../hooks/useTheme';
 import {PaymentService} from '../../services/database/payment/PaymentService';
 
 interface Props {
@@ -20,7 +21,7 @@ interface Props {
   selectedCustomer?: {id: string; name: string} | null;
 }
 
-const formatPrice = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+const formatPrice = (n: number, t: any) => n.toLocaleString('vi-VN') + t('pos.currency_symbol');
 
 export default function PaymentModal({
   visible,
@@ -30,6 +31,7 @@ export default function PaymentModal({
   selectedCustomer,
 }: Props) {
   const {t} = useTranslation();
+  const {isDark} = useTheme();
   const [cash, setCash] = useState(0); // số thật
   const [cashText, setCashText] = useState(''); // text hiển thị
   const [expand, setExpand] = useState(false);
@@ -91,10 +93,10 @@ export default function PaymentModal({
         {/* HEADER */}
         <View className="flex-row items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
           <TouchableOpacity onPress={onClose}>
-            <Icon name="arrow-back" size={24} />
+            <Icon name="arrow-back" size={24} color={isDark ? '#e5e7eb' : '#000'} />
           </TouchableOpacity>
 
-          <Text className="text-lg font-bold">{t('payment.title')}</Text>
+          <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('payment.title')}</Text>
 
           <View className="w-6" />
         </View>
@@ -105,7 +107,7 @@ export default function PaymentModal({
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
               <Icon name="receipt-long" size={20} color="#3b82f6" />
-              <Text className="ml-2 font-bold text-base">
+              <Text className={`ml-2 font-bold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {t('payment.order_detail')}
               </Text>
             </View>
@@ -120,12 +122,13 @@ export default function PaymentModal({
                 </Text>
 
                 <View className="flex-row items-center">
-                  <Text className="font-semibold mr-2">
-                    {formatPrice(total)}
+                  <Text className={`font-semibold mr-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {formatPrice(total, t)}
                   </Text>
                   <Icon
                     name="expand-more"
                     size={20}
+                    color={isDark ? '#9ca3af' : '#64748b'}
                     style={{
                       transform: [{rotate: expand ? '180deg' : '0deg'}],
                     }}
@@ -135,29 +138,31 @@ export default function PaymentModal({
 
               {/* ITEMS */}
               {expand && (
-                <View className="mt-4 border-t pt-4 space-y-3">
+                <View className={`mt-4 border-t pt-4 space-y-3 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                   {cartItems.map(item => (
                     <View key={item.product.id}>
                       <View className="flex-row justify-between">
-                        <Text className="font-semibold text-sm">
+                        <Text className={`font-semibold text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
                           {item.product.name}
                         </Text>
-                        <Text className="font-semibold text-sm">
+                        <Text className={`font-semibold text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
                           {formatPrice(
                             item.selectedVariant?.price ?? item.product.price,
+                            t,
                           )}
                         </Text>
                       </View>
 
                       <View className="flex-row justify-between text-xs text-gray-500">
                         <Text>
-                          {item.selectedVariant?.name || 'Mặc định'} • x
+                          {item.selectedVariant?.name || t('payment.default_variant')} • x
                           {item.quantity}
                         </Text>
                         <Text>
                           {formatPrice(
                             (item.selectedVariant?.price ??
                               item.product.price) * item.quantity,
+                            t,
                           )}
                         </Text>
                       </View>
@@ -167,10 +172,10 @@ export default function PaymentModal({
               )}
 
               {/* TOTAL */}
-              <View className="flex-row justify-between mt-4 pt-4 border-t">
-                <Text className="font-bold">{t('payment.total')}</Text>
+              <View className={`flex-row justify-between mt-4 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <Text className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('payment.total')}</Text>
                 <Text className="text-blue-500 font-bold text-lg">
-                  {formatPrice(total)}
+                  {formatPrice(total, t)}
                 </Text>
               </View>
             </View>
@@ -180,7 +185,7 @@ export default function PaymentModal({
           <View className="mb-6">
             <View className="flex-row items-center mb-3">
               <Icon name="payments" size={20} color="#3b82f6" />
-              <Text className="ml-2 font-bold">{t('payment.cash')}</Text>
+              <Text className={`ml-2 font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('payment.cash')}</Text>
             </View>
 
             <View className="relative">
@@ -196,14 +201,15 @@ export default function PaymentModal({
                 keyboardType="numeric"
                 className="bg-slate-100 dark:bg-slate-800 rounded-xl px-4 py-4 text-right text-xl font-bold pr-8"
                 placeholder="0"
+                style={{ color: isDark ? '#fff' : '#000' }}
               />
-              <Text className="absolute right-4 mt-5 -translate-y-1/2 text-gray-900">
-                đ
+              <Text className={`absolute right-4 mt-5 -translate-y-1/2 ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                {t('pos.currency_symbol')}
               </Text>
             </View>
 
             {/* QUICK BUTTON */}
-            <View className="flex-row flex-wrap gap-2">
+            <View className="flex-row flex-wrap gap-2 mt-3">
               {[50000, 100000, 200000, 500000].map(v => (
                 <TouchableOpacity
                   key={v}
@@ -218,7 +224,7 @@ export default function PaymentModal({
             <View className="flex-row justify-between mt-6">
               <Text className="text-gray-500">{t('payment.change')}</Text>
               <Text className="text-green-500 font-bold text-lg">
-                {formatPrice(change)}
+                {formatPrice(change, t)}
               </Text>
             </View>
           </View>
@@ -226,8 +232,8 @@ export default function PaymentModal({
 
         {/* FOOTER */}
         <View className="flex-row p-4 border-t gap-1 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-          <TouchableOpacity className="flex-1 bg-gray-200 rounded-xl py-4 items-center">
-            <Text className="font-bold">{t('payment.print')}</Text>
+          <TouchableOpacity className={`flex-1 rounded-xl py-4 items-center ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+            <Text className={`font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{t('payment.print')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

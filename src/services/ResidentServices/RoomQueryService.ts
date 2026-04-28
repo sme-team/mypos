@@ -49,10 +49,15 @@ export interface RoomDetailInfo {
   start_date?: string;
   end_date?: string;
   rent_amount?: number;
+  deposit_amount?: number;
   electric_rate?: number;
   water_rate?: number;
   electric_reading_init?: number;
   water_reading_init?: number;
+  price_description?: string;  // Mô tả cách tính giá cho ngắn hạn
+  price_breakdown?: any[];  // Breakdown chi tiết giá phòng cho ngắn hạn
+  metadata_rent_amount?: number;  // Tiền phòng riêng (từ metadata)
+  metadata_service_amount?: number;  // Tiền dịch vụ riêng (từ metadata)
   // customers
   customer_name?: string;
   customer_phone?: string;
@@ -597,11 +602,18 @@ class RoomQueryServiceClass {
       currentBill = billRows.length > 0 ? billRows[0] : null;
 
       if (currentBill?.id) {
-        const details = await this.billDetailSvc.findAll(
-          { bill_id: currentBill.id },
-          { orderBy: [{ name: 'sort_order', order: 'ASC' }] },
-        );
-        billItems = details.map((d: any): BillDetailItem => ({
+        const db = DatabaseManager.get('pos');
+        const details = await QueryBuilder.table('bill_details', db!.getInternalDAO())
+          .select([
+            'bill_details.*',
+            'products.product_type'
+          ])
+          .leftJoin('products', 'bill_details.product_id = products.id')
+          .where('bill_id', currentBill.id)
+          .orderBy('sort_order', 'ASC')
+          .get();
+
+        billItems = details.map((d: any): BillDetailItem & { product_type: string } => ({
           id: d.id,
           line_description: d.line_description ?? '',
           quantity: d.quantity ?? 1,
@@ -609,6 +621,7 @@ class RoomQueryServiceClass {
           reading_from: d.reading_from,
           reading_to: d.reading_to,
           amount: d.amount ?? 0,
+          product_type: d.product_type ?? 'product',
         }));
       }
     }
@@ -636,11 +649,13 @@ class RoomQueryServiceClass {
       const db = DatabaseManager.get('pos');
       const dao = db!.getInternalDAO();
 
-      // a. Tổng Phải thu (receivables.status != cancelled)
+      // a. Tổng Phải thu (receivables.status != cancelled, loại trừ deposit)
+      // Tiền cọc không được tính vào công nợ vì nó là khoản bảo lãnh
       const payResult = await QueryBuilder.table('receivables', dao)
         .select(['SUM(amount) as total'])
         .where('contract_id', contract.id)
         .where('status', '!=', 'cancelled')
+        .where('receivable_type', '!=', 'deposit')  // Loại trừ receivable deposit
         .first();
       totalPayable = payResult?.total || 0;
 
@@ -688,10 +703,15 @@ class RoomQueryServiceClass {
       start_date: contract?.start_date,
       end_date: contract?.end_date,
       rent_amount: contract?.rent_amount,
+      deposit_amount: contract?.deposit_amount,
       electric_rate: contract?.electric_rate,
       water_rate: contract?.water_rate,
       electric_reading_init: contract?.electric_reading_init,
       water_reading_init: contract?.water_reading_init,
+      price_description: metaDataObj.price_description,
+      price_breakdown: metaDataObj.price_breakdown,
+      metadata_rent_amount: metaDataObj.rent_amount,
+      metadata_service_amount: metaDataObj.service_amount,
       billing_day: contract?.billing_day,
       customer_name: customer?.full_name,
       customer_phone: customer?.phone,

@@ -88,12 +88,15 @@ function recordToForm(customer: CustomerRecord): AddCustomerForm {
 const FieldLabel: React.FC<{label: string; required?: boolean}> = ({
   label,
   required,
-}) => (
-  <Text className="text-sm text-gray-600 mb-1.5">
-    {label}
-    {required && <Text className="text-red-500"> *</Text>}
-  </Text>
-);
+}) => {
+  const {isDark} = useTheme();
+  return (
+    <Text className={`text-sm mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      {label}
+      {required && <Text className="text-red-500"> *</Text>}
+    </Text>
+  );
+};
 
 const StyledInput: React.FC<{
   placeholder?: string;
@@ -105,6 +108,7 @@ const StyledInput: React.FC<{
   maxLength?: number;
   editable?: boolean;
   onBlur?: () => void;
+  isDark?: boolean;
 }> = ({
   placeholder,
   value,
@@ -115,14 +119,15 @@ const StyledInput: React.FC<{
   maxLength,
   editable = true,
   onBlur,
+  isDark,
 }) => (
   <TextInput
-    className="bg-gray-100 rounded-xl px-4 text-gray-800 text-[14px]"
+    className={`rounded-xl px-4 text-[14px] ${isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-800'}`}
     style={{
       paddingVertical: 14,
       minHeight: multiline ? (numberOfLines ?? 3) * 40 : undefined,
       textAlignVertical: multiline ? 'top' : 'center',
-      color: editable ? '#1f2937' : '#9ca3af',
+      color: editable ? (isDark ? '#f1f5f9' : '#1f2937') : '#9ca3af',
     }}
     placeholder={placeholder}
     placeholderTextColor="#9ca3af"
@@ -137,19 +142,22 @@ const StyledInput: React.FC<{
   />
 );
 
-const SectionCard: React.FC<{children: React.ReactNode}> = ({children}) => (
-  <View
-    className="bg-white rounded-2xl px-4 pt-4 pb-2 mx-4 mb-4"
-    style={{
-      elevation: 1,
-      shadowColor: '#000',
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      shadowOffset: {width: 0, height: 1},
-    }}>
-    {children}
-  </View>
-);
+const SectionCard: React.FC<{children: React.ReactNode}> = ({children}) => {
+  const {isDark} = useTheme();
+  return (
+    <View
+      className={`rounded-2xl px-4 pt-4 pb-2 mx-4 mb-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+      style={{
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOpacity: isDark ? 0.3 : 0.05,
+        shadowRadius: 4,
+        shadowOffset: {width: 0, height: 1},
+      }}>
+      {children}
+    </View>
+  );
+};
 
 const SectionTitle: React.FC<{title: string; right?: React.ReactNode}> = ({
   title,
@@ -380,7 +388,9 @@ export default function AddCustomer({
     if (data.placeOfOrigin) {
       setField(
         'notes',
-        `Quê quán: ${data.placeOfOrigin}${form.notes ? '\n' + form.notes : ''}`,
+        `${t('customer.place_of_origin')}: ${data.placeOfOrigin}${
+          form.notes ? '\n' + form.notes : ''
+        }`,
       );
     }
 
@@ -470,17 +480,17 @@ export default function AddCustomer({
   const savingLabel = t('common.saving');
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
-      <StatusBar barStyle="dark-content" backgroundColor="#f3f4f6" />
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f3f4f6'} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-gray-100">
+      <View className={`flex-row items-center justify-between px-4 py-3 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <TouchableOpacity onPress={onCancel} disabled={saving}>
           <Text className="text-gray-500 font-medium text-[15px]">
             {t('common.cancel')}
           </Text>
         </TouchableOpacity>
-        <Text className="text-base font-bold text-gray-900">{screenTitle}</Text>
+        <Text className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{screenTitle}</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color="#3b82f6" />
@@ -507,9 +517,9 @@ export default function AddCustomer({
                 <TouchableOpacity
                   className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
                   style={{
-                    backgroundColor: '#eff6ff',
+                    backgroundColor: isDark ? '#1e3a5f' : '#eff6ff',
                     borderWidth: 1,
-                    borderColor: '#bfdbfe',
+                    borderColor: isDark ? '#1d4ed8' : '#bfdbfe',
                   }}
                   onPress={handleScanCCCD}>
                   <Icon name="camera-alt" size={15} color="#3b82f6" />
@@ -528,6 +538,7 @@ export default function AddCustomer({
                 value={form.full_name}
                 onChangeText={v => setField('full_name', v)}
                 maxLength={150}
+                isDark={isDark}
               />
               {errors.full_name && (
                 <Text className="text-red-500 text-xs mt-1">
@@ -545,6 +556,7 @@ export default function AddCustomer({
                 onChangeText={v => setField('id_number', v)}
                 keyboardType="phone-pad"
                 maxLength={20}
+                isDark={isDark}
               />
               {errors.id_number && (
                 <Text className="text-red-500 text-xs mt-1">
@@ -558,17 +570,17 @@ export default function AddCustomer({
               <FieldLabel label={t('customer.add.dob')} />
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
-                className="flex-row items-center bg-gray-100 rounded-xl px-4"
+                className={`flex-row items-center rounded-xl px-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
                 style={{paddingVertical: 14}}>
                 <Icon
                   name="calendar-today"
                   size={18}
-                  color={form.date_of_birth ? '#374151' : '#9ca3af'}
+                  color={form.date_of_birth ? (isDark ? '#f1f5f9' : '#374151') : '#9ca3af'}
                   style={{marginRight: 10}}
                 />
                 <Text
                   className="flex-1 text-[14px]"
-                  style={{color: form.date_of_birth ? '#1f2937' : '#9ca3af'}}>
+                  style={{color: form.date_of_birth ? (isDark ? '#f1f5f9' : '#1f2937') : '#9ca3af'}}>
                   {form.date_of_birth
                     ? formatDisplayDate(form.date_of_birth)
                     : t('customer.add.dob_placeholder')}
@@ -594,14 +606,14 @@ export default function AddCustomer({
             {/* Giới tính */}
             <View className="mb-4">
               <FieldLabel label={t('customer.add.gender')} />
-              <View className="flex-row bg-gray-100 rounded-xl overflow-hidden">
+              <View className={`flex-row rounded-xl overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
                 {GENDERS.map(g => (
                   <TouchableOpacity
                     key={g.key}
                     className="flex-1 items-center py-3"
                     style={{
                       backgroundColor:
-                        form.gender === g.key ? '#fff' : 'transparent',
+                        form.gender === g.key ? (isDark ? '#374151' : '#fff') : 'transparent',
                       borderRadius: 10,
                       margin: form.gender === g.key ? 3 : 0,
                       ...(form.gender === g.key
@@ -618,7 +630,7 @@ export default function AddCustomer({
                     <Text
                       className="text-sm font-semibold"
                       style={{
-                        color: form.gender === g.key ? '#3b82f6' : '#6b7280',
+                        color: form.gender === g.key ? '#3b82f6' : (isDark ? '#94a3b8' : '#6b7280'),
                       }}>
                       {g.label}
                     </Text>
@@ -636,6 +648,7 @@ export default function AddCustomer({
                 onChangeText={v => setField('address', v)}
                 multiline
                 numberOfLines={3}
+                isDark={isDark}
               />
             </View>
 
@@ -647,6 +660,7 @@ export default function AddCustomer({
                 value={form.nationality}
                 onChangeText={v => setField('nationality', v.toUpperCase())}
                 maxLength={10}
+                isDark={isDark}
               />
             </View>
           </SectionCard>
@@ -659,10 +673,10 @@ export default function AddCustomer({
             <View className="mb-4">
               <FieldLabel label={t('customer.add.phone')} required />
               <View
-                className="bg-gray-100 rounded-xl overflow-hidden"
+                className={`rounded-xl overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
                 style={{paddingLeft: 12}}>
                 <TextInput
-                  className="flex-1 text-gray-800 text-[14px]"
+                  className={`flex-1 text-[14px] ${isDark ? 'text-gray-100' : 'text-gray-800'}`}
                   style={{paddingVertical: 14}}
                   placeholder={t('customer.add.phone_placeholder')}
                   placeholderTextColor="#9ca3af"
@@ -689,6 +703,7 @@ export default function AddCustomer({
                 onChangeText={v => setField('notes', v)}
                 multiline
                 numberOfLines={4}
+                isDark={isDark}
               />
             </View>
           </SectionCard>
@@ -697,11 +712,11 @@ export default function AddCustomer({
 
       {/* Bottom CTA */}
       <View
-        className="absolute bottom-0 left-0 right-0 bg-white px-4 pb-4 pt-2"
+        className={`absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 ${isDark ? 'bg-gray-900 border-t border-gray-800' : 'bg-white'}`}
         style={{
           elevation: 10,
           shadowColor: '#000',
-          shadowOpacity: 0.08,
+          shadowOpacity: isDark ? 0.3 : 0.08,
           shadowRadius: 8,
           shadowOffset: {width: 0, height: -2},
         }}>

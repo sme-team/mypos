@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Modal, ScrollView} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTranslation} from 'react-i18next';
 import type {UnitOption} from '../types';
 
 interface Props {
@@ -17,8 +18,10 @@ export const UnitPickerModal: React.FC<Props> = ({
   units,
   onSelect,
   onClose,
-}) => (
-  <Modal
+}) => {
+  const {t} = useTranslation();
+  return (
+    <Modal
     visible={visible}
     transparent
     animationType="fade"
@@ -50,7 +53,7 @@ export const UnitPickerModal: React.FC<Props> = ({
             borderBottomColor: '#f3f4f6',
           }}>
           <Text style={{fontSize: 16, fontWeight: '700', color: '#111827'}}>
-            Chọn đơn vị tính
+            {t('pos.category.selectUnit')}
           </Text>
           <TouchableOpacity onPress={onClose}>
             <Icon name="close" size={22} color="#6b7280" />
@@ -60,7 +63,7 @@ export const UnitPickerModal: React.FC<Props> = ({
         {units.length === 0 ? (
           <View style={{padding: 24, alignItems: 'center'}}>
             <Text style={{color: '#9ca3af', fontSize: 14}}>
-              Chưa có đơn vị tính nào
+              {t('pos.category.noUnitsFound', 'Chưa có đơn vị tính nào')}
             </Text>
           </View>
         ) : (
@@ -101,3 +104,4 @@ export const UnitPickerModal: React.FC<Props> = ({
     </TouchableOpacity>
   </Modal>
 );
+}

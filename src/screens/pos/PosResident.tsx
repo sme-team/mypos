@@ -43,7 +43,8 @@ import CustomerService from '@/services/ResidentServices/CustomerService';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const GAP = 12;
-const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
+const formatPrice = (price: number, t: any) =>
+  price.toLocaleString('vi-VN') + t('pos.currency_symbol');
 
 // ─── Data fetch happen inside PosResident ───────────────────────────────────
 
@@ -218,7 +219,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
         // Lấy theo intern1/Qanhdev: dùng t() cho tất cả label lưu trú
         label:
           type === 'pos'
-            ? 'POS'
+            ? t('pos.title')
             : type === 'accommodation'
             ? t('pos.accommodation')
             : type === 'hotel'
@@ -260,7 +261,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
     () => [
       {key: 'all', label: t('pos.status_all')},
       {key: 'available', label: t('pos.status_empty')},
-      {key: 'booked', label: t('pos.status_booked', 'Đã đặt')},
+      {key: 'booked', label: t('pos.status_booked')},
       {key: 'occupied', label: t('pos.status_occupied')},
     ],
     [t],
@@ -520,7 +521,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
   // Dynamic Styles
   const bgColor = isDark ? '#111827' : '#f5f7fa';
   const headerBg = isDark ? '#1f2937' : '#f5f7fa';
-  const cardBg = isDark ? '#1f2937' : '#fff';
+  const cardBg = isDark ? '#2d3748' : '#fff';
   const textColor = isDark ? '#f9fafb' : '#111827';
   const subTextColor = isDark ? '#9ca3af' : '#374151';
   const borderColor = isDark ? '#374151' : '#c2c2c2';
@@ -1262,7 +1263,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                       style={{marginRight: 6}}
                     />
                     <TextInput
-                      placeholder="Tìm khách theo tên hoặc SĐT..."
+                      placeholder={t('pos.search_customer_placeholder')}
                       placeholderTextColor="#9ca3af"
                       value={customerSearch}
                       onChangeText={handleCustomerSearch}
@@ -1365,7 +1366,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                           marginTop: 4,
                           paddingLeft: 4,
                         }}>
-                        Không tìm thấy khách hàng
+                        {t('pos.no_customer_found')}
                       </Text>
                     )}
                 </View>
@@ -1415,7 +1416,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                 {t('pos.subtotal')}
               </Text>
               <Text style={{fontSize: 14, color: textColor}}>
-                {formatPrice(subtotal)}
+                {formatPrice(subtotal, t)}
               </Text>
             </View>
             <View
@@ -1427,7 +1428,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
               <Text style={{fontSize: 14, color: subTextColor}}>
                 {t('pos.tax')} (0%)
               </Text>
-              <Text style={{fontSize: 14, color: textColor}}>0đ</Text>
+              <Text style={{fontSize: 14, color: textColor}}>0{t('pos.currency_symbol') || 'đ'}</Text>
             </View>
             <View
               style={{
@@ -1439,7 +1440,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                 {t('pos.total')}
               </Text>
               <Text style={{fontSize: 16, fontWeight: '700', color: '#3b82f6'}}>
-                {formatPrice(subtotal)}
+                {formatPrice(subtotal, t)}
               </Text>
             </View>
 
@@ -1510,7 +1511,7 @@ export default function PosResident({onOpenMenu}: {onOpenMenu: () => void}) {
                 marginBottom: 16,
               }}>
               <Text style={{fontSize: 18, fontWeight: '700', color: textColor}}>
-                {t('pos.filter') || 'Bộ lọc phòng'}
+                {t('pos.filter_rooms')}
               </Text>
               <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
                 <Icon name="close" size={24} color={subTextColor} />

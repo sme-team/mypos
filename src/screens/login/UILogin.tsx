@@ -53,7 +53,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
   // ── Handlers (Defined first to be used in effects) ─────────────────────────
   const processGoogleCode = useCallback(async (codeOverride?: string) => {
     const finalCode = (codeOverride ?? oauthCode).trim();
-    if (!finalCode) {return;}
+    if (!finalCode) { return; }
     setGoogleStep('processing');
     const success = await loginWithCode(finalCode);
     if (success) {
@@ -68,7 +68,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
     setIsLoading(true);
     const success = await loginCredentials(email, password);
     setIsLoading(false);
-    if (success) {onLoginSuccess();}
+    if (success) { onLoginSuccess(); }
   };
 
   const handleGetAuthUrl = useCallback(async () => {
@@ -92,7 +92,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
   useEffect(() => {
     const handleUrl = ({ url }: { url: string }) => {
       logger.info('[UILogin] Deep link received:', url);
-      if (!url.startsWith(DEEP_LINK_SCHEME)) {return;}
+      if (!url.startsWith(DEEP_LINK_SCHEME)) { return; }
 
       let receivedCode = '';
       if (url.includes('code=')) {
@@ -109,7 +109,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
 
     const subscription = Linking.addListener('url', handleUrl);
     Linking.getInitialURL().then(url => {
-      if (url) {handleUrl({ url });}
+      if (url) { handleUrl({ url }); }
     });
     return () => subscription.remove();
   }, [processGoogleCode]);
@@ -146,27 +146,26 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
             <Text className={`text-lg font-bold ${C.text}`} />
           </View>
 
-          <View className="flex-1 justify-center py-8">
+          <View className="flex-1 justify-start py-8 pt-0">
             <View className="w-full max-w-sm self-center">
-              <View className="items-center mb-8">
-                <View className={`${isDark ? 'bg-blue-900' : 'bg-blue-100'} rounded-3xl p-4 mb-4`}>
-                  <Image
-                    source={require('../../assets/logo/logoMypos.png')}
-                    style={{ width: 60, height: 60, borderRadius: 10 }}
-                    resizeMode="contain"
+              <View className="items-center -mt-10">
+                <Image
+                  source={require('../../assets/logo/logoMypos.png')}
+                  style={{ width: 160, height: 160 }}
+                  resizeMode="contain"
+                />
+                <View className="items-center -mt-8 mb-12">
+                  <View
+                    className={`h-1 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`}
+                    style={{ width: 100 }}
                   />
-                </View>
-                {/* Logo myPOS */}
-                <View className="items-center mb-6">
-                  <Text className={`text-3xl font-bold mb-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>myPOS</Text>
-                  <View className={`h-1 w-12 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`} />
                 </View>
 
                 <Text className={`text-2xl font-bold text-center mb-2 ${C.text}`}>
-                  {t('landing.welcome_back', 'Chào mừng quay trở lại')}
+                  {t('landing.welcome_back')}
                 </Text>
-                <Text className={`text-sm text-center ${C.subText}`}>
-                  {t('landing.welcome_login', 'Vui lòng đăng nhập để tiếp tục')}
+                <Text className={`text-sm text-center mb-10 ${C.subText}`}>
+                  {t('landing.welcome_login')}
                 </Text>
               </View>
 
@@ -184,12 +183,12 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                   <View className={`border flex-row items-center p-4 rounded-xl mb-4 ${isDark ? 'bg-blue-900/20 border-blue-900/30' : 'bg-blue-50 border-blue-200'}`}>
                     <Icon name="vpn-key" size={18} color={isDark ? '#93c5fd' : '#2563eb'} />
                     <View className="ml-3">
-                      <Text className={`${isDark ? 'text-blue-300' : 'text-blue-700'} font-bold mb-1`}>{t('auth.google_verify_title', 'Hoàn tất xác thực')}</Text>
-                      <Text className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-xs`}>{t('auth.google_verify_desc', 'Sau khi đăng nhập Google, hãy dán code vào đây.')}</Text>
+                      <Text className={`${isDark ? 'text-blue-300' : 'text-blue-700'} font-bold mb-1`}>{t('auth.google_verify_title')}</Text>
+                      <Text className={`${isDark ? 'text-blue-400' : 'text-blue-600'} text-xs`}>{t('auth.google_verify_desc')}</Text>
                     </View>
                   </View>
                   <TextInput
-                    placeholder="Dán code ở đây…"
+                    placeholder={t('auth.codePlaceholder')}
                     placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
                     value={oauthCode}
                     onChangeText={setOauthCode}
@@ -202,10 +201,10 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                     onPress={() => processGoogleCode()}
                     disabled={googleStep === 'processing'}
                     className="w-full bg-blue-600 py-3 rounded-xl mt-4 items-center">
-                    {googleStep === 'processing' ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold">Xác nhận code</Text>}
+                    {googleStep === 'processing' ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold">{t('auth.confirm_code')}</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setGoogleStep('idle')} className="mt-2 self-center">
-                    <Text className="text-gray-400 text-sm">Huỷ, thử lại</Text>
+                    <Text className="text-gray-400 text-sm">{t('auth.cancel_retry')}</Text>
                   </TouchableOpacity>
                 </Animated.View>
               ) : null}
@@ -215,10 +214,10 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                 <View className="space-y-4">
                   <View>
                     <Text className={`text-sm font-semibold mb-2 ${C.text}`}>
-                      {t('auth.placeholderEmail', 'Tên đăng nhập / Email')}
+                      {t('auth.placeholderEmail')}
                     </Text>
                     <TextInput
-                      placeholder={t('auth.placeholderloginEmail', 'Nhập email hoặc tên đăng nhập')}
+                      placeholder={t('auth.placeholderloginEmail')}
                       placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
                       value={email}
                       onChangeText={setEmail}
@@ -230,11 +229,11 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
 
                   <View className="mt-4">
                     <Text className={`text-sm font-semibold mb-2 ${C.text}`}>
-                      {t('auth.placeholderPassword', 'Mật khẩu')}
+                      {t('auth.placeholderPassword')}
                     </Text>
                     <View className="relative">
                       <TextInput
-                        placeholder={t('auth.placeholderloginPassword', 'Nhập mật khẩu')}
+                        placeholder={t('auth.placeholderloginPassword')}
                         placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
                         value={password}
                         onChangeText={setPassword}
@@ -260,11 +259,11 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                       <View className={`w-5 h-5 border rounded-md mr-2 items-center justify-center ${rememberMe ? 'bg-blue-600 border-blue-600' : isDark ? 'border-gray-600' : 'border-gray-300'}`}>
                         {rememberMe && <Icon name="check" size={12} color="white" />}
                       </View>
-                      <Text className={`text-sm ${C.subText}`}>{t('auth.rememberMe', 'Ghi nhớ đăng nhập')}</Text>
+                      <Text className={`text-sm ${C.subText}`}>{t('auth.rememberMe')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity>
                       <Text className={`text-sm font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                        {t('auth.forgotPassword', 'Quên mật khẩu?')}
+                        {t('auth.forgotPassword')}?
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -276,7 +275,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                       <ActivityIndicator color="white" />
                     ) : (
                       <Text className="text-white font-semibold text-base">
-                        {t('auth.btnSignIn', 'Đăng nhập')}
+                        {t('auth.btnSignIn')}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -289,7 +288,7 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
                   <View className="flex-row items-center my-6">
                     <View className={`flex-1 h-[1px] ${C.divider}`} />
                     <Text className="mx-4 text-xs font-semibold text-gray-400 uppercase">
-                      Hoặc
+                      {t('auth.orDivider')}
                     </Text>
                     <View className={`flex-1 h-[1px] ${C.divider}`} />
                   </View>
@@ -326,10 +325,10 @@ export function UILogin({ isDark, onLoginSuccess, onBack }: Props) {
               ) : null}
 
               <View className="flex-row justify-center mt-8">
-                <Text className={C.subText}>{t('landing.no_account', 'Chưa có tài khoản?')} </Text>
+                <Text className={C.subText}>{t('landing.no_account')} </Text>
                 <TouchableOpacity>
                   <Text className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {t('landing.register', 'Đăng ký ngay')}
+                    {t('landing.register')}
                   </Text>
                 </TouchableOpacity>
               </View>

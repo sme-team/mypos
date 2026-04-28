@@ -75,16 +75,6 @@ export function RoomHistoryView({
           </View>
         )}
 
-        {/* Nút Xuất PDF / Gia hạn */}
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-          <TouchableOpacity style={[s.actionBtn, { flex: 1, backgroundColor: c.surface, borderColor: c.border, borderWidth: 1 }]}>
-            <Text style={[s.actionBtnText, { color: c.text }]}>{t('roomDetail.exportPDF')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.actionBtn, { flex: 1, backgroundColor: '#007AFF' }]}>
-            <Text style={[s.actionBtnText, { color: '#fff' }]}>{t('roomDetail.extend')}</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* 4 Cards Summary */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
           <SummaryCard label={t('roomDetail.debt.payable')} value={fmt(details?.total_payable)} color="#007AFF" c={c} />

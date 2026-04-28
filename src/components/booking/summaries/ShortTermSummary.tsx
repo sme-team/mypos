@@ -154,7 +154,7 @@ export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEd
         {loadingPrice && (
           <View style={{ alignItems: 'center', marginBottom: 12 }}>
             <ActivityIndicator size="small" color={themedColors.primary} />
-            <Text style={{ fontSize: 12, color: themedColors.textSecondary, marginTop: 4 }}>Đang tính giá...</Text>
+            <Text style={{ fontSize: 12, color: themedColors.textSecondary, marginTop: 4 }}>{t('booking.summary.calculating_price')}</Text>
           </View>
         )}
 
@@ -162,21 +162,21 @@ export const ShortTermSummary = React.memo(({ form, room, selectedCustomer, onEd
         <View style={[styles.summaryTotalCard, { backgroundColor: themedColors.primaryLight }]}>
           <Text style={[styles.summaryTotalTitle, { color: themedColors.text }]}>{t('booking.summary.paymentDetail')}</Text>
           <View style={styles.summaryTotalRow}>
-            <Text style={styles.confSummaryTotalLabel}>Giá phòng ({nights} đêm)</Text>
+            <Text style={styles.confSummaryTotalLabel}>{t('booking.summary.room_price')} ({nights} {t('common.nights')})</Text>
             <Text style={[styles.confSummaryTotalValue, { color: themedColors.text }]}>{formatVND(roomTotal)}</Text>
           </View>
           <View style={styles.summaryTotalRow}>
-            <Text style={styles.confSummaryTotalLabel}>Tiền dịch vụ</Text>
+            <Text style={styles.confSummaryTotalLabel}>{t('booking.summary.service_price')}</Text>
             <Text style={[styles.confSummaryTotalValue, { color: themedColors.text }]}>{formatVND(serviceTotal)}</Text>
           </View>
           
           <View style={[styles.summaryTotalRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 0.5, borderTopColor: 'rgba(0,0,0,0.1)' }]}>
-            <Text style={[styles.confSummaryTotalLabel, { fontWeight: 'bold', color: themedColors.text }]}>Tạm tính</Text>
+            <Text style={[styles.confSummaryTotalLabel, { fontWeight: 'bold', color: themedColors.text }]}>{t('pos.subtotal')}</Text>
             <Text style={[styles.confSummaryTotalValue, { fontWeight: 'bold', color: themedColors.text }]}>{formatVND(roomTotal + serviceTotal)}</Text>
           </View>
 
           <View style={styles.summaryTotalRow}>
-            <Text style={styles.confSummaryTotalLabel}>Tiền cọc</Text>
+            <Text style={styles.confSummaryTotalLabel}>{t('booking.summary.deposit_price')}</Text>
             <Text style={[styles.confSummaryTotalValue, { color: '#DC2626' }]}>- {formatVND(form.deposit)}</Text>
           </View>
 

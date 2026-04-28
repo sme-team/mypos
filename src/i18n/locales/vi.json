@@ -37,7 +37,11 @@
     "hidePassword": "Ẩn",
     "rememberMe": "Ghi nhớ đăng nhập",
     "forgotPassword": "Quên mật khẩu",
-    "btnSignIn": "Đăng nhập"
+    "btnSignIn": "Đăng nhập",
+    "google_verify_title": "Hoàn tất xác thực",
+    "google_verify_desc": "Sau khi đăng nhập Google, hãy dán code vào đây.",
+    "cancel_retry": "Huỷ, thử lại",
+    "confirm_code": "Xác nhận code"
   },
   "home": {
     "greeting": "Xin chào, {{name}}!",
@@ -55,7 +59,22 @@
     "save": "Lưu",
     "saving": "Đang lưu...",
     "error": "Lỗi",
-    "unknownError": "Lỗi không xác định"
+    "unknownError": "Lỗi không xác định",
+    "previous": "‹ Trước",
+    "next": "Tiếp theo ›",
+    "select": "Chọn",
+    "deselect_all": "Bỏ chọn tất cả",
+    "select_all": "Chọn tất cả",
+    "confirm": "Xác nhận",
+    "missingInfo": "Thiếu thông tin",
+    "saveChanges": "Lưu thay đổi",
+    "and": " và ",
+    "retry": "Thử lại",
+    "nights": "đêm",
+    "floor": "Tầng",
+    "status": "Trạng thái",
+    "close": "Đóng",
+    "success": "Thành công"
   },
   "dashboard": {
     "overview": "Tổng quan",
@@ -69,7 +88,16 @@
     "viewAll": "Xem tất cả",
     "pos": "Bán hàng",
     "hotel": "Lưu trú",
-    "cost": "Chi phí vận hành"
+    "cost": "Chi phí vận hành",
+    "mock": {
+      "order_table": "Đơn #{{id}} - Bàn {{table}}",
+      "pending_payment": "Chờ thanh toán",
+      "paid": "Đã thanh toán",
+      "checkin": "Phòng {{id}} - Check in",
+      "checkout": "Phòng {{id}} - Check out",
+      "confirmed": "Đã xác nhận",
+      "completed": "Đã hoàn thành"
+    }
   },
   "sidebar": {
     "dashboard": "Bảng điều khiển",
@@ -112,12 +140,154 @@
     "tax": "Thuế",
     "total": "Tổng cộng",
     "filter": "Bộ lọc",
+    "currency_symbol": "đ",
     "roomType": "Loại phòng",
     "allRoomTypes": "Tất cả hạng phòng",
     "roomStatus": "Trạng thái phòng",
     "clearFilter": "Xoá lọc",
     "apply": "Áp dụng",
-    "reload": "Tải lại"
+    "reload": "Tải lại",
+    "search_customer_placeholder": "Tìm khách theo tên hoặc SĐT...",
+    "no_customer_found": "Không tìm thấy khách hàng",
+    "filter_rooms": "Bộ lọc phòng",
+    "category": {
+      "title": "Quản lý danh mục",
+      "addCategory": "Thêm danh mục sản phẩm",
+      "addProduct": "Thêm sản phẩm",
+      "addVariant": "Thêm biến thể",
+      "searchPlaceholder": "Tìm danh mục...",
+      "loadError": "Không thể tải danh mục",
+      "loading": "Đang tải danh mục...",
+      "empty": "Chưa có danh mục nào",
+      "deleteSingleGroup": "danh mục \"{{name}}\"",
+      "selectedGroupsCount": "{{count}} danh mục",
+      "selectedItemsCount": "{{count}} sản phẩm",
+      "selectedVariantsCount": "{{count}} biến thể",
+      "selectedCount": "Đã chọn {{count}}",
+      "selectToDelete": "Chọn để xóa",
+      "productName": "Tên sản phẩm",
+      "productNamePlaceholder": "Nhập tên sản phẩm",
+      "belongsToCategory": "Thuộc danh mục",
+      "nameRequired": "Vui lòng nhập tên sản phẩm",
+      "categoryRequired": "Vui lòng chọn danh mục",
+      "noCategoryFound": "Không tìm thấy danh mục",
+      "editProduct": "Chỉnh sửa sản phẩm",
+      "manageVariants": "QUẢN LÝ BIẾN THỂ",
+      "addNew": "Thêm mới",
+      "saveChanges": "Lưu thay đổi",
+      "selectCategory": "Chọn danh mục",
+      "belongToProduct": "Thuộc sản phẩm",
+      "variantName": "Tên loại",
+      "variantNamePlaceholder": "Nhập tên loại",
+      "price": "Giá bán",
+      "unit": "Đơn vị tính",
+      "selectUnit": "Chọn đơn vị",
+      "allFieldsRequired": "Vui lòng điền đầy đủ thông tin",
+      "invalidPrice": "Giá phải là số hợp lệ",
+      "selectProduct": "Chọn sản phẩm",
+      "searchProductPlaceholder": "Tìm sản phẩm...",
+      "noProductFound": "Không tìm thấy sản phẩm",
+      "noUnitsFound": "Chưa có đơn vị tính nào",
+      "variantDetail": "Chi tiết loại",
+      "deleteVariant": "Xóa loại",
+      "deleteVariantConfirm": "Bạn có chắc muốn xóa loại \"{{name}}\"?",
+      "editCategory": "Chỉnh sửa danh mục"
+    },
+    "room": {
+      "addRoom": "Thêm phòng mới",
+      "roomDetail": "Chi tiết phòng",
+      "classification": "Phân loại",
+      "roomCategory": "Hạng mục phòng",
+      "selectCategory": "Chọn hạng mục",
+      "noCategories": "Chưa có hạng mục phòng nào",
+      "createNewCategory": "Tạo hạng mục mới...",
+      "roomInfo": "Thông tin phòng",
+      "floor": "Tầng",
+      "roomName": "Tên phòng",
+      "initialPricing": "Giá khởi tạo",
+      "loadingPrices": "Đang tải giá...",
+      "priceHourFirst": "Giá giờ đầu",
+      "priceHour": "Giá theo giờ",
+      "priceListed": "Giá qua ngày",
+      "priceMonth": "Giá một tháng",
+      "nameRequired": "Vui lòng nhập tên phòng.",
+      "categoryRequired": "Vui lòng chọn hạng mục phòng.",
+      "saveError": "Không thể lưu phòng.",
+      "newCategoryNameRequired": "Vui lòng nhập tên hạng mục phòng.",
+      "newCategorySaveError": "Không thể tạo hạng mục phòng.",
+      "createNewCategoryTitle": "Tạo hạng mục phòng mới",
+      "categoryNameLabel": "Tên hạng mục *",
+      "categoryNamePlaceholder": "VD: Phòng Luxury, Phòng VIP...",
+      "categoryDescLabel": "Mô tả (tùy chọn)",
+      "categoryDescPlaceholder": "Mô tả ngắn về hạng mục này...",
+      "btnCreateCategory": "Tạo hạng mục",
+      "floorLabel": "Tầng {{floor}}",
+      "defaultType": "Phòng",
+      "defaultTypeDesc": "Danh mục phòng mặc định",
+      "deleteSingleRoom": "phòng \"{{name}}\"",
+      "deleteMultipleRooms": "{{count}} phòng đã chọn",
+      "selectedCount": "Đã chọn {{count}} phòng",
+      "selectToDelete": "Chọn phòng để xóa",
+      "loadingInfo": "Đang tải thông tin phòng...",
+      "deleteSelectedLabel": "Xóa {{count}} phòng đã chọn",
+      "searchPlaceholder": "Tìm phòng...",
+      "loading": "Đang tải danh sách phòng...",
+      "noSearchResult": "Không tìm thấy phòng phù hợp",
+      "empty": "Chưa có phòng nào",
+      "emptyFilter": "Không có phòng trong hạng mục này",
+      "loadError": "Không thể tải danh sách phòng",
+      "roomNamePlaceholder": "VD: Room 301",
+      "floorPlaceholder": "3"
+    },
+    "customer": {
+      "hub": {
+        "title": "Khách hàng"
+      },
+      "tab": {
+        "all": "Tất cả",
+        "sales": "Bán hàng",
+        "storage": "Lưu trú"
+      },
+      "search": {
+        "placeholder": "Tìm tên hoặc số điện thoại..."
+      },
+      "empty": "Không tìm thấy khách hàng",
+      "delete_selected_label": "Xóa {{count}} khách hàng đã chọn",
+      "select_hint": "Chưa chọn khách hàng nào",
+      "place_of_origin": "Quê quán",
+      "detail": {
+        "title": "Khách hàng",
+        "edit": "Sửa",
+        "personal_info": "Thông tin cá nhân",
+        "id_number": "Số CCCD",
+        "dob": "Ngày sinh",
+        "gender": "Giới tính",
+        "nationality": "Quốc tịch",
+        "address": "Địa chỉ",
+        "notes": "Ghi chú",
+        "recent_bills": "Giao dịch gần đây",
+        "hide_bills": "Ẩn",
+        "view_all": "Xem tất cả",
+        "no_bills": "Không có giao dịch nào gần đây",
+        "current_stay": "Lưu trú hiện tại",
+        "staying": "ĐANG Ở",
+        "checkin_date": "Ngày nhận phòng",
+        "checkout_date": "Dự kiến trả",
+        "booking_detail": "Chi tiết đặt phòng",
+        "no_stay": "Không có lưu trú nào gần đây"
+      }
+    },
+    "bill": {
+      "status": {
+        "paid": "Đã thanh toán",
+        "issued": "Còn nợ",
+        "partial": "Một phần",
+        "overdue": "Quá hạn",
+        "draft": "Nháp",
+        "cancelled": "Đã huỷ",
+        "refunded": "Hoàn tiền"
+      }
+    }
   },
   "payment": {
     "title": "Thanh toán",
@@ -131,7 +301,8 @@
     "cash": "Tiền mặt",
     "change": "Tiền thừa",
     "print": "In hóa đơn",
-    "confirm": "Xác nhận thanh toán"
+    "confirm": "Xác nhận thanh toán",
+    "default_variant": "Mặc định"
   },
   "alert": {
     "error": "Lỗi",
@@ -171,7 +342,9 @@
     "syncSuccess": "Đồng bộ dữ liệu thành công!",
     "syncStrategyPrompt": "Bạn muốn ghi đè (xoá dữ liệu cũ) hay kết hợp (giữ nguyên dữ liệu hiện có)?",
     "merge": "Kết hợp (Merge)",
-    "overwrite": "Ghi đè (Overwrite)"
+    "overwrite": "Ghi đè (Overwrite)",
+    "selectLanguage": "Chọn ngôn ngữ",
+    "cancel": "Hủy"
   },
   "tabs": {
     "overview": "Overview",
@@ -181,10 +354,16 @@
     "settings": "Cài đặt"
   },
   "report": {
-    "title": "Báo cáo chi tiết",
+    "title": "Báo cáo",
     "exportExcel": "Xuất Excel",
-    "totalRevenue": "Tổng doanh thu",
     "viewAll": "Xem tất cả",
+    "collapse": "Thu gọn",
+    "noData": "Không có dữ liệu",
+    "topSales": "Sản phẩm bán chạy",
+    "topSalesDesc": "Các mặt hàng có doanh thu cao nhất",
+    "topLodging": "Top Lưu trú",
+    "topLodgingDesc": "Phòng cho thuê nhiều nhất",
+    "totalRevenue": "Tổng doanh thu",
     "filter": {
       "fromDate": "Từ ngày",
       "toDate": "Tới ngày",
@@ -227,12 +406,36 @@
       "history": "Lịch sử",
       "noHistory": "Chưa có lịch sử xuất file",
       "success": "Xuất file thành công",
-      "error": "Lỗi khi xuất file"
+      "error": "Lỗi khi xuất file",
+      "errorUnrecognized": "Không nhận dạng được loại báo cáo"
     }
   },
   "calendar": {
     "cancel": "Hủy",
-    "confirm": "Xác nhận"
+    "confirm": "Xác nhận",
+    "days": {
+      "sun": "CN",
+      "mon": "T2",
+      "tue": "T3",
+      "wed": "T4",
+      "thu": "T5",
+      "fri": "T6",
+      "sat": "T7"
+    },
+    "months": {
+      "jan": "Tháng 1",
+      "feb": "Tháng 2",
+      "mar": "Tháng 3",
+      "apr": "Tháng 4",
+      "may": "Tháng 5",
+      "jun": "Tháng 6",
+      "jul": "Tháng 7",
+      "aug": "Tháng 8",
+      "sep": "Tháng 9",
+      "oct": "Tháng 10",
+      "nov": "Tháng 11",
+      "dec": "Tháng 12"
+    }
   },
   "excel": {
     "orderDetail": "123",
@@ -263,6 +466,38 @@
     }
   },
   "booking": {
+    "checkin_label": "Check-in",
+    "checkout_label": "Check-out",
+    "nights_label": "Số đêm",
+    "status": {
+      "staying": "Đang ở",
+      "booked": "Đã đặt",
+      "empty": "Trống",
+      "confirmed": "Đã xác nhận",
+      "pending": "Đang chờ"
+    },
+    "no_booking": "Chưa có booking nào",
+    "loading_info": "Đang tải thông tin booking...",
+    "timeline_title": "Timeline 30 ngày",
+    "list_title": "Danh sách booking",
+    "btn_cancel": "Hủy đặt phòng",
+    "cancel_confirm": "Xác nhận hủy",
+    "cancel_confirm_msg": "Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không thể hoàn tác.",
+    "btn_early_checkin": "Check-in sớm",
+    "cancel_success": "Đã hủy đặt phòng thành công.",
+    "cancel_error": "Không thể hủy đặt phòng. Vui lòng thử lại.",
+    "early_checkin_fee_error": "Không thể tính phí phụ thu.",
+    "early_checkin_value_required": "Vui lòng nhập giá trị phụ thu.",
+    "early_checkin_success": "Đã check-in sớm cho khách {{customerName}}. Phụ thu: {{amount}} ({{hours}} giờ sớm)",
+    "early_checkin_hours": "Sớm {{hours}} giờ",
+    "equivalent_price": "Giá tương ứng",
+    "surcharge_percent_label": "Phụ thu (% giá phòng):",
+    "surcharge_fixed_label": "Phụ thu (số tiền):",
+    "surcharge_percent_placeholder": "Nhập % (VD: 50)",
+    "surcharge_fixed_placeholder": "Nhập số tiền (VD: 100000)",
+    "equivalent": "Tương đương",
+    "daily_price": "giá ngày",
+    "total_surcharge": "Tổng phí phụ thu",
     "header": {
       "title": "Đăng ký lưu trú",
       "confirmLong": "Xác nhận hợp đồng",
@@ -300,6 +535,9 @@
       "selectStartDate": "Chọn ngày bắt đầu",
       "duration": "THỜI HẠN HỢP ĐỒNG",
       "selectDuration": "Chọn thời hạn",
+      "undefinedDuration": "Chưa xác định",
+      "hour": "giờ",
+      "day": "ngày",
       "deposit": "TIỀN CỌC",
       "monthlyRent": "GIÁ THUÊ/THÁNG",
       "initialMeter": "CHỈ SỐ ĐẦU KỲ",
@@ -316,7 +554,42 @@
       "notFound": "Không tìm thấy khách hàng",
       "serviceModalTitle": "Chọn dịch vụ thêm",
       "noAvailableServices": "Không có dịch vụ khả dụng",
-      "close": "Đóng"
+      "close": "Đóng",
+      "confirmed": "Đã xác nhận",
+      "pending": "Đang chờ",
+      "no_bookings": "Chưa có booking nào",
+      "loading_booking": "Đang tải thông tin booking...",
+      "timeline_30d": "Timeline 30 ngày",
+      "booking_list": "Danh sách booking",
+      "status": {
+        "staying": "Đang ở",
+        "booked": "Đã đặt",
+        "empty": "Trống",
+        "confirmed": "Đã xác nhận",
+        "pending": "Đang chờ"
+      },
+      "no_booking": "Chưa có booking nào",
+      "loading_info": "Đang tải thông tin booking...",
+      "timeline_title": "Timeline 30 ngày",
+      "list_title": "Danh sách booking",
+      "cancel_confirm": "Xác nhận hủy",
+      "cancel_confirm_msg": "Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không thể hoàn tác.",
+      "btn_cancel": "Hủy đặt phòng",
+      "btn_early_checkin": "Check-in sớm",
+      "cancel_success": "Đã hủy đặt phòng thành công.",
+      "cancel_error": "Không thể hủy đặt phòng. Vui lòng thử lại.",
+      "early_checkin_fee_error": "Không thể tính phí phụ thu.",
+      "early_checkin_value_required": "Vui lòng nhập giá trị phụ thu.",
+      "early_checkin_success": "Đã check-in sớm cho khách {{customerName}}. Phụ thu: {{amount}}đ ({{hours}} giờ sớm)",
+      "early_checkin_hours": "Sớm {{hours}} giờ",
+      "equivalent_price": "Giá tương ứng",
+      "surcharge_percent_label": "Phụ thu (% giá phòng):",
+      "surcharge_fixed_label": "Phụ thu (số tiền):",
+      "surcharge_percent_placeholder": "Nhập % (VD: 50)",
+      "surcharge_fixed_placeholder": "Nhập số tiền (VD: 100000)",
+      "equivalent": "Tương đương",
+      "daily_price": "giá ngày",
+      "total_surcharge": "Tổng phí phụ thu"
     },
     "summary": {
       "roomRent": "Tiền phòng",
@@ -337,7 +610,15 @@
       "stayInfo": "Chi tiết lưu trú",
       "paymentDetail": "Chi tiết thanh toán",
       "totalInitial": "Tổng thanh toán đợt đầu",
-      "totalToPay": "Tổng cộng cần trả"
+      "totalToPay": "Tổng cộng cần trả",
+      "room_price": "Giá phòng",
+      "service_price": "Tiền dịch vụ",
+      "deposit_price": "Tiền cọc:",
+      "subtotal": "Tạm tính:",
+      "no_price_info": "Chưa có thông tin giá",
+      "calculating_price": "Đang tính giá...",
+      "total_label": "Tổng cộng:",
+      "payment_needed": "Số tiền cần thanh toán:"
     },
     "errors": {
       "error": "Lỗi",
@@ -356,6 +637,14 @@
       "email": "Email",
       "address": "Địa chỉ",
       "nationality": "Quốc tịch"
+    },
+    "alerts": {
+      "long_term_stay_title": "Lưu trú dài hạn",
+      "long_term_stay_msg": "Thời gian bạn chọn thuộc loại lưu trú dài hạn (≥30 ngày). Giá và điều khoản sẽ khác với lưu trú ngắn hạn.\n\nBạn có muốn chuyển sang hình thức lưu trú dài hạn không?",
+      "stay_short_term": "Không, chọn lại ngày",
+      "stay_long_term": "Có, chuyển dài hạn",
+      "room_not_found": "Không tìm thấy thông tin phòng",
+      "booking_success": "Đăng ký cư trú đã được ghi nhận."
     }
   },
   "roomDetail": {
@@ -378,6 +667,9 @@
     "serviceAndRent": "DỊCH VỤ & TIỀN PHÒNG",
     "roomRent": "Tiền thuê phòng",
     "rentFixed": "Giá cố định / tháng",
+    "rentCalculated": "Tính theo thời gian lưu trú",
+    "subtotal": "Tạm tính",
+    "depositPaid": "Tiền cọc đã trả",
     "electric": "Điện",
     "water": "Nước",
     "old": "Cũ:",
@@ -386,7 +678,7 @@
     "unitPrice": "Đơn giá",
     "quantity": "Số lượng",
     "addService": "Thêm dịch vụ",
-    "subtotal": "Tạm tính tháng này:",
+    "monthlySubtotal": "Tạm tính tháng này:",
     "btnCheckout": "Trả phòng (Check-out)",
     "extend": "Gia hạn",
     "confirmCheckout": "Bạn có chắc chắn muốn trả phòng này?",
@@ -437,7 +729,33 @@
     "statusOccupied": "Đang thuê",
     "vacant": "Phòng trống",
     "successSwap": "Đã chuyển sang phòng {{name}}",
-    "comingSoon": "Sắp ra mắt"
+    "comingSoon": "Sắp ra mắt",
+    "confirmCheckoutTitle": "Xác nhận trả phòng",
+    "confirmCheckoutMsg": "Bạn có chắc chắn muốn trả phòng này không?",
+    "cancel": "Hủy",
+    "checkoutBtn": "Trả phòng",
+    "hour": "Giờ",
+    "day": "Ngày",
+    "totalRoomRent": "Tổng tiền phòng:",
+    "totalRentAmount": "Tổng tiền phòng:",
+    "totalServiceAmount": "Tổng tiền dịch vụ:",
+    "monthPrice": "Giá tháng:",
+    "services": "Dịch vụ",
+    "totalServices": "Tổng dịch vụ:",
+    "noServices": "Chưa có dịch vụ nào",
+    "paymentSummary": "Tổng kết thanh toán",
+    "depositApplied": "Tiền cọc đã áp dụng:",
+    "depositHeld": "Tiền cọc đang giữ:",
+    "depositNote": "(Tiền cọc này không tính vào tiền phòng hàng tháng, chỉ dùng để đối trừ khi trả phòng)",
+    "paidAmount": "Đã thanh toán:",
+    "remainingToPay": "CÒN PHẢI TRẢ:",
+    "remainingNote": "(Phòng + Dịch vụ - Cọc - Đã trả)",
+    "resetFullAmount": "Đặt lại số tiền đầy đủ",
+    "collectBtn": "Thu tiền",
+    "deposit": {
+      "held": "Đang giữ",
+      "offset": "Đã áp dụng"
+    }
   },
   "idScanner": {
     "scanTitle": "Quét CCCD / Passport",
@@ -472,7 +790,15 @@
     "oldId": "Số CMND cũ",
     "btnRetry": "Thử lại",
     "placeOfOrigin": "Quê quán",
-    "placeOfResident": "Nơi thường trú"
+    "placeOfOriginPlaceholder": "Tỉnh/Thành phố...",
+    "cameraError": "Lỗi Camera",
+    "waiting": "Đang chờ quét...",
+    "recognized": "Đã nhận diện",
+    "initializing": "Đang khởi tạo...",
+    "placeOfResident": "Nơi thường trú",
+    "gender_placeholder": "Nam/Nữ",
+    "address_placeholder": "Số nhà, đường, phường...",
+    "city_placeholder": "Tỉnh/Thành phố..."
   },
   "validation": {
     "required": "Trường này là bắt buộc",
@@ -507,7 +833,11 @@
       "phone_placeholder": "Nhập số điện thoại",
       "notes": "Ghi chú",
       "notes_placeholder": "Ghi chú thêm về khách hàng...",
-      "save_error": "Không thể lưu khách hàng. Vui lòng thử lại."
+      "save_error": "Không thể lưu khách hàng. Vui lòng thử lại.",
+      "select_hint": "Chưa chọn khách hàng nào",
+      "delete_selected": "Xóa {{count}} khách hàng đã chọn",
+      "select_all": "Chọn tất cả",
+      "deselect_all": "Bỏ chọn tất cả"
     },
     "edit": {
       "title": "Sửa khách hàng",

@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTheme} from '../../hooks/useTheme';
 
 export type CustomerType = 'selling' | 'storage';
 
@@ -65,9 +66,10 @@ const getAvatarColor = (id: string): string => {
 interface AvatarProps {
   customer: Customer;
   isSelected: boolean;
+  isDark: boolean;
 }
 
-const Avatar: React.FC<AvatarProps> = ({customer, isSelected}) => {
+const Avatar: React.FC<AvatarProps> = ({customer, isSelected, isDark}) => {
   const [imageError, setImageError] = useState(false);
 
   const showImage = !!customer.imageUri && !imageError;
@@ -112,6 +114,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   isSelected = false,
   onToggleSelect,
 }) => {
+  const {isDark} = useTheme();
   const handlePress = () => {
     if (selectionMode) {
       onToggleSelect?.(customer.id);
@@ -126,11 +129,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
       onPress={handlePress}
       onLongPress={() => onLongPress?.(customer)}
       delayLongPress={350}
-      className="flex-row items-center bg-white rounded-2xl px-4 py-3 mb-3"
+      className={`flex-row items-center rounded-2xl px-4 py-3 mb-3 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
       style={{
         shadowColor: '#000',
         shadowOffset: {width: 0, height: 1},
-        shadowOpacity: 0.06,
+        shadowOpacity: isDark ? 0.3 : 0.06,
         shadowRadius: 4,
         elevation: 2,
         borderWidth: 1.5,
@@ -142,22 +145,21 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         onPress={() => selectionMode && onToggleSelect?.(customer.id)}
         disabled={!selectionMode}
         className="mr-3">
-        <Avatar customer={customer} isSelected={isSelected} />
+        <Avatar customer={customer} isSelected={isSelected} isDark={isDark} />
       </TouchableOpacity>
 
       {/* Info */}
       <View className="flex-1">
         <View className="flex-row items-center">
           <Text
-            className="font-semibold text-[15px] mr-1"
-            style={{color: '#1f2937'}}>
+            className={`font-semibold text-[15px] mr-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             {customer.name}
           </Text>
           {customer.hasKey && !selectionMode && (
             <Text className="text-base">🔑</Text>
           )}
         </View>
-        <Text className="text-gray-400 text-sm mt-0.5">{customer.phone}</Text>
+        <Text className={`text-sm mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{customer.phone}</Text>
       </View>
 
       {/* Right indicator */}
@@ -166,8 +168,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
           {isSelected && <Icon name="check-circle" size={22} color="#3b82f6" />}
         </View>
       ) : (
-        <View className="w-8 h-8 border-dashed border-gray-300 rounded-lg items-center justify-center">
-          <Icon name="chevron-right" size={18} color="#9ca3af" />
+        <View className={`w-8 h-8 border-dashed rounded-lg items-center justify-center ${isDark ? 'border-gray-600' : 'border-gray-300'}`}>
+          <Icon name="chevron-right" size={18} color={isDark ? '#4b5563' : '#9ca3af'} />
         </View>
       )}
     </TouchableOpacity>

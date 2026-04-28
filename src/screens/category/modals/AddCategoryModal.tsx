@@ -98,7 +98,7 @@ export const AddCategoryModal: React.FC<Props> = ({
               }}
               onPress={handleClose}>
               <Text style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                Hủy
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -111,7 +111,7 @@ export const AddCategoryModal: React.FC<Props> = ({
               }}
               onPress={handleSave}>
               <Text style={{color: '#fff', fontWeight: '600', fontSize: 15}}>
-                Lưu
+                {t('common.save')}
               </Text>
             </TouchableOpacity>
           </View>

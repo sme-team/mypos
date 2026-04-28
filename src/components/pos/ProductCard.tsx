@@ -10,8 +10,12 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {Product} from '../../screens/pos/types';
 import {useTheme} from '../../hooks/useTheme';
+import i18n from '../../i18n';
 
-const formatPrice = (price: number) => price.toLocaleString('vi-VN') + 'đ';
+const formatPrice = (price: number) => {
+  const currentLocale = i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US';
+  return price.toLocaleString(currentLocale) + i18n.t('pos.currency_symbol');
+};
 
 interface ProductCardProps {
   product: Product;

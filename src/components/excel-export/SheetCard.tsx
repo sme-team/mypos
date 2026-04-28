@@ -43,11 +43,13 @@ export const Dropdown: React.FC<DropdownProps> = ({
   value,
   options,
   onSelect,
-  placeholder = 'Chọn...',
+  placeholder,
   isDark = false,
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const selected = options.find(o => o.value === value);
+  const effectivePlaceholder = placeholder || t('common.select', 'Chọn...');
 
   return (
     <View className="mb-4">
@@ -72,7 +74,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
               ? 'text-gray-500'
               : 'text-gray-400'
           }`}>
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : effectivePlaceholder}
         </Text>
         <Icon
           name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}

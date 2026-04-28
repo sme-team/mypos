@@ -19,29 +19,11 @@ interface DateInputProps {
   isDark?: boolean;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-const DAYS_OF_WEEK = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-const MONTHS_VI = [
-  'Tháng 1',
-  'Tháng 2',
-  'Tháng 3',
-  'Tháng 4',
-  'Tháng 5',
-  'Tháng 6',
-  'Tháng 7',
-  'Tháng 8',
-  'Tháng 9',
-  'Tháng 10',
-  'Tháng 11',
-  'Tháng 12',
-];
-
 const formatDate = (date: Date): string => {
   const d = date.getDate().toString().padStart(2, '0');
   const m = (date.getMonth() + 1).toString().padStart(2, '0');
   const y = date.getFullYear();
-  return `${m}/${d}/${y}`;
+  return `${d}/${m}/${y}`;
 };
 
 const isSameDay = (a: Date, b: Date) =>
@@ -80,6 +62,31 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
   const [tempDate, setTempDate] = useState<Date>(selectedDate);
   const [showYearPicker, setShowYearPicker] = useState(false);
+
+  const DAYS_OF_WEEK = [
+    t('calendar.days.sun', 'CN'),
+    t('calendar.days.mon', 'T2'),
+    t('calendar.days.tue', 'T3'),
+    t('calendar.days.wed', 'T4'),
+    t('calendar.days.thu', 'T5'),
+    t('calendar.days.fri', 'T6'),
+    t('calendar.days.sat', 'T7'),
+  ];
+
+  const MONTHS = [
+    t('calendar.months.jan', 'Tháng 1'),
+    t('calendar.months.feb', 'Tháng 2'),
+    t('calendar.months.mar', 'Tháng 3'),
+    t('calendar.months.apr', 'Tháng 4'),
+    t('calendar.months.may', 'Tháng 5'),
+    t('calendar.months.jun', 'Tháng 6'),
+    t('calendar.months.jul', 'Tháng 7'),
+    t('calendar.months.aug', 'Tháng 8'),
+    t('calendar.months.sep', 'Tháng 9'),
+    t('calendar.months.oct', 'Tháng 10'),
+    t('calendar.months.nov', 'Tháng 11'),
+    t('calendar.months.dec', 'Tháng 12'),
+  ];
 
   // Reset tempDate when modal opens or selectedDate changes
   useEffect(() => {
@@ -163,7 +170,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
               onPress={() => setShowYearPicker(!showYearPicker)}
               className="flex-row items-center gap-1">
               <Text className="text-sm font-semibold text-gray-800">
-                {MONTHS_VI[viewMonth]} {viewYear}
+                {MONTHS[viewMonth]} {viewYear}
               </Text>
               <Icon
                 name={showYearPicker ? 'arrow-drop-up' : 'arrow-drop-down'}

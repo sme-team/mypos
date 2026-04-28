@@ -27,7 +27,9 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
 
   // Auto-update checkinTime to current time every minute if checkinDate is today
   useEffect(() => {
-    if (!isCheckinToday) return;
+    if (!isCheckinToday) {
+      return;
+    }
 
     const updateTime = () => {
       const now = new Date();
@@ -42,7 +44,7 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
     const interval = setInterval(updateTime, 60000);
 
     return () => clearInterval(interval);
-  }, [isCheckinToday]);
+  }, [isCheckinToday, updateForm]);
 
   // Hàm format thời gian đăng ký
   const formatStayDuration = useCallback(() => {
@@ -50,18 +52,18 @@ export const ShortTermForm = React.memo(({ form, updateForm, t, themedColors }: 
     const checkoutDateTime = new Date(`${form.checkoutDate}T${form.checkoutTime}`);
     const totalMs = checkoutDateTime.getTime() - checkinDateTime.getTime();
 
-    if (totalMs <= 0) {return 'Chưa xác định';}
+    if (totalMs <= 0) {return t('booking.form.undefinedDuration');}
 
     const totalHours = totalMs / (1000 * 60 * 60);
     const days = Math.floor(totalHours / 24);
     const hours = Math.ceil(totalHours % 24);
 
     if (days === 0) {
-      return `${hours} giờ`;
+      return `${hours} ${t('booking.form.hour')}`;
     } else if (hours === 0) {
-      return `${days} ngày`;
+      return `${days} ${t('booking.form.day')}`;
     } else {
-      return `${days} ngày ${hours} giờ`;
+      return `${days} ${t('booking.form.day')} ${hours} ${t('booking.form.hour')}`;
     }
   }, [form.checkinDate, form.checkinTime, form.checkoutDate, form.checkoutTime]);
 

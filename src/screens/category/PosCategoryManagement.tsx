@@ -54,7 +54,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       setData(groups);
       setUnits(unitNames);
     } catch {
-      setError('Không thể tải danh mục');
+      setError(t('category.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -331,12 +331,16 @@ export default function PosCategoryScreen({storeId}: Props) {
   // ── Delete helpers ────────────────────────────────────────────────────────
   const deleteLabel = (): string => {
     if (pendingDeleteGroupId) {
-      return `danh mục "${
-        filteredGroups.find(g => g.id === pendingDeleteGroupId)?.label ?? ''
-      }"`;
+      const name =
+        filteredGroups.find(g => g.id === pendingDeleteGroupId)?.label ?? '';
+      return t('category.deleteSingleGroup', {name});
     }
     const parts: string[] = [];
-    if (selectedGroups.size > 0) parts.push(`${selectedGroups.size} danh mục`);
+    if (selectedGroups.size > 0) {
+      parts.push(
+        t('category.selectedGroupsCount', {count: selectedGroups.size}),
+      );
+    }
 
     const standaloneItems = [...selectedItems].filter(itemId => {
       const group = filteredGroups.find(g =>
@@ -344,8 +348,11 @@ export default function PosCategoryScreen({storeId}: Props) {
       );
       return group && !selectedGroups.has(group.id);
     });
-    if (standaloneItems.length > 0)
-      parts.push(`${standaloneItems.length} sản phẩm`);
+    if (standaloneItems.length > 0) {
+      parts.push(
+        t('category.selectedItemsCount', {count: standaloneItems.length}),
+      );
+    }
 
     // Variants không thuộc item/group đã chọn
     const standaloneVariants = [...selectedVariants].filter(variantId => {
@@ -357,10 +364,13 @@ export default function PosCategoryScreen({storeId}: Props) {
       );
       return !(group && selectedGroups.has(group.id));
     });
-    if (standaloneVariants.length > 0)
-      parts.push(`${standaloneVariants.length} biến thể`);
+    if (standaloneVariants.length > 0) {
+      parts.push(
+        t('category.selectedVariantsCount', {count: standaloneVariants.length}),
+      );
+    }
 
-    return parts.join(' và ');
+    return parts.join(t('common.and'));
   };
 
   const handleConfirmDelete = () => {
@@ -414,7 +424,7 @@ export default function PosCategoryScreen({storeId}: Props) {
   // ── FAB actions ───────────────────────────────────────────────────────────
   const fabActions = [
     {
-      label: 'Thêm danh mục sản phẩm ',
+      label: t('category.addCategory'),
       icon: 'folder-open',
       color: '#3b82f6',
       onPress: () => {
@@ -423,7 +433,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       },
     },
     {
-      label: 'Thêm sản phẩm',
+      label: t('category.addProduct'),
       icon: 'inventory-2',
       color: '#f97316',
       onPress: () => {
@@ -432,7 +442,7 @@ export default function PosCategoryScreen({storeId}: Props) {
       },
     },
     {
-      label: 'Thêm loại ',
+      label: t('category.addVariant'),
       icon: 'layers',
       color: '#10b981',
       onPress: () => {
@@ -465,8 +475,8 @@ export default function PosCategoryScreen({storeId}: Props) {
               flex: 1,
             }}>
             {totalSelectedWithVariants > 0
-              ? `Đã chọn ${totalSelectedWithVariants}`
-              : 'Chọn để xóa'}
+              ? t('category.selectedCount', {count: totalSelectedWithVariants})
+              : t('category.selectToDelete')}
           </Text>
         ) : (
           <View
@@ -483,7 +493,7 @@ export default function PosCategoryScreen({storeId}: Props) {
               borderColor,
             }}>
             <TextInput
-              placeholder={t('category.searchPlaceholder', 'Tìm danh mục...')}
+              placeholder={t('category.searchPlaceholder')}
               placeholderTextColor="#9ca3af"
               value={searchText}
               onChangeText={setSearchText}
@@ -499,9 +509,9 @@ export default function PosCategoryScreen({storeId}: Props) {
           <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '600'}}>
             {selectionMode
               ? isAllSelected
-                ? 'Bỏ chọn tất cả'
-                : 'Chọn tất cả'
-              : 'Chọn'}
+                ? t('common.deselect_all')
+                : t('common.select_all')
+              : t('common.select')}
           </Text>
         </TouchableOpacity>
 
@@ -519,7 +529,7 @@ export default function PosCategoryScreen({storeId}: Props) {
         <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
           <ActivityIndicator size="large" color="#3b82f6" />
           <Text style={{color: '#9ca3af', fontSize: 14, marginTop: 12}}>
-            Đang tải danh mục...
+            {t('category.loading')}
           </Text>
         </View>
       ) : error ? (
@@ -549,7 +559,7 @@ export default function PosCategoryScreen({storeId}: Props) {
               borderRadius: 12,
             }}
             onPress={loadData}>
-            <Text style={{color: '#fff', fontWeight: '600'}}>Thử lại</Text>
+            <Text style={{color: '#fff', fontWeight: '600'}}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -565,7 +575,7 @@ export default function PosCategoryScreen({storeId}: Props) {
               }}>
               <Icon name="inbox" size={48} color="#e5e7eb" />
               <Text style={{color: '#9ca3af', fontSize: 16, marginTop: 12}}>
-                Chưa có danh mục nào
+                {t('category.empty')}
               </Text>
             </View>
           ) : (

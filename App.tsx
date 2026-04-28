@@ -11,7 +11,6 @@
  *   pos      →  landing       (đăng xuất)
  */
 import './src/i18n/index';
-import {useTranslation} from 'react-i18next';
 import React, {useEffect, useState, useCallback} from 'react';
 import {
   StyleSheet,
@@ -25,7 +24,6 @@ import {
   Linking,
 } from 'react-native';
 
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 
 import PreLogin from './src/screens/login/PreLogin';
@@ -69,7 +67,6 @@ type Screen =
 const AppContent: React.FC = () => {
   const {state: auth, logout, handleDeepLinkToken} = useAuth();
   const {isDark} = useTheme();
-  const {t} = useTranslation();
   const [screen, setScreen] = useState<Screen>('landing');
   const [dbReady, setDbReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -154,7 +151,7 @@ const AppContent: React.FC = () => {
           isDark ? 'bg-gray-900' : 'bg-white'
         }`}>
         <Image
-          source={require('./src/assets/logo-mypos.png')}
+          source={require('./src/assets/logo/logoMypos.png')}
           style={{width: 120, height: 120, marginBottom: 24}}
           resizeMode="contain"
         />

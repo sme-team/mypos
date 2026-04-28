@@ -5,9 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useTheme } from '../../hooks/useTheme';
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 interface StatCardProps {
@@ -19,6 +21,7 @@ interface StatCardProps {
   change: string;
   changePositive: boolean;
   onPress?: () => void;
+  isDark: boolean;
 }
 
 const StatCard = ({
@@ -30,12 +33,15 @@ const StatCard = ({
   change,
   changePositive,
   onPress,
+  isDark,
 }: StatCardProps) => {
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      className="flex-1 mx-1 p-3.5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+      className={`flex-1 mx-1 p-3.5 rounded-2xl border shadow-sm ${
+        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+      }`}>
       <View className="flex-row justify-between ">
         <View
           className="w-9 h-9 rounded-xl items-center justify-center"
@@ -48,10 +54,14 @@ const StatCard = ({
           {change}
         </Text>
       </View>
-      <Text className="text-gray-500 text-[10px] font-medium mt-2.5 leading-4 tracking-wide">
+      <Text className={`text-[10px] font-medium mt-2.5 leading-4 tracking-wide ${
+        isDark ? 'text-gray-400' : 'text-gray-500'
+      }`}>
         {label}
       </Text>
-      <Text className="text-gray-700 text-[15px] font-bold mt-1">{value}</Text>
+      <Text className={`text-[15px] font-bold mt-1 ${
+        isDark ? 'text-gray-100' : 'text-gray-700'
+      }`}>{value}</Text>
     </TouchableOpacity>
   );
 };
@@ -65,6 +75,7 @@ interface ActivityItemProps {
   subtitle: string;
   amount: string;
   amountPositive?: boolean;
+  isDark: boolean;
 }
 
 const ActivityItem = ({
@@ -75,6 +86,7 @@ const ActivityItem = ({
   subtitle,
   amount,
   amountPositive,
+  isDark,
 }: ActivityItemProps) => {
   return (
     <View className="flex-row items-center py-3 px-1">
@@ -84,11 +96,15 @@ const ActivityItem = ({
         <Icon name={icon} size={20} color={iconColor} />
       </View>
       <View className="flex-1">
-        <Text className="text-gray-900 text-sm font-semibold">{title}</Text>
-        <Text className="text-gray-400 text-xs mt-0.5">{subtitle}</Text>
+        <Text className={`text-sm font-semibold ${
+          isDark ? 'text-gray-100' : 'text-gray-900'
+        }`}>{title}</Text>
+        <Text className={`text-xs mt-0.5 ${
+          isDark ? 'text-gray-500' : 'text-gray-400'
+        }`}>{subtitle}</Text>
       </View>
       <Text
-        className={`text-sm font-bold ${amountPositive ? 'text-green-500' : 'text-gray-900'
+        className={`text-sm font-bold ${amountPositive ? 'text-green-500' : isDark ? 'text-gray-100' : 'text-gray-900'
           }`}>
         {amount}
       </Text>
@@ -97,11 +113,14 @@ const ActivityItem = ({
 };
 
 // ─── Divider ─────  ────────────────────────────────────────────────────────────
-const Divider = () => <View className="h-px bg-gray-100 mx-1" />;
+const Divider = ({ isDark }: { isDark: boolean }) => (
+  <View className={`h-px mx-1 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} />
+);
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavigate: (screen: string) => void }) => {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'pos' | 'hotel' | 'warehouse'>(
     'pos',
   );
@@ -112,25 +131,28 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
   ] as const;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <View className="flex-row items-center justify-between bg-white px-4 pt-3 pb-2 border-b border-gray-100">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-slate-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View className={`flex-row items-center justify-between px-4 pt-3 pb-2 border-b ${
+        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+      }`}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={onOpenMenu} className="p-1">
-            <Icon name="menu" size={28} color="#4B5563" />
+            <Icon name="menu" size={28} color={isDark ? '#e5e7eb' : '#4B5563'} />
           </TouchableOpacity>
 
-          <Text className="text-xl font-black text-blue-600 tracking-tighter ml-2">
+          <Text className={`text-xl font-black tracking-tighter ml-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
             MyPOS
           </Text>
         </View>
       </View>
-      <ScrollView className="flex-1 bg-slate-50" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* ── Page Title ── */}
         <View className="px-4 mt-6">
-          <Text className="text-2xl font-bold text-gray-900 leading-tight">
+          <Text className={`text-2xl font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {t('dashboard.overview')}
           </Text>
-          <Text className="text-xs font-medium text-gray-400 mt-1 uppercase tracking-widest">
+          <Text className={`text-xs font-medium mt-1 uppercase tracking-widest ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             {t('dashboard.updatedAt')} 14:30, {t('dashboard.today')}
           </Text>
         </View>
@@ -140,21 +162,23 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
           <StatCard
             icon="trending-up"
             iconColor="#2563EB"
-            iconBg="#EFF6FF"
+            iconBg={isDark ? '#1e3a8a33' : '#EFF6FF'}
             label={t('dashboard.revenueToday')}
             value="15.200.000đ"
             change="+12.5%"
             changePositive
             onPress={() => onNavigate('sales')}
+            isDark={isDark}
           />
           <StatCard
             icon="shopping-cart"
             iconColor="#16A34A"
-            iconBg="#F0FDF4"
+            iconBg={isDark ? '#14532d33' : '#F0FDF4'}
             label={t('dashboard.newOrders')}
             value="42"
             change="+8%"
             changePositive
+            isDark={isDark}
           />
         </View>
         {/* ── Stat Cards Row 2 ── */}
@@ -162,21 +186,23 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
           <StatCard
             icon="hotel"
             iconColor="#EA580C"
-            iconBg="#FFF7ED"
+            iconBg={isDark ? '#7c2d1233' : '#FFF7ED'}
             label={t('dashboard.roomCapacity')}
             value="85%"
             change="-2%"
             changePositive={false}
             onPress={() => onNavigate('categories')}
+            isDark={isDark}
           />
           <StatCard
             icon="login"
             iconColor="#7C3AED"
-            iconBg="#F5F3FF"
+            iconBg={isDark ? '#4c1d9533' : '#F5F3FF'}
             label={t('dashboard.checkins')}
             value="12"
             change="+5%"
             changePositive
+            isDark={isDark}
           />
         </View>
 
@@ -184,7 +210,7 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
         <View className="px-4 mt-8">
           {/* Section Header */}
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold text-gray-900">
+            <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {t('dashboard.recentActivity')}
             </Text>
             <TouchableOpacity>
@@ -195,7 +221,7 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
           </View>
 
           {/* Tab Bar */}
-          <View className="flex-row border-b border-gray-100 mb-2">
+          <View className={`flex-row border-b mb-2 ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
             {tabs.map(tab => (
               <TouchableOpacity
                 key={tab.key}
@@ -216,26 +242,30 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
           </View>
 
           {/* Activity List */}
-          <View className="bg-white rounded-3xl px-3 py-1 border border-gray-100 shadow-sm">
+          <View className={`rounded-3xl px-3 py-1 border shadow-sm ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
             {activeTab === 'pos' && (
               <>
                 <ActivityItem
                   icon="receipt-long"
                   iconColor="#64748B"
-                  iconBg="#F1F5F9"
-                  title="Đơn #8492 - Bàn 04"
-                  subtitle="14:25 · Chờ thanh toán"
+                  iconBg={isDark ? '#33415533' : '#F1F5F9'}
+                  title={t('dashboard.mock.order_table', {id: '8492', table: '04'})}
+                  subtitle={`14:25 · ${t('dashboard.mock.pending_payment')}`}
                   amount="850.000đ"
+                  isDark={isDark}
                 />
-                <Divider />
+                <Divider isDark={isDark} />
                 <ActivityItem
                   icon="receipt-long"
                   iconColor="#64748B"
-                  iconBg="#F1F5F9"
-                  title="Đơn #8490 - Bàn 12"
-                  subtitle="14:10 · Đã thanh toán"
+                  iconBg={isDark ? '#33415533' : '#F1F5F9'}
+                  title={t('dashboard.mock.order_table', {id: '8490', table: '12'})}
+                  subtitle={`14:10 · ${t('dashboard.mock.paid')}`}
                   amount="1.240.000đ"
                   amountPositive
+                  isDark={isDark}
                 />
               </>
             )}
@@ -244,20 +274,22 @@ const DashBoard = ({ onOpenMenu, onNavigate }: { onOpenMenu: () => void, onNavig
                 <ActivityItem
                   icon="meeting-room"
                   iconColor="#2563EB"
-                  iconBg="#EFF6FF"
-                  title="Phòng 201 - Check in"
-                  subtitle="13:50 · Đã xác nhận"
+                  iconBg={isDark ? '#1e3a8a33' : '#EFF6FF'}
+                  title={t('dashboard.mock.checkin', {id: '201'})}
+                  subtitle={`13:50 · ${t('dashboard.mock.confirmed')}`}
                   amount="800.000đ"
+                  isDark={isDark}
                 />
-                <Divider />
+                <Divider isDark={isDark} />
                 <ActivityItem
                   icon="logout"
                   iconColor="#EA580C"
-                  iconBg="#FFF7ED"
-                  title="Phòng 105 - Check out"
-                  subtitle="12:30 · Đã hoàn thành"
+                  iconBg={isDark ? '#7c2d1233' : '#FFF7ED'}
+                  title={t('dashboard.mock.checkout', {id: '105'})}
+                  subtitle={`12:30 · ${t('dashboard.mock.completed')}`}
                   amount="1.200.000đ"
                   amountPositive
+                  isDark={isDark}
                 />
               </>
             )}

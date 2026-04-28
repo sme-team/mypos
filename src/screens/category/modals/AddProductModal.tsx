@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTranslation} from 'react-i18next';
 import {useImagePicker} from '../../../hooks/useImagePicker';
 import type {CategoryGroup} from '../types';
 
@@ -28,6 +29,7 @@ export const AddProductModal: React.FC<Props> = ({
   onClose,
   onSave,
 }) => {
+  const {t} = useTranslation();
   const {imageUri, chooseImage} = useImagePicker();
   const [name, setName] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
@@ -52,11 +54,11 @@ export const AddProductModal: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên sản phẩm');
+      Alert.alert(t('alert.error'), t('pos.category.nameRequired'));
       return;
     }
     if (!categoryId) {
-      Alert.alert('Lỗi', 'Vui lòng chọn danh mục');
+      Alert.alert(t('alert.error'), t('pos.category.categoryRequired'));
       return;
     }
     onSave(categoryId, name.trim(), imageUri);
@@ -91,7 +93,7 @@ export const AddProductModal: React.FC<Props> = ({
               marginBottom: 24,
             }}>
             <Text style={{fontSize: 18, fontWeight: '700', color: '#111827'}}>
-              Thêm sản phẩm
+              {t('pos.category.addProduct')}
             </Text>
             <TouchableOpacity onPress={handleClose}>
               <Icon name="close" size={24} color="#6b7280" />
@@ -106,7 +108,7 @@ export const AddProductModal: React.FC<Props> = ({
               color: '#374151',
               marginBottom: 8,
             }}>
-            Tên sản phẩm
+            {t('pos.category.productName')}
           </Text>
           <View
             style={{
@@ -155,7 +157,7 @@ export const AddProductModal: React.FC<Props> = ({
                 color: '#111827',
                 fontSize: 15,
               }}
-              placeholder="Nhập tên sản phẩm"
+              placeholder={t('pos.category.productNamePlaceholder')}
               value={name}
               onChangeText={setName}
             />
@@ -168,7 +170,7 @@ export const AddProductModal: React.FC<Props> = ({
               color: '#374151',
               marginBottom: 6,
             }}>
-            Thuộc danh mục
+            {t('pos.category.belongsToCategory')}
           </Text>
           <View style={{position: 'relative', marginBottom: 24}}>
             <View
@@ -189,7 +191,7 @@ export const AddProductModal: React.FC<Props> = ({
               />
               <TextInput
                 style={{flex: 1, paddingVertical: 12, color: '#111827'}}
-                placeholder="Tìm danh mục..."
+                placeholder={t('pos.category.searchPlaceholder')}
                 placeholderTextColor="#9ca3af"
                 value={categorySearch}
                 onChangeText={text => {
@@ -229,7 +231,7 @@ export const AddProductModal: React.FC<Props> = ({
                 {suggestions.length === 0 ? (
                   <View style={{padding: 14, alignItems: 'center'}}>
                     <Text style={{color: '#9ca3af', fontSize: 13}}>
-                      Không tìm thấy danh mục
+                      {t('pos.category.noCategoryFound')}
                     </Text>
                   </View>
                 ) : (
@@ -286,7 +288,7 @@ export const AddProductModal: React.FC<Props> = ({
               }}
               onPress={handleClose}>
               <Text style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                Hủy
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -299,7 +301,7 @@ export const AddProductModal: React.FC<Props> = ({
               }}
               onPress={handleSave}>
               <Text style={{color: '#fff', fontWeight: '600', fontSize: 15}}>
-                Thêm sản phẩm
+                {t('pos.category.addProduct')}
               </Text>
             </TouchableOpacity>
           </View>

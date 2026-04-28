@@ -8,9 +8,11 @@ import {
   Modal,
   Alert,
   Pressable,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useTranslation} from 'react-i18next';
+import i18n from 'i18next';
 import {useTheme} from '../../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {SheetCard, SheetConfig} from '../../components/excel-export/SheetCard';
@@ -276,7 +278,7 @@ export default function ReportExport({
         const resolved = resolveSheetConfig(sheet);
         if (!resolved) {
           throw new Error(
-            `Không nhận dạng được loại báo cáo: "${sheet.reportType}" / "${sheet.template}"`,
+            `${t('report.export.errorUnrecognized')}: "${sheet.reportType}" / "${sheet.template}"`,
           );
         }
 
@@ -287,8 +289,8 @@ export default function ReportExport({
         console.log(`[ExcelExport] Sheet ${index + 1}:`, {
           reportType: resolved.reportType,
           billType: resolved.billType,
-          fromDate: sheet.fromDate.toLocaleDateString('vi-VN'),
-          toDate: sheet.toDate.toLocaleDateString('vi-VN'),
+          fromDate: sheet.fromDate.toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US'),
+          toDate: sheet.toDate.toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US'),
           sheetLabel,
         });
 
@@ -318,6 +320,7 @@ export default function ReportExport({
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f9fafb'} />
       {/* Header */}
       <View
         className={`flex-row items-center justify-between px-4 py-3 border-b ${

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTheme} from '../../hooks/useTheme';
 
 import CustomerCard, {Customer} from '../../components/customer/CustomerCard';
 import CustomerDetail from './CustomerDetail';
@@ -74,6 +75,7 @@ const Pagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => {
+  const {t} = useTranslation();
   if (totalPages <= 1) {return null;}
 
   /**
@@ -105,7 +107,7 @@ const Pagination: React.FC<PaginationProps> = ({
         disabled={isFirst}
         className="px-3 py-2 rounded-lg"
         style={{opacity: isFirst ? 0.35 : 1}}>
-        <Text className="text-gray-500 text-sm font-medium">‹ Trước</Text>
+        <Text className="text-gray-500 text-sm font-medium">{t('common.previous')}</Text>
       </TouchableOpacity>
 
       {/* Số trang */}
@@ -136,7 +138,7 @@ const Pagination: React.FC<PaginationProps> = ({
         disabled={isLast}
         className="px-3 py-2 rounded-lg"
         style={{opacity: isLast ? 0.35 : 1}}>
-        <Text className="text-gray-500 text-sm font-medium">Tiếp theo ›</Text>
+        <Text className="text-gray-500 text-sm font-medium">{t('common.next')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -152,6 +154,7 @@ interface CustomerScreenProps {
 
 export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
   const {t} = useTranslation();
+  const {isDark} = useTheme();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
@@ -165,7 +168,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
-  const [sortAZ, setSortAZ] = useState(true);
+  const [sortAZ, _setSortAZ] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerRecord | null>(null);
@@ -298,10 +301,9 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
     [selectedIds, filtered],
   );
 
-  const deleteTargetLabel =
-    selectedCount === 1
-      ? 'khách hàng đã chọn'
-      : `${selectedCount} khách hàng đã chọn`;
+  const deleteTargetLabel = t('customer.delete_selected_label', {
+    count: selectedCount,
+  });
 
   // ── Add customer ───────────────────────────────────────────────────────────
 
@@ -324,15 +326,15 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
   const tabs: {key: FilterTab; label: string}[] = [
     {
       key: 'all',
-      label: t('customer.tab.all', {defaultValue: 'Tất cả'}),
+      label: t('customer.tab.all'),
     },
     {
       key: 'selling',
-      label: t('customer.tab.sales', {defaultValue: 'Bán hàng'}),
+      label: t('customer.tab.sales'),
     },
     {
       key: 'storage',
-      label: t('customer.tab.storage', {defaultValue: 'Lưu trú'}),
+      label: t('customer.tab.storage'),
     },
   ];
 
@@ -362,8 +364,8 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f9fafb'} />
 
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
@@ -372,13 +374,13 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
             <TouchableOpacity
               className="w-9 h-9 items-center justify-center"
               onPress={exitSelectionMode}>
-              <Icon name="close" size={24} color="#374151" />
+              <Icon name="close" size={24} color={isDark ? '#e5e7eb' : '#374151'} />
             </TouchableOpacity>
             <TouchableOpacity onPress={toggleSelectAll}>
               <Text className="text-blue-500 font-semibold text-[15px]">
                 {isAllSelected
-                  ? t('customer.deselect_all', {defaultValue: 'Bỏ chọn tất cả'})
-                  : t('customer.select_all', {defaultValue: 'Chọn tất cả'})}
+                  ? t('common.deselect_all')
+                  : t('common.select_all')}
               </Text>
             </TouchableOpacity>
             <View className="w-9 h-9" />
@@ -389,14 +391,14 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
               <TouchableOpacity
                 className="w-9 h-9 items-center justify-center"
                 onPress={onOpenMenu}>
-                <Icon name="menu" size={24} color="#374151" />
+                <Icon name="menu" size={24} color={isDark ? '#e5e7eb' : '#374151'} />
               </TouchableOpacity>
-              <Text className="text-2xl font-bold text-gray-900 mt-1">
+              <Text className={`text-2xl font-bold mt-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {t('customer.hub.title')}
               </Text>
             </View>
             <TouchableOpacity onPress={enterSelectionMode}>
-              <Text className="text-blue-500 font-bold">Chọn</Text>
+              <Text className="text-blue-500 font-bold">{t('common.select')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -405,19 +407,17 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
       {/* Search */}
       <View className="mx-4 mb-4">
         <View
-          className="flex-row items-center bg-white rounded-2xl px-3 py-1"
+          className={`flex-row items-center rounded-2xl px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
           style={{
             elevation: 1,
             shadowColor: '#000',
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.3 : 0.05,
             shadowRadius: 3,
           }}>
           <Icon name="search" size={20} color="#9ca3af" />
           <TextInput
-            className="flex-1 ml-2 text-gray-700 text-[14px]"
-            placeholder={t('customer.search.placeholder', {
-              defaultValue: 'Tìm tên hoặc số điện thoại...',
-            })}
+            className={`flex-1 ml-2 text-[14px] ${isDark ? 'text-gray-100' : 'text-gray-700'}`}
+            placeholder={t('customer.search.placeholder')}
             placeholderTextColor="#9ca3af"
             value={search}
             onChangeText={setSearch}
@@ -437,16 +437,16 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
             key={tab.key}
             onPress={() => setActiveTab(tab.key)}
             className={`px-4 py-1.5 rounded-full ${
-              activeTab === tab.key ? 'bg-blue-500' : 'bg-white'
+              activeTab === tab.key ? 'bg-blue-500' : (isDark ? 'bg-gray-800' : 'bg-white')
             }`}
             style={
               activeTab !== tab.key
-                ? {elevation: 1, shadowColor: '#000', shadowOpacity: 0.05}
+                ? {elevation: 1, shadowColor: '#000', shadowOpacity: isDark ? 0.3 : 0.05}
                 : undefined
             }>
             <Text
               className={`text-sm font-medium ${
-                activeTab === tab.key ? 'text-white' : 'text-gray-600'
+                activeTab === tab.key ? 'text-white' : (isDark ? 'text-gray-400' : 'text-gray-600')
               }`}>
               {tab.label}
             </Text>
@@ -458,8 +458,8 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
       {!loading && filtered.length > 0 && (
         <View className="px-4 mb-2 flex-row items-center justify-between">
           <Text className="text-gray-400 text-xs">
-            {filtered.length} khách hàng
-            {totalPages > 1 ? ` · Trang ${currentPage}/${totalPages}` : ''}
+            {filtered.length} {t('sidebar.customers').toLowerCase()}
+            {totalPages > 1 ? ` · ${t('common.page')} ${currentPage}/${totalPages}` : ''}
           </Text>
         </View>
       )}
@@ -496,9 +496,7 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
             <View className="items-center mt-16">
               <Icon name="person-search" size={48} color="#d1d5db" />
               <Text className="text-gray-400 mt-3 text-sm">
-                {t('customer.empty', {
-                  defaultValue: 'Không tìm thấy khách hàng',
-                })}
+                {t('customer.empty')}
               </Text>
             </View>
           }
@@ -541,14 +539,11 @@ export default function CustomerScreen({onOpenMenu}: CustomerScreenProps) {
             if (totalSelected > 0) {setShowDeleteModal(true);}
           }}
           labelSelected={() =>
-            t('customer.delete_selected', {
-              defaultValue: `Xóa ${selectedCount} khách hàng đã chọn`,
+            t('customer.delete_selected_label', {
               count: selectedCount,
             })
           }
-          labelEmpty={t('customer.select_hint', {
-            defaultValue: 'Chưa chọn khách hàng nào',
-          })}
+          labelEmpty={t('customer.select_hint')}
         />
       )}
 

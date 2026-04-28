@@ -143,59 +143,93 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   }, [availableRooms, switchFloor]);
 
   // ─── Tính toán tiền (Logic mới: Gross Total & Net Debt) ─────────────────
-  const rentAmount = details?.rent_amount ?? room.monthly_price ?? 0;
-  const extraTotal = services.reduce((sum: number, sv: any) => sum + (sv.unitPrice ?? 0) * (sv.qty ?? 1), 0);
+  // Kiểm tra loại hợp đồng: chỉ tính điện nước cho hợp đồng dài hạn
+  // Dựa trên thời gian: dài hạn nếu duration >= 30 ngày
+  const isLongTerm = details?.start_date && details?.end_date &&
+    ((new Date(details.end_date).getTime() - new Date(details.start_date).getTime()) / (1000 * 60 * 60 * 24) >= 30);
 
-  // Tiền điện nước tạm tính
-  const eOld = details?.electric_reading_init ?? 0;
-  const wOld = details?.water_reading_init ?? 0;
-  const eNew = parseFloat(electricNew) || 0;
-  const wNew = parseFloat(waterNew) || 0;
-  const eDiff = Math.max(0, eNew - eOld);
-  const wDiff = Math.max(0, wNew - wOld);
-  const eAmount = eDiff * electricRate;
-  const wAmount = wDiff * waterRate;
-  const meterEstimate = eAmount + wAmount;
+  // Tiền điện nước tạm tính (chỉ cho hợp đồng dài hạn)
+  let meterEstimate = 0;
+  let eOld = 0, wOld = 0, eNew = 0, wNew = 0, eAmount = 0, wAmount = 0;
+
+  if (isLongTerm) {
+    eOld = details?.electric_reading_init ?? 0;
+    wOld = details?.water_reading_init ?? 0;
+    eNew = parseFloat(electricNew) || 0;
+    wNew = parseFloat(waterNew) || 0;
+    const eDiff = Math.max(0, eNew - eOld);
+    const wDiff = Math.max(0, wNew - wOld);
+    eAmount = eDiff * electricRate;
+    wAmount = wDiff * waterRate;
+    meterEstimate = eAmount + wAmount;
+  }
+
+  // Dịch vụ từ bill hiện tại (nếu có)
+  const billServices = details?.bill_items?.filter((item: any) => 
+    item.product_type === 'service' || 
+    item.product_type === 'product_service' || 
+    item.product_type === 'room_service'
+  ) || [];
+
+  // Tiền phòng: ngắn hạn dùng metadata_rent_amount (tách biệt), dài hạn dùng rent_amount
+  const rentAmount = !isLongTerm
+    ? (details?.metadata_rent_amount ?? details?.total_amount ?? 0)  // Ngắn hạn: dùng metadata_rent_amount nếu có
+    : (details?.rent_amount ?? room.monthly_price ?? 0);  // Dài hạn: dùng giá tháng
+
+  // Tiền dịch vụ: ngắn hạn dùng metadata_service_amount (tách biệt), dài hạn dùng bill_services
+  const serviceAmount = !isLongTerm
+    ? (details?.metadata_service_amount ?? 0)  // Ngắn hạn: dùng metadata_service_amount nếu có
+    : billServices.reduce((sum: number, sv: any) => sum + (sv.unit_price ?? 0) * (sv.quantity ?? 1), 0);  // Dài hạn: dùng bill_services
+
+  // Tổng dịch vụ: dịch vụ từ metadata/bill + dịch vụ thêm mới
+  const extraTotal = serviceAmount + services.reduce((sum: number, sv: any) => sum + (sv.unitPrice ?? 0) * (sv.qty ?? 1), 0);
 
   // Gross Total (Phải thu): Tổng tất cả dịch vụ + tiền phòng + nợ cũ
-  // Nếu đã có bill, details.total_amount thường đã gồm rent + negative_balance + prev services.
-  // Nếu chưa có bill, ta phải cộng thủ công rent và negative_balance.
-  const baseAmount = details?.current_bill_id
-    ? (details?.total_amount ?? 0)
-    : (rentAmount + (details?.negative_balance ?? 0));
+  // Ngắn hạn: total_amount đã bao gồm cả phòng + dịch vụ (trừ cọc), chỉ cộng thêm dịch vụ mới và nợ cũ
+  // Dài hạn: rent_amount chỉ là tiền phòng, cần cộng thêm dịch vụ, điện nước và nợ cũ
+  const baseAmount = !isLongTerm
+    ? ((details?.total_amount ?? 0) + (details?.negative_balance ?? 0))  // Ngắn hạn: dùng total_amount (đã có phòng + dịch vụ)
+    : (rentAmount + (details?.negative_balance ?? 0));  // Dài hạn: dùng rent_amount (chỉ phòng)
 
-  const grossTotal = baseAmount + meterEstimate + extraTotal;
+  // Chỉ cộng extraTotal (dịch vụ mới) cho dài hạn, vì ngắn hạn đã có trong total_amount
+  const grossTotal = !isLongTerm
+    ? (baseAmount + meterEstimate + services.reduce((sum: number, sv: any) => sum + (sv.unitPrice ?? 0) * (sv.qty ?? 1), 0))  // Ngắn hạn: chỉ cộng dịch vụ mới
+    : (baseAmount + meterEstimate + extraTotal);  // Dài hạn: cộng tất cả
 
-  // Tiền đã trả (từ bill hiện tại)
-  const paidAmount = details?.paid_amount ?? 0;
+  // Tiền đã trả (tổng tất cả bill/payment của hợp đồng)
+  const totalPaid = details?.total_paid ?? 0;
+  
+  // Hiển thị ở UI "Đã thanh toán" (Trừ đi phần cọc đã hiển thị ở trên để tránh double count)
+  const displayPaidAmount = Math.max(0, totalPaid - (!isLongTerm ? (details?.deposit_amount ?? 0) : 0));
 
   // Số tiền thực sự còn nợ (Net Remaining)
-  const netRemainingDebt = Math.max(0, grossTotal - paidAmount);
+  // Logic đúng: (Tổng phòng + Dịch vụ) - (Tất cả tiền đã thu)
+  const fullGross = (rentAmount + extraTotal + (details?.negative_balance ?? 0));
+  const remainingAmount = Math.max(0, fullGross - totalPaid);
 
   // Hiển thị ở màn hình chính
-  const payableAmount = grossTotal;
-  const remainingAmount = netRemainingDebt;
+  const payableAmount = fullGross;
   const payableSubLabels: string[] = [];
   if (eNew > 0 || wNew > 0 || extraTotal > 0) {
     payableSubLabels.push(t('roomDetail.estimated'));
   }
 
-  const fmt = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+  const fmt = (n: number) => (n || 0).toLocaleString('vi-VN') + 'đ';
 
   // ─── Hành động ────────────────────────────────────────────────────────────
 
 
   const handleCollect = () => {
     setPaymentMode('full');
-    setPartialAmount(String(netRemainingDebt));
+    setPartialAmount(String(remainingAmount));
     setShowPaymentModal(true);
   };
 
   const handleCheckOut = async () => {
-    Alert.alert('Xác nhận trả phòng', 'Bạn có chắc chắn muốn trả phòng này không?', [
-      { text: 'Hủy', style: 'cancel' },
+    Alert.alert(t('roomDetail.confirmCheckoutTitle'), t('roomDetail.confirmCheckoutMsg'), [
+      { text: t('roomDetail.cancel'), style: 'cancel' },
       {
-        text: 'Trả phòng', style: 'destructive',
+        text: t('roomDetail.checkoutBtn'), style: 'destructive',
         onPress: async () => {
           try { await RoomActionService.checkOut('store-001', room.id); onBack(); }
           catch (e) { Alert.alert(t('common.error'), String(e)); }
@@ -221,7 +255,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
     if (!selectedNewRoom) {return;}
     Alert.alert(
       t('roomDetail.confirmSwap'),
-      t('roomDetail.confirmSwapDesc') || 'Bạn có chắc chắn muốn đổi khách sang phòng đã chọn không?',
+      t('roomDetail.confirmSwapDesc') || t('roomDetail.confirmCheckoutMsg'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -327,7 +361,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
           // Nếu có nhập số mới thì coi như cập nhật luôn?
           // Thực tế editRoomDetails chủ yếu sửa thông tin nền.
         });
-        Alert.alert(t('common.ok'), t('roomDetail.success.update') || 'Cập nhật thành công');
+        Alert.alert(t('common.ok'), t('roomDetail.success.update') || t('roomDetail.save'));
         await loadDetails();
         setView('detail');
       } catch (err) {
@@ -364,10 +398,6 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
   const isOverdue = dueDate && new Date(dueDate) < new Date();
 
   // Calculate next monthly due date for long-term rentals
-  // Detect long-term based on contract duration (end_date - start_date >= 30 days)
-  const isLongTerm = details?.start_date && details?.end_date && 
-    ((new Date(details.end_date).getTime() - new Date(details.start_date).getTime()) / (1000 * 60 * 60 * 24) >= 30);
-  
   let nextMonthlyDueDate = '';
   if (isLongTerm && details?.billing_day) {
     const now = new Date();
@@ -451,48 +481,185 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>{t('roomDetail.serviceAndRent')}</Text>
         <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
 
-          {/* Dòng tiền phòng */}
-          <ServiceLineFixed
-            icon="home"
-            iconColor={colors.primary}
-            name={t('roomDetail.roomRent')}
-            sub={t('roomDetail.rentFixed')}
-            amount={rentAmount}
-            fmt={fmt}
-            colors={colors}
-          />
-          <View style={[s.divider, { backgroundColor: colors.border }]} />
+          {/* ── TIỀN PHÒNG ── */}
+          <View style={s.sectionHeader}>
+            <Icon name="home" size={18} color={colors.primary} />
+            <Text style={[s.sectionHeaderText, { color: colors.text }]}>{t('roomDetail.roomRent')}</Text>
+          </View>
 
-          {/* Dòng điện */}
-          <ServiceLineMeter
-            icon="bolt"
-            iconColor={colors.yellow}
-            name={t('roomDetail.electric')}
-            unit="kWh"
-            oldVal={eOld}
-            newVal={electricNew}
-            onChangeNew={setElectricNew}
-            amount={eAmount}
-            fmt={fmt}
-            colors={colors}
-            t={t}
-          />
-          <View style={[s.divider, { backgroundColor: colors.border }]} />
+          {/* Ngắn hạn: Hiển thị breakdown chi tiết */}
+          {!isLongTerm && details?.price_breakdown && details.price_breakdown.length > 0 ? (
+            <View style={s.priceDetailBox}>
+              {details.price_breakdown.map((item: any, index: number) => (
+                <View key={index} style={s.breakdownItem}>
+                  <Text style={[s.breakdownDesc, { color: colors.textSecondary }]}>
+                    {item.description || `${item.type === 'hour' ? t('roomDetail.hour') : t('roomDetail.day')}: ${item.quantity} × ${fmt(item.unitPrice)}`}
+                  </Text>
+                  <Text style={[s.breakdownAmount, { color: colors.text, fontWeight: '700' }]}>
+                    {fmt(item.amount)}
+                  </Text>
+                </View>
+              ))}
+              <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+              <View style={s.priceTotalRow}>
+                <Text style={[s.priceTotalLabel, { color: colors.textSecondary }]}>{t('roomDetail.totalRoomRent')}</Text>
+                <Text style={[s.priceTotalValue, { color: colors.primary, fontWeight: '800' }]}>
+                  {fmt(rentAmount)}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            /* Dài hạn: Hiển thị giá cố định */
+            <View style={s.priceDetailBox}>
+              <Text style={[s.priceDescription, { color: colors.textSecondary }]}>
+                {t('roomDetail.rentFixed')}
+              </Text>
+              <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+              <View style={s.priceTotalRow}>
+                <Text style={[s.priceTotalLabel, { color: colors.textSecondary }]}>{t('roomDetail.monthPrice')}</Text>
+                <Text style={[s.priceTotalValue, { color: colors.primary, fontWeight: '800' }]}>
+                  {fmt(rentAmount)}
+                </Text>
+              </View>
+            </View>
+          )}
 
-          {/* Dòng nước */}
-          <ServiceLineMeter
-            icon="water-drop"
-            iconColor={colors.blue}
-            name={t('roomDetail.water')}
-            unit="m³"
-            oldVal={wOld}
-            newVal={waterNew}
-            onChangeNew={setWaterNew}
-            amount={wAmount}
-            fmt={fmt}
-            colors={colors}
-            t={t}
-          />
+          <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 12 }]} />
+
+          {/* ── DỊCH VỤ ── */}
+          <View style={s.sectionHeader}>
+            <Icon name="room-service" size={18} color={colors.warning} />
+            <Text style={[s.sectionHeaderText, { color: colors.text }]}>{t('roomDetail.services')}</Text>
+          </View>
+
+          {billServices.length > 0 ? (
+            <View style={s.servicesList}>
+              {billServices.map((item: any, index: number) => (
+                <View key={index} style={s.serviceItem}>
+                  <View style={s.serviceItemLeft}>
+                    <Text style={[s.serviceName, { color: colors.text }]}>{item.line_description}</Text>
+                    <Text style={[s.serviceQty, { color: colors.textSecondary }]}>
+                      {item.quantity} × {fmt(item.unit_price)}
+                    </Text>
+                  </View>
+                  <Text style={[s.serviceAmount, { color: colors.text, fontWeight: '700' }]}>
+                    {fmt(item.amount)}
+                  </Text>
+                </View>
+              ))}
+              <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+              <View style={s.priceTotalRow}>
+                <Text style={[s.priceTotalLabel, { color: colors.textSecondary }]}>{t('roomDetail.totalServices')}</Text>
+                <Text style={[s.priceTotalValue, { color: colors.warning, fontWeight: '800' }]}>
+                  {fmt(serviceAmount)}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={[s.noServiceText, { color: colors.textSecondary }]}>{t('roomDetail.noServices')}</Text>
+          )}
+
+          <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 12 }]} />
+
+          {/* ── TỔNG KẾT THANH TOÁN ── */}
+          <View style={s.sectionHeader}>
+            <Icon name="receipt" size={18} color={colors.success} />
+            <Text style={[s.sectionHeaderText, { color: colors.text }]}>{t('roomDetail.paymentSummary')}</Text>
+          </View>
+
+          <View style={s.paymentSummary}>
+            <View style={s.paymentRow}>
+              <Text style={[s.paymentLabel, { color: colors.textSecondary }]}>{t('roomDetail.totalRentAmount')}</Text>
+              <Text style={[s.paymentValue, { color: colors.text }]}>{fmt(rentAmount)}</Text>
+            </View>
+            <View style={s.paymentRow}>
+              <Text style={[s.paymentLabel, { color: colors.textSecondary }]}>{t('roomDetail.totalServiceAmount')}</Text>
+              <Text style={[s.paymentValue, { color: colors.text }]}>{fmt(extraTotal)}</Text>
+            </View>
+            
+            {/* Tiền cọc - hiển thị khác nhau cho Ngắn hạn / Dài hạn */}
+            {!isLongTerm && details?.deposit_amount && details.deposit_amount > 0 ? (
+              <View style={s.paymentRow}>
+                <Text style={[s.paymentLabel, { color: colors.textSecondary }]}>{t('roomDetail.depositApplied')}</Text>
+                <Text style={[s.paymentValue, { color: colors.danger, fontWeight: '700' }]}>
+                  - {fmt(details.deposit_amount)}
+                </Text>
+              </View>
+            ) : isLongTerm && details?.deposit_amount && details.deposit_amount > 0 ? (
+              <View style={{ marginTop: 8 }}>
+                <View style={s.paymentRow}>
+                  <Text style={[s.paymentLabel, { color: colors.textSecondary }]}>{t('roomDetail.depositHeld')}</Text>
+                  <Text style={[s.paymentValue, { color: colors.warning, fontWeight: '700' }]}>
+                    {fmt(details.deposit_amount)}
+                  </Text>
+                </View>
+                <Text style={[s.depositNote, { color: colors.textSecondary, fontSize: 11, marginTop: 4, lineHeight: 16 }]}>
+                  {t('roomDetail.depositNote')}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+            
+            <View style={s.paymentRow}>
+              <Text style={[s.paymentLabel, { color: colors.textSecondary }]}>{t('roomDetail.paidAmount')}</Text>
+              <Text style={[s.paymentValue, { color: colors.success, fontWeight: '700' }]}>
+                {fmt(displayPaidAmount)}
+              </Text>
+            </View>
+
+            <View style={[s.divider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+            
+            <View style={[s.finalPaymentRow, { backgroundColor: colors.primaryLight }]}>
+              <View>
+                <Text style={[s.finalPaymentLabel, { color: colors.primary, fontWeight: '800' }]}>{t('roomDetail.remainingToPay')}</Text>
+                {!isLongTerm && (
+                  <Text style={{ fontSize: 10, color: colors.primary, marginTop: 2, opacity: 0.8 }}>
+                    {t('roomDetail.remainingNote')}
+                  </Text>
+                )}
+              </View>
+              <Text style={[s.finalPaymentValue, { color: colors.primary, fontWeight: '900', fontSize: 20 }]}>
+                {fmt(remainingAmount)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Dòng điện - chỉ hiển thị cho hợp đồng dài hạn */}
+          {isLongTerm && (
+            <>
+              <ServiceLineMeter
+                icon="bolt"
+                iconColor={colors.yellow}
+                name={t('roomDetail.electric')}
+                unit="kWh"
+                oldVal={eOld}
+                newVal={electricNew}
+                onChangeNew={setElectricNew}
+                amount={eAmount}
+                fmt={fmt}
+                colors={colors}
+                t={t}
+              />
+              <View style={[s.divider, { backgroundColor: colors.border }]} />
+
+              {/* Dòng nước - chỉ hiển thị cho hợp đồng dài hạn */}
+              <ServiceLineMeter
+                icon="water-drop"
+                iconColor={colors.blue}
+                name={t('roomDetail.water')}
+                unit="m³"
+                oldVal={wOld}
+                newVal={waterNew}
+                onChangeNew={setWaterNew}
+                amount={wAmount}
+                fmt={fmt}
+                colors={colors}
+                t={t}
+              />
+              <View style={[s.divider, { backgroundColor: colors.border }]} />
+            </>
+          )}
         </View>
 
         {/* ── DỊCH VỤ THÊM (dùng lại từ BookingScreen) ── */}
@@ -518,7 +685,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
         <View style={[s.card, s.debtCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.debtRow}>
             <DebtCol label={t('roomDetail.debt.payable')} value={fmt(payableAmount)} valueColor={colors.text} subLabels={payableSubLabels} />
-            <DebtCol label={t('roomDetail.debt.paid')} value={fmt(paidAmount)} valueColor={colors.success} />
+            <DebtCol label={t('roomDetail.debt.paid')} value={fmt(displayPaidAmount)} valueColor={colors.success} />
             <DebtCol
               label={t('roomDetail.debt.remaining')}
               value={isOverdue ? t('roomDetail.debt.overdue') : fmt(remainingAmount)}
@@ -526,6 +693,16 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               badge={isOverdue}
             />
           </View>
+          {/* Hiển thị tiền cọc đang giữ */}
+          {details?.deposit_amount && details.deposit_amount > 0 && (
+            <View style={[s.depositRow, { borderTopColor: colors.border }]}>
+              <Icon name="account-balance-wallet" size={16} color={colors.warning} />
+              <Text style={[s.depositLabel, { color: colors.textSecondary }]}>
+                {isLongTerm ? t('roomDetail.deposit.held') : t('roomDetail.deposit.offset')}
+              </Text>
+              <Text style={[s.depositAmount, { color: colors.warning }]}>{fmt(details.deposit_amount)}</Text>
+            </View>
+          )}
         </View>
 
         {/* ── NÚT HÀNH ĐỘNG ── */}
@@ -592,7 +769,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                 <View style={{ flexDirection: 'row' }}>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRightWidth: 1, borderColor: colors.border }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.payable')}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{fmt(netRemainingDebt)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>{fmt(remainingAmount)}</Text>
                   </View>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRightWidth: 1, borderColor: colors.border }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.paid')}</Text>
@@ -600,7 +777,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                   </View>
                   <View style={{ flex: 1, paddingVertical: 12, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>{t('roomDetail.debt.remaining')}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>{fmt(Math.max(0, netRemainingDebt - (Number(partialAmount || 0))))}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>{fmt(Math.max(0, remainingAmount - (Number(partialAmount || 0))))}</Text>
                   </View>
                 </View>
                 {isLongTerm && (
@@ -632,10 +809,10 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
               <View style={{ marginBottom: 16 }}>
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, backgroundColor: colors.primaryLight }}
-                  onPress={() => setPartialAmount(String(netRemainingDebt))}
+                  onPress={() => setPartialAmount(String(remainingAmount))}
                 >
                   <Icon name="refresh" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>Đặt lại số tiền đầy đủ</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>{t('roomDetail.resetFullAmount')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -644,7 +821,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                 style={[s.primaryBtn, { backgroundColor: colors.primary, marginTop: 4, marginBottom: Platform.OS === 'ios' ? 10 : 0 }]}
                 onPress={async () => {
                   try {
-                    const finalAmount = parseFloat(partialAmount || String(netRemainingDebt));
+                    const finalAmount = parseFloat(partialAmount || String(remainingAmount));
                     if (finalAmount <= 0) {
                       Alert.alert(t('roomDetail.error.title'), t('roomDetail.payment.errZero'));
                       return;
@@ -653,8 +830,8 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                     await RoomActionService.collectMonthlyPayment({
                       storeId: 'store-001',
                       variantId: room.id,
-                      electricNew: eNew,
-                      waterNew: wNew,
+                      electricNew: isLongTerm ? eNew : 0,
+                      waterNew: isLongTerm ? wNew : 0,
                       paymentAmount: finalAmount,
                       extraServices: services.map((s: any) => ({ productId: s.id, name: s.name, quantity: s.qty, unitPrice: s.unitPrice, unitId: s.unitId })),
                     });
@@ -666,7 +843,7 @@ export default function RoomDetailScreen({ room, onBack }: { room: Room; onBack:
                   }
                 }}
               >
-                <Text style={[s.primaryBtnText, { marginRight: 8 }]}>Thu tiền</Text>
+                <Text style={[s.primaryBtnText, { marginRight: 8 }]}>{t('roomDetail.collectBtn')}</Text>
                 <Icon name="payment" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -707,7 +884,7 @@ function ServiceLineFixed({ icon, iconColor, name, sub, amount, fmt, colors }: a
   );
 }
 
-function ServiceLineMeter({ icon, iconColor, name, unit, oldVal, newVal, onChangeNew, amount, fmt, colors }: any) {
+function ServiceLineMeter({ icon, iconColor, name, unit, oldVal, newVal, onChangeNew, amount, fmt, colors, t }: any) {
   return (
     <View style={s.svcRow}>
       <View style={[s.svcIcon, { backgroundColor: iconColor + '22' }]}>
@@ -761,7 +938,7 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '800', position: 'absolute', left: 0, right: 0, textAlign: 'center', zIndex: 0 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
 
-  card: { borderRadius: 14, borderWidth: 1, marginBottom: 8 },
+  card: { borderRadius: 16, borderWidth: 1, marginBottom: 16, padding: 16 },
   roomIcon: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   roomName: { fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
   tenantName: { fontSize: 15, fontWeight: '700' },
@@ -769,15 +946,15 @@ const s = StyleSheet.create({
   badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
 
-  sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginTop: 16, marginBottom: 8 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginTop: 20, marginBottom: 12 },
 
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, minWidth: '100%' },
   infoLabel: { fontSize: 14, marginLeft: 10 },
   infoValue: { fontSize: 14, fontWeight: '600' },
-  divider: { height: 1, marginHorizontal: 16 },
+  divider: { height: 1, marginHorizontal: 16, marginVertical: 12 },
 
   svcRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13, minWidth: '100%' },
-  svcIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  svcIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   svcName: { fontSize: 14, fontWeight: '600' },
   svcSub: { fontSize: 12, marginTop: 2 },
   svcAmount: { fontSize: 14, fontWeight: '700', minWidth: 80, textAlign: 'right' },
@@ -798,6 +975,40 @@ const s = StyleSheet.create({
   debtSubLabel: { fontSize: 10, marginTop: 2, fontWeight: '600', textAlign: 'center' },
   overdueBadge: { backgroundColor: '#E53935', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   overdueText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  depositRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12, borderTopWidth: 1 },
+  depositLabel: { fontSize: 12, fontWeight: '600', flex: 1 },
+  depositAmount: { fontSize: 14, fontWeight: '800' },
+  priceBreakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  priceBreakdownText: { fontSize: 12, fontWeight: '500' },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  summaryLabel: { fontSize: 13, fontWeight: '600' },
+  summaryValue: { fontSize: 14, fontWeight: '700' },
+  // New styles for redesigned payment section
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  sectionHeaderText: { fontSize: 16, fontWeight: '800' },
+  priceDetailBox: { paddingVertical: 12, paddingHorizontal: 4 },
+  priceDescription: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+  breakdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  breakdownDesc: { fontSize: 12, fontWeight: '500', flex: 1 },
+  breakdownAmount: { fontSize: 13, fontWeight: '700' },
+  priceTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  priceTotalLabel: { fontSize: 14, fontWeight: '700' },
+  priceTotalValue: { fontSize: 18, fontWeight: '900' },
+  servicesList: { paddingVertical: 8 },
+  serviceItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4 },
+  serviceItemLeft: { flex: 1 },
+  serviceName: { fontSize: 15, fontWeight: '700' },
+  serviceQty: { fontSize: 13, marginTop: 3 },
+  serviceAmount: { fontSize: 15, fontWeight: '800' },
+  noServiceText: { fontSize: 13, fontStyle: 'italic', paddingVertical: 8 },
+  paymentSummary: { paddingVertical: 12, paddingHorizontal: 4, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 12, marginTop: 8 },
+  paymentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12 },
+  paymentLabel: { fontSize: 14, fontWeight: '600' },
+  paymentValue: { fontSize: 15, fontWeight: '700' },
+  finalPaymentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 12, marginTop: 12, borderWidth: 2 },
+  finalPaymentLabel: { fontSize: 15, fontWeight: '800' },
+  finalPaymentValue: { fontSize: 22, fontWeight: '900' },
+  depositNote: { fontStyle: 'italic' },
 
   primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 16, paddingVertical: 18, gap: 10, marginTop: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },

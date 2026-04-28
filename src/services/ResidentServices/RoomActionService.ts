@@ -755,13 +755,16 @@ class RoomActionServiceClass {
       // Lấy cycle_id cho ngắn hạn (daily)
       const cycleId = await this.getCycleId(input.storeId, 'daily');
 
-      // Metadata lưu trữ thông tin thời gian checkin/checkout
+      // Metadata lưu trữ thông tin thời gian checkin/checkout và breakdown giá
       const metadata = JSON.stringify({
         checkin_time: input.checkinTime,
         checkout_time: input.checkoutTime,
         adults: input.adults || 1,
         children: input.children || 0,
         price_description: priceResult.description,
+        price_breakdown: priceResult.breakdown,  // Lưu breakdown chi tiết để hiển thị sau này
+        rent_amount: rentAmount,  // Tiền phòng riêng
+        service_amount: svcAmount,  // Tiền dịch vụ riêng
       });
 
       // 4. contracts
@@ -875,7 +878,8 @@ class RoomActionServiceClass {
 
       // 6. Bill Tiền nhà & Dịch vụ ngắn hạn (RENT BILL)
       rentBillId = await generateSequentialId(this.billSvc, 'bill');
-      const totalRentBill = rentAmount + svcAmount;
+      // Ngắn hạn: trừ tiền cọc ngay vào bill
+      const totalRentBill = rentAmount + svcAmount - depositAmount;
 
       await this.billSvc.create({
         id: rentBillId,
@@ -1224,14 +1228,24 @@ class RoomActionServiceClass {
       (s, sv) => s + sv.quantity * sv.unitPrice,
       0,
     );
-    const total = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount;
+    const meterTotal = eAmount + wAmount;
 
     return this.billSvc.executeTransaction(async () => {
       const now = this.now();
       const today = now.split('T')[0];
 
-      // Kiểm tra xem đã có bill cho kỳ này chưa
+      // Lấy negative_balance (khoản điều chỉnh âm kỳ trước)
       const db = DatabaseManager.get('pos');
+      const adjResult = await QueryBuilder.table('receivables', db!.getInternalDAO())
+        .select(['SUM(amount) as total'])
+        .where('contract_id', contract.id)
+        .where('receivable_type', 'adjustment')
+        .where('amount', '<', 0)
+        .where('status', 'pending')
+        .first();
+      const negativeBalance = adjResult?.total || 0;
+
+      // Kiểm tra xem đã có bill cho kỳ này chưa
       const existingBillRows = await QueryBuilder.table('bills', db!.getInternalDAO())
         .where('ref_id', contract.id)
         .where('ref_type', 'contract')
@@ -1245,13 +1259,15 @@ class RoomActionServiceClass {
       const existingBill = existingBillRows.length > 0 ? existingBillRows[0] : null;
 
       let billId: string;
+      let total: number;
 
       if (existingBill) {
         // Cập nhật bill hiện tại
         billId = existingBill.id;
 
-        // Tính lại total_amount bao gồm điện nước mới
-        const recalculatedTotal = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount;
+        // Tính lại total_amount bao gồm điện nước mới + negative_balance
+        const recalculatedTotal = (contract.rent_amount ?? 0) + eAmount + wAmount + svcAmount + negativeBalance;
+        total = recalculatedTotal;
         const currentPaid = existingBill.paid_amount ?? 0;
         const newPaid = currentPaid + input.paymentAmount;
         const newRemaining = recalculatedTotal - newPaid;
@@ -1285,6 +1301,9 @@ class RoomActionServiceClass {
         // Tạo bill mới
         billId = await generateSequentialId(this.billSvc, 'bill');
 
+        // Tính total cho bill mới
+        total = (contract.rent_amount ?? 0) + meterTotal + svcAmount + negativeBalance;
+
         // Tính cycle_period_to cho bill = start_date + 1 tháng
         const d = new Date(contract.start_date);
         d.setMonth(d.getMonth() + 1);
@@ -1302,6 +1321,8 @@ class RoomActionServiceClass {
         });
 
         // 1. Tạo bill
+        const newBillStatus = input.paymentAmount >= total ? 'paid' : 'partial';
+        const newRemaining = Math.max(0, total - input.paymentAmount);
         await this.billSvc.create({
           id: billId,
           store_id: input.storeId,
@@ -1315,9 +1336,9 @@ class RoomActionServiceClass {
           cycle_period_to: cyclePeriodTo,
           subtotal: total,
           total_amount: total,
-          paid_amount: total,
-          remaining_amount: 0,
-          bill_status: 'paid',
+          paid_amount: input.paymentAmount,
+          remaining_amount: newRemaining,
+          bill_status: newBillStatus,
           issued_at: now,
           due_at: contract.start_date,
           notes: input.notes,
@@ -1384,14 +1405,35 @@ class RoomActionServiceClass {
           );
         }
 
-        // 6. Tạo payment record
+        // 6. Tạo receivable cho bill mới (để theo dõi khoản phải thu)
+        const receivableCode = await generateReceivableCode(input.storeId);
+        await this.receivableSvc.create({
+          id: await generateSequentialId(this.receivableSvc, 'rec'),
+          store_id: input.storeId,
+          customer_id: contract.customer_id,
+          contract_id: contract.id,
+          bill_id: billId,
+          receivable_code: receivableCode,
+          receivable_type: 'rent',
+          description: 'Tiền thuê phòng và dịch vụ hàng tháng',
+          amount: total,
+          due_date: contract.start_date,
+          status: newBillStatus,
+          ref_id: contract.id,
+          ref_type: 'contract',
+          sync_status: 'local',
+          created_at: now,
+          updated_at: now,
+        });
+
+        // 7. Tạo payment record
         const paymentId = await generateSequentialId(this.paymentSvc, 'pay');
         await this.paymentSvc.create({
           id: paymentId,
           store_id: input.storeId,
           bill_id: billId,
           payment_method: 'cash',
-          amount: total,
+          amount: input.paymentAmount,
           paid_at: now,
           status: 'success',
           notes: input.notes || null,

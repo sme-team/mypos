@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTheme} from '../../hooks/useTheme';
 import {useImagePicker} from '../../hooks/useImagePicker';
 
 import {
@@ -26,8 +27,8 @@ import AddCustomer from './AddCustomer';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatCurrency = (amount: number): string =>
-  amount.toLocaleString('vi-VN') + ' đ';
+const formatPrice = (amount: number, t: any) =>
+  amount.toLocaleString('vi-VN') + (t('pos.currency_symbol') || 'đ');
 
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) {return '-';}
@@ -45,15 +46,15 @@ const formatDateTime = (dateStr: string): string => {
   )}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-const formatGender = (gender?: string | null): string => {
-  if (gender === 'male') {return 'Nam';}
-  if (gender === 'female') {return 'Nữ';}
-  if (gender === 'other') {return 'Khác';}
+const formatGender = (gender: string | null | undefined, t: any): string => {
+  if (gender === 'male') {return t('gender.male');}
+  if (gender === 'female') {return t('gender.female');}
+  if (gender === 'other') {return t('gender.other');}
   return '-';
 };
 
-const formatNationality = (code?: string | null): string => {
-  if (code === 'VN') {return 'Việt Nam';}
+const formatNationality = (code: string | null | undefined, t: any): string => {
+  if (code === 'VN') {return t('common.vietnam');}
   return code ?? '-';
 };
 
@@ -71,25 +72,26 @@ const getInitials = (name: string): string => {
 
 const BILL_STATUS_CONFIG: Record<
   BillStatus,
-  {label: string; bg: string; text: string}
+  {labelKey: string; defaultLabel: string; bg: string; text: string}
 > = {
-  paid: {label: 'Đã thanh toán', bg: '#dcfce7', text: '#16a34a'},
-  issued: {label: 'Còn nợ', bg: '#fee2e2', text: '#dc2626'},
-  partial: {label: 'Một phần', bg: '#fef9c3', text: '#ca8a04'},
-  overdue: {label: 'Quá hạn', bg: '#fee2e2', text: '#dc2626'},
-  draft: {label: 'Nháp', bg: '#f3f4f6', text: '#6b7280'},
-  cancelled: {label: 'Đã huỷ', bg: '#f3f4f6', text: '#6b7280'},
-  refunded: {label: 'Hoàn tiền', bg: '#ede9fe', text: '#7c3aed'},
+  paid: {labelKey: 'bill.status.paid', defaultLabel: '', bg: '#dcfce7', text: '#16a34a'},
+  issued: {labelKey: 'bill.status.issued', defaultLabel: '', bg: '#fee2e2', text: '#dc2626'},
+  partial: {labelKey: 'bill.status.partial', defaultLabel: '', bg: '#fef9c3', text: '#ca8a04'},
+  overdue: {labelKey: 'bill.status.overdue', defaultLabel: '', bg: '#fee2e2', text: '#dc2626'},
+  draft: {labelKey: 'bill.status.draft', defaultLabel: '', bg: '#f3f4f6', text: '#6b7280'},
+  cancelled: {labelKey: 'bill.status.cancelled', defaultLabel: '', bg: '#f3f4f6', text: '#6b7280'},
+  refunded: {labelKey: 'bill.status.refunded', defaultLabel: '', bg: '#ede9fe', text: '#7c3aed'},
 };
 
 const BillStatusBadge: React.FC<{status: BillStatus}> = ({status}) => {
+  const {t} = useTranslation();
   const cfg = BILL_STATUS_CONFIG[status] ?? BILL_STATUS_CONFIG.draft;
   return (
     <View
       className="px-2 py-0.5 rounded-full"
       style={{backgroundColor: cfg.bg}}>
       <Text className="text-xs font-semibold" style={{color: cfg.text}}>
-        {cfg.label}
+        {t(cfg.labelKey)}
       </Text>
     </View>
   );
@@ -139,6 +141,7 @@ export default function CustomerDetailScreen({
   onUpdateCustomer,
 }: CustomerDetailProps) {
   const {t} = useTranslation();
+  const {isDark} = useTheme();
 
   // Giữ bản local của customer để cập nhật ngay sau khi edit xong
   const [customer, setCustomer] = useState<CustomerRecord>(initialCustomer);
@@ -220,23 +223,23 @@ export default function CustomerDetailScreen({
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f9fafb'} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-3 pb-2 bg-gray-50">
+      <View className={`flex-row items-center justify-between px-4 pt-3 pb-2 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <TouchableOpacity
           className="w-9 h-9 items-center justify-center"
           onPress={onBack}>
-          <Icon name="arrow-back" size={24} color="#374151" />
+          <Icon name="arrow-back" size={24} color={isDark ? '#e5e7eb' : '#374151'} />
         </TouchableOpacity>
-        <Text className="text-base font-bold text-gray-800">
-          {t('customer.detail.title', {defaultValue: 'Khách hàng'})}
+        <Text className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          {t('customer.detail.title')}
         </Text>
         {/* Nút Sửa → bật edit form */}
         <TouchableOpacity onPress={() => setShowEditForm(true)}>
           <Text className="text-blue-500 font-semibold text-[15px]">
-            {t('customer.detail.edit', {defaultValue: 'Sửa'})}
+            {t('customer.detail.edit')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -244,11 +247,11 @@ export default function CustomerDetailScreen({
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* ── Avatar & tên ── */}
         <View
-          className="bg-white mx-4 mt-3 mb-3 rounded-2xl px-6 py-6 items-center"
+          className={`mx-4 mt-3 mb-3 rounded-2xl px-6 py-6 items-center ${isDark ? 'bg-gray-800' : 'bg-white'}`}
           style={{
             elevation: 1,
             shadowColor: '#000',
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.3 : 0.05,
             shadowRadius: 4,
             shadowOffset: {width: 0, height: 1},
           }}>
@@ -264,13 +267,13 @@ export default function CustomerDetailScreen({
             </View>
             {/* Camera overlay */}
             <View
-              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white items-center justify-center"
+              className={`absolute bottom-0 right-0 w-7 h-7 rounded-full items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-white'}`}
               style={{elevation: 2}}>
               <Icon name="camera-alt" size={15} color="#3b82f6" />
             </View>
           </TouchableOpacity>
 
-          <Text className="text-xl font-bold text-gray-800 text-center">
+          <Text className={`text-xl font-bold text-center ${isDark ? 'text-white' : 'text-gray-800'}`}>
             {customer.full_name}
           </Text>
           <Text className="text-gray-400 text-sm mt-1">{customer.phone}</Text>
@@ -278,77 +281,69 @@ export default function CustomerDetailScreen({
 
         {/* ── Thông tin cá nhân ── */}
         <View
-          className="bg-white mx-4 mb-3 rounded-2xl px-4 py-4"
+          className={`mx-4 mb-3 rounded-2xl px-4 py-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
           style={{
             elevation: 1,
             shadowColor: '#000',
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.3 : 0.05,
             shadowRadius: 4,
             shadowOffset: {width: 0, height: 1},
           }}>
           <SectionHeader
-            title={t('customer.detail.personal_info', {
-              defaultValue: 'Thông tin cá nhân',
-            })}
+            title={t('customer.detail.personal_info')}
           />
-          <View className="h-px bg-gray-100 mb-4" />
+          <View className={`h-px mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} />
           <InfoRow
-            label={t('customer.detail.id_number', {defaultValue: 'Số CCCD'})}
+            label={t('customer.detail.id_number')}
             value={customer.id_number ?? undefined}
           />
           <InfoRow
-            label={t('customer.detail.dob', {defaultValue: 'Ngày sinh'})}
+            label={t('customer.detail.dob')}
             value={formatDate(customer.date_of_birth)}
           />
           <InfoRow
-            label={t('customer.detail.gender', {defaultValue: 'Giới tính'})}
-            value={formatGender(customer.gender)}
+            label={t('customer.detail.gender')}
+            value={formatGender(customer.gender, t)}
           />
           <InfoRow
-            label={t('customer.detail.nationality', {
-              defaultValue: 'Quốc tịch',
-            })}
-            value={formatNationality(customer.nationality)}
+            label={t('customer.detail.nationality')}
+            value={formatNationality(customer.nationality, t)}
           />
           <InfoRow
-            label={t('customer.detail.address', {defaultValue: 'Địa chỉ'})}
+            label={t('customer.detail.address')}
             value={customer.address ?? undefined}
           />
           <InfoRow
-            label={t('customer.detail.notes', {defaultValue: 'Ghi chú'})}
+            label={t('customer.detail.notes')}
             value={customer.notes ?? undefined}
           />
         </View>
 
         {/* ── Giao dịch gần đây ── */}
         <View
-          className="bg-white mx-4 mb-3 rounded-2xl px-4 py-4"
+          className={`mx-4 mb-3 rounded-2xl px-4 py-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
           style={{
             elevation: 1,
             shadowColor: '#000',
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.3 : 0.05,
             shadowRadius: 4,
             shadowOffset: {width: 0, height: 1},
           }}>
           <SectionHeader
-            title={t('customer.detail.recent_bills', {
-              defaultValue: 'Giao dịch gần đây',
-            })}
+            title={t('customer.detail.recent_bills')}
             right={
               hasMoreBills ? (
                 <TouchableOpacity onPress={() => setShowAllBills(v => !v)}>
                   <Text className="text-blue-500 text-sm font-semibold">
                     {showAllBills
-                      ? t('customer.detail.hide_bills', {defaultValue: 'Ẩn'})
-                      : t('customer.detail.view_all', {
-                          defaultValue: 'Xem tất cả',
-                        })}
+                      ? t('customer.detail.hide_bills')
+                      : t('customer.detail.view_all')}
                   </Text>
                 </TouchableOpacity>
               ) : null
             }
           />
-          <View className="h-px bg-gray-100 mb-3" />
+          <View className={`h-px mb-3 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} />
 
           {loadingData ? (
             <ActivityIndicator
@@ -364,7 +359,7 @@ export default function CustomerDetailScreen({
                     className="w-10 h-10 rounded-xl items-center justify-center mr-3"
                     style={{
                       backgroundColor:
-                        bill.bill_status === 'paid' ? '#eff6ff' : '#fff1f2',
+                        bill.bill_status === 'paid' ? (isDark ? '#1e3a5f' : '#eff6ff') : (isDark ? '#451a1a' : '#fff1f2'),
                     }}>
                     <Icon
                       name={
@@ -377,7 +372,7 @@ export default function CustomerDetailScreen({
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[14px] font-bold text-gray-800">
+                    <Text className={`text-[14px] font-bold ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
                       {bill.bill_number}
                     </Text>
                     <Text className="text-xs text-gray-400 mt-0.5">
@@ -385,24 +380,22 @@ export default function CustomerDetailScreen({
                     </Text>
                   </View>
                   <View className="items-end gap-1">
-                    <Text className="text-[14px] font-bold text-gray-800">
-                      {formatCurrency(bill.total_amount)}
+                    <Text className={`text-[14px] font-bold ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
+                      {formatPrice(bill.total_amount, t)}
                     </Text>
                     <BillStatusBadge status={bill.bill_status} />
                   </View>
                 </View>
                 {index < displayedBills.length - 1 && (
-                  <View className="h-px bg-gray-100" />
+                  <View className={`h-px ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} />
                 )}
               </View>
             ))
           ) : (
             <View className="items-center py-8">
-              <Icon name="receipt-long" size={40} color="#d1d5db" />
+              <Icon name="receipt-long" size={40} color={isDark ? '#374151' : '#d1d5db'} />
               <Text className="text-gray-400 text-sm mt-2">
-                {t('customer.detail.no_bills', {
-                  defaultValue: 'Không có giao dịch nào gần đây',
-                })}
+                {t('customer.detail.no_bills')}
               </Text>
             </View>
           )}
@@ -410,20 +403,18 @@ export default function CustomerDetailScreen({
 
         {/* ── Lưu trú hiện tại ── */}
         <View
-          className="bg-white mx-4 mb-6 rounded-2xl px-4 py-4"
+          className={`mx-4 mb-6 rounded-2xl px-4 py-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
           style={{
             elevation: 1,
             shadowColor: '#000',
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.3 : 0.05,
             shadowRadius: 4,
             shadowOffset: {width: 0, height: 1},
           }}>
           <SectionHeader
-            title={t('customer.detail.current_stay', {
-              defaultValue: 'Lưu trú hiện tại',
-            })}
+            title={t('customer.detail.current_stay')}
           />
-          <View className="h-px bg-gray-100 mb-3" />
+          <View className={`h-px mb-3 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`} />
 
           {loadingData ? (
             <ActivityIndicator
@@ -435,41 +426,37 @@ export default function CustomerDetailScreen({
             <View
               className="rounded-xl p-4"
               style={{
-                backgroundColor: '#f0f9ff',
+                backgroundColor: isDark ? '#0c4a6e' : '#f0f9ff',
                 borderWidth: 1,
-                borderColor: '#bae6fd',
+                borderColor: isDark ? '#075985' : '#bae6fd',
               }}>
               <View className="flex-row items-center justify-between mb-1">
-                <Text className="text-xs font-bold text-blue-500 tracking-wider uppercase">
+                <Text className={`text-xs font-bold tracking-wider uppercase ${isDark ? 'text-blue-400' : 'text-blue-500'}`}>
                   {contract!.room_type ?? contract!.contract_number}
                 </Text>
-                <View className="px-2 py-0.5 rounded-full bg-blue-100">
-                  <Text className="text-xs font-bold text-blue-600">
-                    {t('customer.detail.staying', {defaultValue: 'ĐANG Ở'})}
+                <View className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                  <Text className={`text-xs font-bold ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                    {t('customer.detail.staying')}
                   </Text>
                 </View>
               </View>
-              <Text className="text-3xl font-black text-gray-800 mb-3">
+              <Text className={`text-3xl font-black mb-3 ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
                 {contract!.room_code ?? '-'}
               </Text>
               <View className="flex-row mb-1">
                 <View className="flex-1">
                   <Text className="text-xs text-gray-400">
-                    {t('customer.detail.checkin_date', {
-                      defaultValue: 'Ngày nhận phòng',
-                    })}
+                    {t('customer.detail.checkin_date')}
                   </Text>
-                  <Text className="text-sm font-semibold text-gray-700 mt-0.5">
+                  <Text className={`text-sm font-semibold mt-0.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     {formatDate(contract!.start_date)}
                   </Text>
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-gray-400">
-                    {t('customer.detail.checkout_date', {
-                      defaultValue: 'Dự kiến trả',
-                    })}
+                    {t('customer.detail.checkout_date')}
                   </Text>
-                  <Text className="text-sm font-semibold text-gray-700 mt-0.5">
+                  <Text className={`text-sm font-semibold mt-0.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     {formatDate(contract!.end_date)}
                   </Text>
                 </View>
@@ -478,9 +465,7 @@ export default function CustomerDetailScreen({
                 className="mt-3 py-2.5 rounded-xl items-center bg-white"
                 style={{borderWidth: 1, borderColor: '#bae6fd'}}>
                 <Text className="text-blue-500 font-semibold text-sm">
-                  {t('customer.detail.booking_detail', {
-                    defaultValue: 'Chi tiết đặt phòng',
-                  })}
+                  {t('customer.detail.booking_detail')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -488,9 +473,7 @@ export default function CustomerDetailScreen({
             <View className="items-center py-8">
               <Icon name="hotel" size={40} color="#d1d5db" />
               <Text className="text-gray-400 text-sm mt-2">
-                {t('customer.detail.no_stay', {
-                  defaultValue: 'Không có lưu trú nào gần đây',
-                })}
+                {t('customer.detail.no_stay')}
               </Text>
             </View>
           )}

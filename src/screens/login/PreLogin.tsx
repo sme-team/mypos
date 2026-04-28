@@ -26,11 +26,13 @@ const PreLogin = ({ onLogin }: any) => {
   const fontScale = width < 360 ? 0.9 : width > 400 ? 1.1 : 1;
 
   const toggleLanguage = () => {
-    const newLng = i18n.language === 'vi' ? 'en' : 'vi';
-    i18n.changeLanguage(newLng);
+    const langs = ['vi', 'en', 'zh'];
+    const currentIndex = langs.indexOf(i18n.language || 'vi');
+    const nextIndex = (currentIndex + 1) % langs.length;
+    i18n.changeLanguage(langs[nextIndex]);
   };
 
-  const currentLangLabel = i18n.language === 'vi' ? 'VN' : 'EN';
+  const currentLangLabel = i18n.language === 'vi' ? 'VN' : i18n.language === 'zh' ? 'ZH' : 'EN';
 
   return (
     <SafeAreaView
@@ -47,7 +49,7 @@ const PreLogin = ({ onLogin }: any) => {
           {/* Logo Section */}
           <View className="items-center mb-6">
             <Image
-              source={require('../../assets/logo/logoMyposs.png')}
+              source={require('../../assets/logo/logoMypos.png')}
               style={{
                 width: 180 * fontScale,
                 height: 180 * fontScale,
@@ -55,8 +57,11 @@ const PreLogin = ({ onLogin }: any) => {
               }}
               resizeMode="contain"
             />
-            <View className="items-center mb-6">
-              <View className={`h-1 w-12 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`} />
+            <View className="items-center mb-6 -mt-12">
+              <View
+                className={`h-1 ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`}
+                style={{ width: 120 * fontScale }}
+              />
             </View>
           </View>
 

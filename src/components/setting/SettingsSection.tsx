@@ -1,9 +1,11 @@
 import React from 'react';
 import {View, Text} from 'react-native';
 import {useTranslation} from 'react-i18next';
+import {useTheme} from '../../hooks/useTheme';
 
 const SettingsSection = ({title, children}: any) => {
   const {t} = useTranslation();
+  const {isDark} = useTheme();
 
   return (
     <View className="mt-6">
@@ -11,7 +13,7 @@ const SettingsSection = ({title, children}: any) => {
         {t(title)}
       </Text>
 
-      <View className="bg-white rounded-xl px-3 shadow-sm">{children}</View>
+      <View className={`rounded-xl px-3 shadow-sm ${isDark ? 'bg-gray-800' : 'bg-white'}`}>{children}</View>
     </View>
   );
 };

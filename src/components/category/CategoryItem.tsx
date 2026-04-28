@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import VariantItem from './VariantItem';
+import {useTranslation} from 'react-i18next';
 import type {CategoryItem as CategoryItemType} from '../../screens/category/types';
 
 interface Props {
@@ -51,8 +52,10 @@ const CategoryItem: React.FC<Props> = ({
   onAddVariant,
   onToggleSelect,
   onToggleSelectVariant,
-}) => (
-  <View
+}) => {
+  const {t} = useTranslation();
+  return (
+    <View
     className="bg-white rounded-2xl mb-2 overflow-hidden"
     style={{
       borderWidth: isSelected ? 1.5 : 0,
@@ -160,13 +163,14 @@ const CategoryItem: React.FC<Props> = ({
               marginTop: 2,
             }}>
             <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '600'}}>
-              + Thêm biến thể
+              {t('category.add_variant', '+ Thêm biến thể')}
             </Text>
           </TouchableOpacity>
         )}
       </View>
     )}
   </View>
-);
+  );
+};
 
 export default CategoryItem;

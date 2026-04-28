@@ -280,6 +280,7 @@ export default function ExportHistory({
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f9fafb'} />
       {/* Header */}
       <View
         className={`flex-row items-center px-4 py-3 border-b ${

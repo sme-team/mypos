@@ -77,16 +77,16 @@ export const AddVariantModal: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!productId) {
-      Alert.alert('Lỗi', 'Vui lòng chọn sản phẩm');
+      Alert.alert(t('alert.error'), t('pos.category.selectProduct'));
       return;
     }
     if (!name.trim() || !price.trim() || !selectedUnit) {
-      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      Alert.alert(t('alert.error'), t('pos.category.allFieldsRequired'));
       return;
     }
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice)) {
-      Alert.alert('Lỗi', 'Giá phải là số hợp lệ');
+      Alert.alert(t('alert.error'), t('pos.category.invalidPrice'));
       return;
     }
     onSave(productId, name.trim(), parsedPrice, selectedUnit.name);
@@ -137,7 +137,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 color: '#374151',
                 marginBottom: 6,
               }}>
-              Thuộc sản phẩm
+              {t('pos.category.belongToProduct')}
             </Text>
             <View style={{position: 'relative', marginBottom: 16}}>
               <View
@@ -158,7 +158,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 />
                 <TextInput
                   style={{flex: 1, paddingVertical: 12, color: '#111827'}}
-                  placeholder="Tìm sản phẩm..."
+                  placeholder={t('pos.category.searchProductPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   value={productSearch}
                   onChangeText={text => {
@@ -198,7 +198,7 @@ export const AddVariantModal: React.FC<Props> = ({
                   {suggestions.length === 0 ? (
                     <View style={{padding: 14, alignItems: 'center'}}>
                       <Text style={{color: '#9ca3af', fontSize: 13}}>
-                        Không tìm thấy sản phẩm
+                        {t('pos.category.noProductFound')}
                       </Text>
                     </View>
                   ) : (
@@ -253,7 +253,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 color: '#374151',
                 marginBottom: 6,
               }}>
-              Tên loại
+              {t('pos.category.variantName')}
             </Text>
             <TextInput
               style={{
@@ -265,7 +265,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 marginBottom: 16,
                 color: '#111827',
               }}
-              placeholder="Nhập tên loại"
+              placeholder={t('pos.category.variantNamePlaceholder')}
               value={name}
               onChangeText={setName}
             />
@@ -280,7 +280,7 @@ export const AddVariantModal: React.FC<Props> = ({
                     color: '#374151',
                     marginBottom: 6,
                   }}>
-                  Giá bán
+                  {t('pos.category.price')}
                 </Text>
                 <View
                   style={{
@@ -305,7 +305,7 @@ export const AddVariantModal: React.FC<Props> = ({
                     onChangeText={setPrice}
                     keyboardType="numeric"
                   />
-                  <Text style={{color: '#6b7280', fontSize: 14}}>đ</Text>
+                  <Text style={{color: '#6b7280', fontSize: 14}}>{t('pos.currency_symbol')}</Text>
                 </View>
               </View>
               <View style={{flex: 1}}>
@@ -316,7 +316,7 @@ export const AddVariantModal: React.FC<Props> = ({
                     color: '#374151',
                     marginBottom: 6,
                   }}>
-                  Đơn vị tính
+                  {t('pos.category.unit')}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setShowUnitPicker(true)}
@@ -335,7 +335,7 @@ export const AddVariantModal: React.FC<Props> = ({
                       fontSize: 14,
                       color: selectedUnit ? '#111827' : '#9ca3af',
                     }}>
-                    {selectedUnit ? selectedUnit.name : 'Chọn đơn vị'}
+                    {selectedUnit ? selectedUnit.name : t('pos.category.selectUnit')}
                   </Text>
                   <Icon name="keyboard-arrow-down" size={20} color="#6b7280" />
                 </TouchableOpacity>
@@ -354,7 +354,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 onPress={handleClose}>
                 <Text
                   style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                  Hủy
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -367,7 +367,7 @@ export const AddVariantModal: React.FC<Props> = ({
                 }}
                 onPress={handleSave}>
                 <Text style={{color: '#fff', fontWeight: '600', fontSize: 15}}>
-                  Lưu thay đổi
+                  {t('pos.category.saveChanges')}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import {useTranslation} from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import i18n from '../../i18n';
 
 import {DateInput} from '../../components/DateInput';
 import {DisplayModeDropdown} from '../../components/report/DisplayModeDropdown';
@@ -109,7 +111,7 @@ const DbSectionList: React.FC<DbSectionListProps> = ({
                   {item.name}
                 </Text>
                 <Text className="text-sm font-semibold text-blue-600">
-                  {item.amount.toLocaleString('vi-VN') + 'đ'}
+                  {item.amount.toLocaleString(i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US') + i18n.t('pos.currency_symbol')}
                 </Text>
               </View>
               {index < displayedItems.length - 1 && (
@@ -211,6 +213,7 @@ export default function Report({
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#111827' : '#f9fafb'} />
       {/* Header */}
       <View
         className={`flex-row items-center justify-between px-4 py-3 border-b ${
@@ -309,10 +312,8 @@ export default function Report({
             {topLodgingItems.length > 0 && (
               <View className="mx-4 mt-3 mb-24">
                 <DbSectionList
-                  title={t('report.topLodging') || 'Top Lưu trú'}
-                  subtitle={
-                    t('report.topLodgingDesc') || 'Phòng cho thuê nhiều nhất'
-                  }
+                  title={t('report.topLodging')}
+                  subtitle={t('report.topLodgingDesc')}
                   items={topLodgingItems}
                   isDark={isDark}
                 />

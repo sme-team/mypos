@@ -66,7 +66,7 @@ const extractRoomNumber = (name: string): string => {
 
 // ─── Thumbnail ────────────────────────────────────────────────────────────────
 
-function RoomThumbnail({variant}: {variant: RoomVariant}) {
+function RoomThumbnail({variant, isDark}: {variant: RoomVariant; isDark: boolean}) {
   const label = extractRoomNumber(variant.name);
   const fs =
     label.length > 4 ? 11 : label.length > 3 ? 14 : label.length > 2 ? 17 : 22;
@@ -77,7 +77,7 @@ function RoomThumbnail({variant}: {variant: RoomVariant}) {
         width: 68,
         height: 68,
         borderRadius: 12,
-        backgroundColor: '#d1d5db',
+        backgroundColor: isDark ? '#374151' : '#d1d5db',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
@@ -93,14 +93,14 @@ function RoomThumbnail({variant}: {variant: RoomVariant}) {
           width: 52,
           height: 52,
           borderRadius: 26,
-          backgroundColor: 'rgba(255,255,255,0.3)',
+          backgroundColor: 'rgba(255,255,255,0.1)',
         }}
       />
       <Text
         style={{
           fontSize: fs,
           fontWeight: '900',
-          color: '#374151',
+          color: isDark ? '#f3f4f6' : '#374151',
           letterSpacing: 0.5,
         }}>
         {label}
@@ -118,6 +118,7 @@ function RoomCard({
   selectionMode,
   isSelected,
   onLongPress,
+  t,
 }: {
   variant: RoomVariant;
   onPress: () => void;
@@ -125,6 +126,7 @@ function RoomCard({
   selectionMode?: boolean;
   isSelected?: boolean;
   onLongPress?: () => void;
+  t: any;
 }) {
   const {floor, area, bed} = variant.attributes ?? {};
   const hasMeta = floor != null || area != null || bed != null;
@@ -171,7 +173,7 @@ function RoomCard({
         </View>
       )}
 
-      <RoomThumbnail variant={variant} />
+      <RoomThumbnail variant={variant} isDark={isDark} />
 
       <View style={{flex: 1, gap: 3}}>
         <Text
@@ -209,7 +211,7 @@ function RoomCard({
                 />
                 <Text
                   style={{fontSize: 11, color: isDark ? '#6b7280' : '#94a3b8'}}>
-                  Tầng {floor}
+                  {t('room.floorLabel', {floor})}
                 </Text>
               </View>
             )}
@@ -307,7 +309,7 @@ function RoomFAB({onAddRoom}: {onAddRoom: () => void}) {
                 paddingVertical: 10,
               }}>
               <Text style={{color: '#fff', fontSize: 14, fontWeight: '600'}}>
-                {t('room.addRoom', 'Thêm phòng mới')}
+                {t('room.addRoom')}
               </Text>
             </View>
             <View
@@ -427,8 +429,8 @@ export default function RoomManagement({storeId}: Props) {
           try {
             const defaultRoomType = await RoomService.createRoomType({
               storeId,
-              name: 'Phòng',
-              description: 'Danh mục phòng mặc định',
+              name: t('room.defaultType'),
+              description: t('room.defaultTypeDesc'),
             });
             setRoomTypes([defaultRoomType]);
             logger.info(
@@ -443,7 +445,7 @@ export default function RoomManagement({storeId}: Props) {
         }
       } catch (e) {
         logger.error('[RoomManagement] loadData error:', e);
-        setError(t('room.loadError', 'Không thể tải danh sách phòng'));
+        setError(t('room.loadError'));
       } finally {
         setIsLoading(false);
         setRefreshing(false);
@@ -555,7 +557,7 @@ export default function RoomManagement({storeId}: Props) {
     const dynamic = roomTypes
       .filter(rt => typesWithRooms.has(rt.id))
       .map(rt => ({key: rt.id, label: rt.name}));
-    return [{key: 'all', label: 'Tất cả'}, ...dynamic];
+    return [{key: 'all', label: t('pos.all')}, ...dynamic];
   }, [roomTypes, variants]);
 
   const displayed = useMemo(() => {
@@ -620,11 +622,12 @@ export default function RoomManagement({storeId}: Props) {
   const deleteLabel = useMemo(() => {
     if (totalSelected === 1) {
       const variantId = [...selectedVariantIds][0];
-      const name = displayed.find(v => v.id === variantId)?.name ?? 'phòng';
-      return `phòng "${name}"`;
+      const variant = displayed.find(v => v.id === variantId);
+      const name = variant?.name || '';
+      return t('room.deleteSingleRoom', {name});
     }
-    return `${totalSelected} phòng đã chọn`;
-  }, [totalSelected, selectedVariantIds, displayed]);
+    return t('room.deleteMultipleRooms', {count: totalSelected});
+  }, [totalSelected, selectedVariantIds, displayed, t]);
 
   // ── Room detail save ──────────────────────────────────────────────────────
 
@@ -663,8 +666,8 @@ export default function RoomManagement({storeId}: Props) {
               flex: 1,
             }}>
             {totalSelected > 0
-              ? `Đã chọn ${totalSelected} phòng`
-              : 'Chọn phòng để xóa'}
+              ? t('room.selectedCount', {count: totalSelected})
+              : t('room.selectToDelete')}
           </Text>
         ) : (
           <View
@@ -681,7 +684,7 @@ export default function RoomManagement({storeId}: Props) {
               borderColor,
             }}>
             <TextInput
-              placeholder={t('room.searchPlaceholder', 'Tìm phòng...')}
+              placeholder={t('room.searchPlaceholder')}
               placeholderTextColor="#9ca3af"
               value={searchText}
               onChangeText={setSearchText}
@@ -697,9 +700,9 @@ export default function RoomManagement({storeId}: Props) {
           <Text style={{color: '#3b82f6', fontSize: 14, fontWeight: '600'}}>
             {selectionMode
               ? isAllSelected
-                ? 'Bỏ chọn tất cả'
-                : 'Chọn tất cả'
-              : 'Chọn'}
+                ? t('common.deselect_all')
+                : t('common.select_all')
+              : t('common.select')}
           </Text>
         </TouchableOpacity>
 
@@ -774,7 +777,7 @@ export default function RoomManagement({storeId}: Props) {
         <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
           <ActivityIndicator size="large" color="#0077ff" />
           <Text style={{color: '#9ca3af', fontSize: 14, marginTop: 12}}>
-            {t('room.loading', 'Đang tải danh sách phòng...')}
+            {t('room.loading')}
           </Text>
         </View>
       ) : error ? (
@@ -809,7 +812,7 @@ export default function RoomManagement({storeId}: Props) {
               borderRadius: 12,
             }}>
             <Text style={{color: '#fff', fontWeight: '600'}}>
-              {t('common.retry', 'Thử lại')}
+              {t('common.retry')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -818,10 +821,10 @@ export default function RoomManagement({storeId}: Props) {
           <Icon name="bed" size={56} color={isDark ? '#374151' : '#e2e8f0'} />
           <Text style={{color: '#9ca3af', fontSize: 15, marginTop: 12}}>
             {searchText.trim()
-              ? t('room.noSearchResult', 'Không tìm thấy phòng phù hợp')
+              ? t('room.noSearchResult')
               : variants.length === 0
-              ? t('room.empty', 'Chưa có phòng nào')
-              : t('room.emptyFilter', 'Không có phòng trong hạng mục này')}
+              ? t('room.empty')
+              : t('room.emptyFilter')}
           </Text>
         </View>
       ) : (
@@ -856,6 +859,7 @@ export default function RoomManagement({storeId}: Props) {
                 isDark={isDark}
                 selectionMode={selectionMode}
                 isSelected={selectedVariantIds.has(item.id)}
+                t={t}
                 onLongPress={() => {
                   if (!selectionMode) {
                     logger.debug(
@@ -905,7 +909,7 @@ export default function RoomManagement({storeId}: Props) {
                     fontSize: 13,
                     fontWeight: '600',
                   }}>
-                  Đang tải thông tin phòng...
+                  {t('room.loadingInfo')}
                 </Text>
               </View>
             </View>
@@ -921,7 +925,7 @@ export default function RoomManagement({storeId}: Props) {
         <SelectionBar
           totalSelected={totalSelected}
           onDelete={() => setShowDeleteConfirm(true)}
-          labelSelected={count => `Xóa ${count} phòng đã chọn`}
+          labelSelected={count => t('room.deleteSelectedLabel', {count})}
         />
       )}
 

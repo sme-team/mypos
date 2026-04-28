@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClose,
 }) => {
   const {t} = useTranslation();
-  const {isDark} = useTheme();
+  const {isDark, toggleTheme} = useTheme();
   const insets = useSafeAreaInsets(); // ✅ Lấy insets chính xác từng thiết bị
 
   const menuItems = [
@@ -146,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <View style={{flex: 1}}>
             <Text style={[styles.footerName, {color: textColor}]}>Admin</Text>
             <Text style={[styles.footerRole, {color: subTextColor}]}>
-              Quản trị viên
+              {t('sidebar.admin_role', 'Quản trị viên')}
             </Text>
           </View>
           <TouchableOpacity

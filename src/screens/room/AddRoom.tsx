@@ -188,8 +188,10 @@ const PriceField = memo(
     borderColor,
     isDark,
     subTextColor,
-  }: PriceFieldProps) => (
-    <View>
+  }: PriceFieldProps) => {
+    const {t} = useTranslation();
+    return (
+      <View>
       <FieldLabel subTextColor={subTextColor}>{label}</FieldLabel>
       <View style={{position: 'relative'}}>
         {/* Badge unit_code bên trái */}
@@ -222,11 +224,12 @@ const PriceField = memo(
             fontWeight: '900',
             color: '#94a3b8',
           }}>
-          VNĐ
+          {t('pos.currency_symbol') || 'đ'}
         </Text>
       </View>
-    </View>
-  ),
+      </View>
+    );
+  },
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -381,8 +384,8 @@ export default function AddRoom({
     if (!name.trim()) {
       logger.warn('[AddRoom] handleSave validation failed: name is empty');
       Alert.alert(
-        t('common.missingInfo', 'Thiếu thông tin'),
-        t('room.nameRequired', 'Vui lòng nhập tên phòng.'),
+        t('common.missingInfo'),
+        t('room.nameRequired'),
       );
       return;
     }
@@ -391,8 +394,8 @@ export default function AddRoom({
         '[AddRoom] handleSave validation failed: selectedTypeId is empty',
       );
       Alert.alert(
-        t('common.missingInfo', 'Thiếu thông tin'),
-        t('room.categoryRequired', 'Vui lòng chọn hạng mục phòng.'),
+        t('common.missingInfo'),
+        t('room.categoryRequired'),
       );
       return;
     }
@@ -452,8 +455,8 @@ export default function AddRoom({
     } catch (err) {
       logger.error('[AddRoom] save error:', err);
       Alert.alert(
-        t('common.error', 'Lỗi'),
-        t('room.saveError', 'Không thể lưu phòng.'),
+        t('common.error'),
+        t('room.saveError'),
       );
     } finally {
       setSaving(false);
@@ -469,7 +472,7 @@ export default function AddRoom({
       logger.warn(
         '[AddRoom] handleCreateCategory validation failed: name is empty',
       );
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên hạng mục phòng.');
+      Alert.alert(t('common.missingInfo'), t('room.newCategoryNameRequired'));
       return;
     }
     setCreatingCategory(true);
@@ -489,7 +492,7 @@ export default function AddRoom({
       onRoomTypeCreated?.(newType);
     } catch (err) {
       logger.error('[AddRoom] createCategory error:', err);
-      Alert.alert('Lỗi', 'Không thể tạo hạng mục phòng.');
+      Alert.alert(t('common.error'), t('room.newCategorySaveError'));
     } finally {
       setCreatingCategory(false);
     }
@@ -534,8 +537,8 @@ export default function AddRoom({
           </TouchableOpacity>
           <Text style={{fontSize: 20, fontWeight: '700', color: textColor}}>
             {isEdit
-              ? t('room.roomDetail', 'Chi tiết phòng')
-              : t('room.addRoom', 'Thêm phòng mới')}
+              ? t('room.roomDetail')
+              : t('room.addRoom')}
           </Text>
         </View>
       </View>
@@ -552,13 +555,13 @@ export default function AddRoom({
         {/* ── Section 1: Hạng mục phòng ── */}
         <SectionCard
           icon="category"
-          title={t('room.classification', 'Phân loại')}
+          title={t('room.classification')}
           cardBg={cardBg}
           subTextColor={subTextColor}
           borderColor={borderColor}
           isDark={isDark}>
           <FieldLabel subTextColor={subTextColor}>
-            {t('room.roomCategory', 'Hạng mục phòng')}
+            {t('room.roomCategory')}
           </FieldLabel>
 
           {/* Trigger button */}
@@ -577,7 +580,7 @@ export default function AddRoom({
               borderColor,
             }}>
             <Text style={{fontSize: 14, fontWeight: '500', color: textColor}}>
-              {selectedType?.name ?? t('room.selectCategory', 'Chọn hạng mục')}
+              {selectedType?.name ?? t('room.selectCategory')}
             </Text>
             <Icon
               name={
@@ -607,7 +610,7 @@ export default function AddRoom({
                 {roomTypes.length === 0 ? (
                   <View style={{padding: 16, alignItems: 'center'}}>
                     <Text style={{fontSize: 13, color: '#9ca3af'}}>
-                      Chưa có hạng mục phòng nào
+                      {t('room.noCategories')}
                     </Text>
                   </View>
                 ) : (
@@ -692,7 +695,7 @@ export default function AddRoom({
                     fontWeight: '600',
                     color: '#3b82f6',
                   }}>
-                  Tạo hạng mục mới...
+                  {t('room.createNewCategory')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -702,7 +705,7 @@ export default function AddRoom({
         {/* ── Section 2: Thông tin phòng ── */}
         <SectionCard
           icon="info"
-          title={t('room.roomInfo', 'Thông tin phòng')}
+          title={t('room.roomInfo')}
           cardBg={cardBg}
           subTextColor={subTextColor}
           borderColor={borderColor}
@@ -711,26 +714,26 @@ export default function AddRoom({
             <View style={{flexDirection: 'row', gap: 12}}>
               <View style={{flex: 1}}>
                 <FieldLabel subTextColor={subTextColor}>
-                  {t('room.floor', 'Tầng')}
+                  {t('room.floor')}
                 </FieldLabel>
                 <TextInput
                   style={inputStyle}
                   value={floor}
                   onChangeText={setFloor}
-                  placeholder="3"
+                  placeholder={t('room.floorPlaceholder')}
                   keyboardType="number-pad"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
               <View style={{flex: 2}}>
                 <FieldLabel subTextColor={subTextColor}>
-                  {t('room.roomName', 'Tên phòng')}
+                  {t('room.roomName')}
                 </FieldLabel>
                 <TextInput
                   style={inputStyle}
                   value={name}
                   onChangeText={setName}
-                  placeholder="VD: Room 301"
+                  placeholder={t('room.roomNamePlaceholder')}
                   placeholderTextColor="#9ca3af"
                 />
               </View>
@@ -742,7 +745,7 @@ export default function AddRoom({
         {/* Thứ tự cố định: Giờ đầu → Theo giờ → Qua ngày → Một tháng */}
         <SectionCard
           icon="payments"
-          title={t('room.initialPricing', 'Giá khởi tạo')}
+          title={t('room.initialPricing')}
           cardBg={cardBg}
           subTextColor={subTextColor}
           borderColor={borderColor}
@@ -757,14 +760,14 @@ export default function AddRoom({
               }}>
               <ActivityIndicator size="small" color="#3b82f6" />
               <Text style={{fontSize: 12, color: '#9ca3af'}}>
-                Đang tải giá...
+                {t('room.loadingPrices')}
               </Text>
             </View>
           ) : (
             <View style={{gap: 16}}>
               {/* 1. Giá giờ đầu – HOURFIRST */}
               <PriceField
-                label={t('room.priceHourFirst', 'Giá giờ đầu')}
+                label={t('room.priceHourFirst')}
                 unitCode="HOURFIRST"
                 value={priceHourFirst}
                 onChange={setPriceHourFirst}
@@ -777,7 +780,7 @@ export default function AddRoom({
 
               {/* 2. Giá theo giờ – HOUR */}
               <PriceField
-                label={t('room.priceHour', 'Giá theo giờ')}
+                label={t('room.priceHour')}
                 unitCode="HOUR"
                 value={priceHour}
                 onChange={setPriceHour}
@@ -790,7 +793,7 @@ export default function AddRoom({
 
               {/* 3. Giá qua ngày – DAY */}
               <PriceField
-                label={t('room.priceListed', 'Giá qua ngày')}
+                label={t('room.priceListed')}
                 unitCode="DAY"
                 value={priceListed}
                 onChange={setPriceListed}
@@ -803,7 +806,7 @@ export default function AddRoom({
 
               {/* 4. Giá một tháng – MONTH */}
               <PriceField
-                label={t('room.priceMonth', 'Giá một tháng')}
+                label={t('room.priceMonth')}
                 unitCode="MONTH"
                 value={priceMonth}
                 onChange={setPriceMonth}
@@ -847,7 +850,7 @@ export default function AddRoom({
             backgroundColor: isDark ? '#374151' : '#f1f5f9',
           }}>
           <Text style={{fontSize: 14, fontWeight: '700', color: subTextColor}}>
-            {t('common.cancel', 'Hủy')}
+            {t('common.cancel')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -870,10 +873,10 @@ export default function AddRoom({
           }}>
           <Text style={{fontSize: 14, fontWeight: '700', color: '#fff'}}>
             {saving
-              ? t('common.saving', 'Đang lưu...')
+              ? t('common.saving')
               : isEdit
-              ? t('common.saveChanges', 'Lưu thay đổi')
-              : t('common.save', 'Lưu thông tin')}
+              ? t('common.saveChanges')
+              : t('common.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -934,7 +937,7 @@ export default function AddRoom({
                   color: textColor,
                   flex: 1,
                 }}>
-                Tạo hạng mục phòng mới
+                {t('room.createNewCategoryTitle')}
               </Text>
               <TouchableOpacity onPress={() => setShowNewCategoryModal(false)}>
                 <Icon name="close" size={22} color="#9ca3af" />
@@ -951,7 +954,7 @@ export default function AddRoom({
                 textTransform: 'uppercase',
                 letterSpacing: 0.8,
               }}>
-              Tên hạng mục *
+              {t('room.categoryNameLabel')}
             </Text>
             <TextInput
               style={{
@@ -960,7 +963,7 @@ export default function AddRoom({
               }}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
-              placeholder="VD: Phòng Luxury, Phòng VIP..."
+              placeholder={t('room.categoryNamePlaceholder')}
               placeholderTextColor="#9ca3af"
               autoFocus
             />
@@ -975,7 +978,7 @@ export default function AddRoom({
                 textTransform: 'uppercase',
                 letterSpacing: 0.8,
               }}>
-              Mô tả (tùy chọn)
+              {t('room.categoryDescLabel')}
             </Text>
             <TextInput
               style={{
@@ -986,7 +989,7 @@ export default function AddRoom({
               }}
               value={newCategoryDesc}
               onChangeText={setNewCategoryDesc}
-              placeholder="Mô tả ngắn về hạng mục này..."
+              placeholder={t('room.categoryDescPlaceholder')}
               placeholderTextColor="#9ca3af"
               multiline
             />
@@ -1008,7 +1011,7 @@ export default function AddRoom({
                     fontWeight: '700',
                     color: subTextColor,
                   }}>
-                  Hủy
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1027,7 +1030,7 @@ export default function AddRoom({
                 ) : (
                   <Text
                     style={{fontSize: 14, fontWeight: '700', color: '#fff'}}>
-                    Tạo hạng mục
+                    {t('room.btnCreateCategory')}
                   </Text>
                 )}
               </TouchableOpacity>

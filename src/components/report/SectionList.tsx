@@ -18,8 +18,11 @@ interface SectionListProps {
   isDark?: boolean;
 }
 
+import i18n from '../../i18n';
+
 const formatCurrency = (amount: number): string => {
-  return amount.toLocaleString('vi-VN') + 'đ';
+  const currentLocale = i18n.language === 'vi' ? 'vi-VN' : i18n.language === 'zh' ? 'zh-CN' : 'en-US';
+  return amount.toLocaleString(currentLocale) + i18n.t('pos.currency_symbol');
 };
 
 export const SectionList: React.FC<SectionListProps> = ({

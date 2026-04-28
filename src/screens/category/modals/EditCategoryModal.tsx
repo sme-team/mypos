@@ -55,7 +55,7 @@ export const EditCategoryModal: React.FC<Props> = ({
               marginBottom: 24,
             }}>
             <Text style={{fontSize: 18, fontWeight: '700', color: '#111827'}}>
-              Chỉnh sửa danh mục
+              {t('pos.category.editCategory')}
             </Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color="#6b7280" />
@@ -97,7 +97,7 @@ export const EditCategoryModal: React.FC<Props> = ({
               }}
               onPress={onClose}>
               <Text style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                Hủy
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -110,7 +110,7 @@ export const EditCategoryModal: React.FC<Props> = ({
               }}
               onPress={handleSave}>
               <Text style={{color: '#fff', fontWeight: '600', fontSize: 15}}>
-                Lưu thay đổi
+                {t('pos.category.saveChanges')}
               </Text>
             </TouchableOpacity>
           </View>

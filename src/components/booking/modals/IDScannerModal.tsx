@@ -124,8 +124,8 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
   /** Dịch giới tính từ tiếng Anh hoặc mã số */
   const formatGender = (raw: string): string => {
     const lower = raw.toLowerCase();
-    if (lower === 'male' || lower === 'nam' || lower === '1') {return 'Nam';}
-    if (lower === 'female' || lower === 'nữ' || lower === '0') {return 'Nữ';}
+    if (lower === 'male' || lower === 'nam' || lower === '1') {return t('gender.male', 'Nam');}
+    if (lower === 'female' || lower === 'nữ' || lower === '0') {return t('gender.female', 'Nữ');}
     return raw;
   };
 
@@ -455,13 +455,13 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
                     placeholder="DD/MM/YYYY"
                     onChange={(val: string) => updateEditableField('dateOfBirth', val)} themedColors={themedColors} />
                   <EditRow icon="wc" label={t('idScanner.gender')} value={data.gender}
-                    placeholder="Nam/Nữ"
+                    placeholder={t('idScanner.gender_placeholder', 'Nam/Nữ')}
                     onChange={(val: string) => updateEditableField('gender', val)} themedColors={themedColors} />
                   <EditRow icon="home" label={t('idScanner.address')} value={data.address}
-                    placeholder="Số nhà, đường, phường..."
+                    placeholder={t('idScanner.address_placeholder', 'Số nhà, đường, phường...')}
                     onChange={(val: string) => updateEditableField('address', val)} themedColors={themedColors} multiline />
-                  <EditRow icon="location-city" label={t('idScanner.placeOfOrigin') || 'Quê quán'} value={data.placeOfOrigin}
-                    placeholder="Tỉnh/Thành phố..."
+                  <EditRow icon="location-city" label={t('idScanner.placeOfOrigin', 'Quê quán')} value={data.placeOfOrigin}
+                    placeholder={t('idScanner.placeOfOriginPlaceholder', 'Tỉnh/Thành phố...')}
                     onChange={(val: string) => updateEditableField('placeOfOrigin', val)} themedColors={themedColors} />
                 </>
               ) : (
@@ -473,7 +473,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
                   <InfoRow icon="cake" label={t('idScanner.dob')} value={data.dateOfBirth || '—'} themedColors={themedColors} missing={!data.dateOfBirth} t={t} />
                   <InfoRow icon="wc" label={t('idScanner.gender')} value={data.gender || '—'} themedColors={themedColors} missing={!data.gender} t={t} />
                   <InfoRow icon="home" label={t('idScanner.address')} value={data.address || '—'} themedColors={themedColors} missing={!data.address} t={t} />
-                  <InfoRow icon="location-city" label={t('idScanner.placeOfOrigin') || 'Quê quán'} value={data.placeOfOrigin || '—'} themedColors={themedColors} missing={!data.placeOfOrigin} t={t} />
+                  <InfoRow icon="location-city" label={t('idScanner.placeOfOrigin', 'Quê quán')} value={data.placeOfOrigin || '—'} themedColors={themedColors} missing={!data.placeOfOrigin} t={t} />
                   {data.oldIdNumber ? (
                     <InfoRow icon="history" label={t('idScanner.oldId')} value={data.oldIdNumber} themedColors={themedColors} t={t} />
                   ) : null}
@@ -560,7 +560,7 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
             <View style={styles.noPermissionView}>
               <Icon name="no-photography" size={48} color={themedColors.textSecondary} />
               <Text style={[{ color: themedColors.textSecondary, textAlign: 'center', marginTop: 12 }]}>
-                {cameraError ? `Lỗi Camera: ${cameraError}` : t('idScanner.cameraNoPermission')}
+                {cameraError ? `${t('idScanner.cameraError', 'Lỗi Camera')}: ${cameraError}` : t('idScanner.cameraNoPermission')}
                 {'\n'}{t('idScanner.cameraPermissionHint')}
               </Text>
             </View>
@@ -575,13 +575,13 @@ export const IDScannerModal: React.FC<IDScannerModalProps> = ({
               <View style={[styles.corner, styles.bottomLeft, { borderColor: themedColors.primary }]} />
               <View style={[styles.corner, styles.bottomRight, { borderColor: themedColors.primary }]} />
             </View>
-            <Text style={styles.hintText}>{t('idScanner.hint') || 'Đưa mã QR trên CCCD vào khung'}</Text>
+            <Text style={styles.hintText}>{t('idScanner.hint', 'Đưa mã QR trên CCCD vào khung')}</Text>
 
             {/* Trạng thái quét - diagnostic UI */}
             <View style={[styles.statusBadge, { backgroundColor: isCameraActive ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.2)' }]}>
               <View style={[styles.statusDot, { backgroundColor: isCameraActive ? '#4CAF50' : '#FF9800' }]} />
               <Text style={[styles.statusText, { color: isCameraActive ? '#4CAF50' : '#FF9800' }]}>
-                {isCameraActive ? (isScanning ? 'Đang chờ quét...' : 'Đã nhận diện') : 'Đang khởi tạo...'}
+                {isCameraActive ? (isScanning ? t('idScanner.waiting', 'Đang chờ quét...') : t('idScanner.recognized', 'Đã nhận diện')) : t('idScanner.initializing', 'Đang khởi tạo...')}
               </Text>
             </View>
           </View>

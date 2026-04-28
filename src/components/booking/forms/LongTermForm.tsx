@@ -50,7 +50,7 @@ export const LongTermForm = React.memo(({ form, updateForm, t, themedColors, isD
         onPress={() => setIsDurationOpen(!isDurationOpen)}
       >
         <Text style={{ flex: 1, color: themedColors.text, fontSize: 14 }}>
-          {durationOptions.find(o => o.value === form.contractDuration)?.label || 'Chọn thời hạn'}
+          {durationOptions.find(o => o.value === form.contractDuration)?.label || t('booking.form.selectDuration')}
         </Text>
         <Icon name="arrow-drop-down" size={20} color={themedColors.textHint} />
       </TouchableOpacity>

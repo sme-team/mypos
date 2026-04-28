@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useTranslation} from 'react-i18next';
 import {UnitPickerModal} from './UnitPickerModal';
 import type {UnitOption} from '../types';
 
@@ -46,6 +47,7 @@ export const VariantDetailModal: React.FC<Props> = ({
   onSave,
   onDelete,
 }) => {
+  const {t} = useTranslation();
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<UnitOption | null>(null);
@@ -62,12 +64,12 @@ export const VariantDetailModal: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!name.trim() || !price.trim() || !selectedUnit) {
-      Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      Alert.alert(t('alert.error'), t('pos.category.allFieldsRequired'));
       return;
     }
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice)) {
-      Alert.alert('Lỗi', 'Giá phải là số hợp lệ');
+      Alert.alert(t('alert.error'), t('pos.category.invalidPrice'));
       return;
     }
     onSave(itemId, variantId, name.trim(), parsedPrice, selectedUnit.name);
@@ -75,10 +77,10 @@ export const VariantDetailModal: React.FC<Props> = ({
   };
 
   const handleDelete = () => {
-    Alert.alert('Xóa loại', `Bạn có chắc muốn xóa loại "${name}"?`, [
-      {text: 'Hủy', style: 'cancel'},
+    Alert.alert(t('pos.category.deleteVariant'), t('pos.category.deleteVariantConfirm', { name }), [
+      {text: t('common.cancel'), style: 'cancel'},
       {
-        text: 'Xóa',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => {
           onClose();
@@ -124,7 +126,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                   fontWeight: '700',
                   color: '#111827',
                 }}>
-                Chi tiết loại
+                {t('pos.category.variantDetail')}
               </Text>
               <View
                 style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
@@ -150,7 +152,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                   color: '#374151',
                   marginBottom: 6,
                 }}>
-                Tên loại
+                {t('pos.category.variantName')}
               </Text>
               <TextInput
                 style={{
@@ -165,7 +167,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                   backgroundColor: '#f9fafb',
                   marginBottom: 16,
                 }}
-                placeholder="Nhập tên loại"
+                placeholder={t('pos.category.variantNamePlaceholder')}
                 value={name}
                 onChangeText={setName}
               />
@@ -180,7 +182,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                       color: '#374151',
                       marginBottom: 6,
                     }}>
-                    Giá bán
+                    {t('pos.category.price')}
                   </Text>
                   <View
                     style={{
@@ -212,7 +214,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                         color: '#6b7280',
                         fontWeight: '500',
                       }}>
-                      đ
+                      {t('pos.currency_symbol')}
                     </Text>
                   </View>
                 </View>
@@ -225,7 +227,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                       color: '#374151',
                       marginBottom: 6,
                     }}>
-                    Đơn vị tính
+                    {t('pos.category.unit')}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setShowUnitPicker(true)}
@@ -246,7 +248,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                         color: selectedUnit ? '#111827' : '#9ca3af',
                         fontWeight: selectedUnit ? '500' : '400',
                       }}>
-                      {selectedUnit ? selectedUnit.name : 'Chọn'}
+                      {selectedUnit ? selectedUnit.name : t('common.select')}
                     </Text>
                     <Icon
                       name="keyboard-arrow-down"
@@ -271,7 +273,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                 onPress={onClose}>
                 <Text
                   style={{color: '#374151', fontWeight: '600', fontSize: 15}}>
-                  Hủy
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -284,7 +286,7 @@ export const VariantDetailModal: React.FC<Props> = ({
                 }}
                 onPress={handleSave}>
                 <Text style={{color: '#fff', fontWeight: '700', fontSize: 15}}>
-                  Áp dụng
+                  {t('common.apply')}
                 </Text>
               </TouchableOpacity>
             </View>
