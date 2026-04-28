@@ -143,6 +143,8 @@ interface SheetCardProps {
   onUpdate: (updated: SheetConfig) => void;
   onRemove: (id: string) => void;
   isDark?: boolean;
+  /** Chỉ hiện các loại báo cáo user có quyền. Nếu không truyền → hiện tất cả */
+  allowedReportTypes?: ReportType[];
 }
 
 export const SheetCard: React.FC<SheetCardProps> = ({
@@ -150,10 +152,14 @@ export const SheetCard: React.FC<SheetCardProps> = ({
   onUpdate,
   onRemove,
   isDark = false,
+  allowedReportTypes,
 }) => {
   const {t} = useTranslation();
 
-  const reportTypeOptions = REPORT_TYPE_OPTIONS.map(opt => ({
+  // Lọc theo businessTypes nếu có truyền vào
+  const reportTypeOptions = REPORT_TYPE_OPTIONS.filter(
+    opt => !allowedReportTypes || allowedReportTypes.includes(opt.value),
+  ).map(opt => ({
     ...opt,
     label: t(opt.label),
   }));

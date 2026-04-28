@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * App.tsx – Entry point
  *
@@ -23,7 +21,7 @@ import React from 'react';
  */
 
 import './src/i18n/index';
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   StatusBar,
@@ -75,7 +73,7 @@ type Screen =
   | 'categories'
   | 'report'
   | 'report_export'
-  | 'report_export_history'  // ← thêm cái này
+  | 'report_export_history'
   | 'setting'
   | 'profile'
   | 'edit_profile';
@@ -84,7 +82,6 @@ type Screen =
 const AppContent: React.FC = () => {
   const { state: auth, logout } = useAuth();
   const { isDark } = useTheme();
-
   const [screen, setScreen] = useState<Screen>('landing');
   const [dbReady, setDbReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -220,16 +217,19 @@ const AppContent: React.FC = () => {
       {screen === 'main' && (
         <BusinessTypeNavigator
           isDark={isDark}
+          // eslint-disable-next-line react/no-unstable-nested-components
           SaleScreen={() => (
             <PosResident onOpenMenu={() => setIsSidebarVisible(true)} />
           )}
+          // eslint-disable-next-line react/no-unstable-nested-components
           AccommodationScreen={() => (
-            <PlaceScreen
-              onOpenMenu={() => setIsSidebarVisible(true)}
-              onBack={() => setScreen('dashboard')}
-            />
+            <PosResident onOpenMenu={() => setIsSidebarVisible(true)} />
           )}
           registerUrl={REGISTER_URL}
+          onBack={async () => {
+            await logout();
+            setScreen('landing');
+          }}
         />
       )}
 

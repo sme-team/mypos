@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useTranslation} from 'react-i18next';
 import {useTheme} from '../../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useAuth} from '../../store/authStore';
 import {SheetCard, SheetConfig} from '../../components/excel-export/SheetCard';
 import ExcelExportService, {
   BillType,
@@ -196,6 +197,12 @@ export default function ReportExport({
   const storeId = storeIdProp ?? 'store-001';
   const {t} = useTranslation();
   const {isDark} = useTheme();
+  const {state: authState} = useAuth();
+
+  // Lọc reportType options theo businessTypes từ JWT
+  const businessTypes = authState.user?.businessTypes ?? [];
+  const hasSale          = businessTypes.includes('sale');
+  const hasAccommodation = businessTypes.includes('accommodation');
 
   useEffect(() => {
     loadSheetsFromStorage();
@@ -350,6 +357,13 @@ export default function ReportExport({
             onUpdate={handleUpdateSheet}
             onRemove={handleRemoveSheet}
             isDark={isDark}
+            allowedReportTypes={
+              hasSale && hasAccommodation
+                ? ['sales', 'accommodation']
+                : hasSale
+                ? ['sales']
+                : ['accommodation']
+            }
           />
         ))}
         <AddSheetButton onPress={handleAddSheet} isDark={isDark} />

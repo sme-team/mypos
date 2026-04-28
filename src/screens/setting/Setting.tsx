@@ -22,13 +22,13 @@ const SHEET_LINK_KEY = 'GOOGLE_SHEET_URL';
 interface SettingProps {
   onOpenMenu: () => void;
   onBack: () => void;
-  onNavigateProfile: () => void; // Thêm dòng này
+  onNavigateProfile?: () => void;
 }
-export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
+export default function Setting({ onOpenMenu, onBack: _onBack, onNavigateProfile }: SettingProps) {
   const { t, i18n } = useTranslation();
   const [sheetLink, setSheetLink] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
+  const [_langOpen, _setLangOpen] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(SHEET_LINK_KEY).then(saved => {
@@ -210,7 +210,7 @@ export default function Setting({ onOpenMenu, onBack: _onBack }: SettingProps) {
                   name="sync"
                   size={20}
                   color="#fff"
-                  style={{marginRight: 8}}
+                  style={{marginRight: 8}} // eslint-disable-line react-native/no-inline-styles
                 />
               )}
               <Text className="text-white font-semibold text-base">

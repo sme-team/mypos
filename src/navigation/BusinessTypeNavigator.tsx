@@ -166,7 +166,6 @@ const noStyles = StyleSheet.create({
   },
 });
 
-// ─── BusinessTabBar ───────────────────────────────────────────────────────────
 
 interface TabBarProps {
   active: 'sale' | 'accommodation';
@@ -174,39 +173,6 @@ interface TabBarProps {
   isDark?: boolean;
 }
 
-function BusinessTabBar({ active, onChange, isDark = false }: TabBarProps) {
-  const bg           = isDark ? '#1e293b' : '#ffffff';
-  const borderClr    = isDark ? '#334155' : '#e2e8f0';
-  const activeText   = '#4f8ef7';
-  const inactiveText = isDark ? '#94a3b8' : '#64748b';
-  const activeBg     = isDark ? '#1e3a5f' : '#eff6ff';
-
-  return (
-    <View style={[tabStyles.wrapper, { backgroundColor: bg, borderBottomColor: borderClr }]}>
-      <TouchableOpacity
-        style={[tabStyles.tab, active === 'sale' && { backgroundColor: activeBg }]}
-        onPress={() => onChange('sale')}
-        activeOpacity={0.75}>
-        <Icon name="point-of-sale" size={18} color={active === 'sale' ? activeText : inactiveText} style={tabStyles.tabIcon} />
-        <Text style={[tabStyles.tabText, { color: active === 'sale' ? activeText : inactiveText }, active === 'sale' && tabStyles.tabTextActive]}>
-          POS
-        </Text>
-        {active === 'sale' && <View style={[tabStyles.indicator, { backgroundColor: activeText }]} />}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[tabStyles.tab, active === 'accommodation' && { backgroundColor: activeBg }]}
-        onPress={() => onChange('accommodation')}
-        activeOpacity={0.75}>
-        <Icon name="hotel" size={18} color={active === 'accommodation' ? activeText : inactiveText} style={tabStyles.tabIcon} />
-        <Text style={[tabStyles.tabText, { color: active === 'accommodation' ? activeText : inactiveText }, active === 'accommodation' && tabStyles.tabTextActive]}>
-          LƯU TRÚ
-        </Text>
-        {active === 'accommodation' && <View style={[tabStyles.indicator, { backgroundColor: activeText }]} />}
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 const tabStyles = StyleSheet.create({
   wrapper: { flexDirection: 'row', borderBottomWidth: 1 },
@@ -237,13 +203,13 @@ export function useBusinessType() {
   const { state } = useAuth();
   const user = state.user;
 
-  if (!user) return { screen: 'loading' as const };
-  if (!user.shopSetupDone || user.businessTypes.length === 0) return { screen: 'setup' as const };
+  if (!user) { return { screen: 'loading' as const }; }
+  if (!user.shopSetupDone || user.businessTypes.length === 0) { return { screen: 'setup' as const }; }
 
   const types = user.businessTypes;
-  if (types.includes('sale') && types.includes('accommodation')) return { screen: 'both' as const };
-  if (types.includes('sale'))          return { screen: 'sale' as const };
-  if (types.includes('accommodation')) return { screen: 'accommodation' as const };
+  if (types.includes('sale') && types.includes('accommodation')) { return { screen: 'both' as const }; }
+  if (types.includes('sale')) { return { screen: 'sale' as const }; }
+  if (types.includes('accommodation')) { return { screen: 'accommodation' as const }; }
 
   return { screen: 'setup' as const };
 }
@@ -256,13 +222,8 @@ interface NavigatorProps {
   AccommodationScreen: React.ComponentType<any>;
   /** URL trang web đăng ký – gắn từ App.tsx */
   registerUrl: string;
-  onBusinessTypeSelected?: (type: 'sale' | 'accommodation') => void;
   /** Callback quay lại màn hình đăng nhập */
   onBack?: () => void;
-  /** Extra props forwarded to SaleScreen */
-  saleScreenProps?: Record<string, any>;
-  /** Extra props forwarded to AccommodationScreen */
-  accommodationScreenProps?: Record<string, any>;
 }
 
 export function BusinessTypeNavigator({
@@ -270,43 +231,21 @@ export function BusinessTypeNavigator({
   SaleScreen,
   AccommodationScreen,
   registerUrl,
-  onBusinessTypeSelected,
   onBack,
-  saleScreenProps,
-  accommodationScreenProps,
 }: NavigatorProps) {
   const { screen } = useBusinessType();
-  const [activeTab, setActiveTab] = React.useState<'sale' | 'accommodation'>('sale');
-
-  const { state } = useAuth();
-  React.useEffect(() => { setActiveTab('sale'); }, [state.user?.id]);
-
-  React.useEffect(() => {
-    if (screen === 'sale')               onBusinessTypeSelected?.('sale');
-    else if (screen === 'accommodation') onBusinessTypeSelected?.('accommodation');
-    else if (screen === 'both')          onBusinessTypeSelected?.(activeTab);
-  }, [screen, activeTab, onBusinessTypeSelected]);
 
   if (screen === 'setup') {
     return <NoBusinessTypeScreen registerUrl={registerUrl} isDark={isDark} onBack={onBack} />;
   }
 
-  if (screen === 'sale') return <SaleScreen isDark={isDark} {...saleScreenProps} />;
+  if (screen === 'sale') { return <SaleScreen isDark={isDark} />; }
 
-  if (screen === 'accommodation') return <AccommodationScreen isDark={isDark} {...accommodationScreenProps} />;
+  if (screen === 'accommodation') { return <AccommodationScreen isDark={isDark} />; }
 
   if (screen === 'both') {
-    // Khi có cả 2 loại, businessType được xác định từ token → render màn hình tương ứng
-    // Tab bar đã được tích hợp bên trong từng màn hình (PosResident / PlaceScreen)
-    const handleTabChange = (type: 'sale' | 'accommodation') => {
-      setActiveTab(type);
-      onBusinessTypeSelected?.(type);
-    };
-    return (
-      <View style={{ flex: 1 }}>
-        {activeTab === 'sale' ? <SaleScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} {...saleScreenProps} /> : <AccommodationScreen isDark={isDark} onTabChange={handleTabChange} activeTab={activeTab} {...accommodationScreenProps} />}
-      </View>
-    );
+    // PosResident tự render cả 2 tab (POS + lưu trú) dựa theo JWT businessTypes
+    return <SaleScreen isDark={isDark} />;
   }
 
   return null;

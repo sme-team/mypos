@@ -1,0 +1,15 @@
+3 account set cứng để có thể đăng nhặp là
+*  ┌─────────────────┬──────────────┬────────────────────────────┐
+ * │ Username        │ Password     │ BusinessType               │
+ * ├─────────────────┼──────────────┼────────────────────────────┤
+ * │ demo_sale       │ demo123      │ sale (POS bán hàng)        │
+ * │ demo_hotel      │ demo123      │ accommodation (Lưu trú)    │
+ * │ demo_both       │ demo123      │ sale + accommodation       │
+ * └─────────────────┴──────────────┴────────────────────────────┘
+
+mang hinh repot xuat e xcel, xuất theo loại businessTypes
+đưa serch cua ban hang Xuong duoi thanh switch
+sưa mang hinh moi vao cua luu tru
+
+trên màng hình đăng nhập có nút dùng thử, bấm là nhảy thẳng vào app, không cần đăng nhập
+sao khi vào thì khách hàng có thể chỉnh đc BusinessType , 

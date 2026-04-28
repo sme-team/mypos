@@ -96,22 +96,22 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Badge hiển thị loại hình đang active
   const badgeMeta = hasSale && hasAccommodation
-    ? { label: 'POS + Lưu trú', icon: 'storefront',    color: '#7c3aed', bg: '#f5f3ff' }
+    ? { label: 'Bán hàng & Lưu trú', icon: 'storefront', color: '#7c3aed', bg: '#f5f3ff' }
     : hasSale
     ? TYPE_META['sale']
     : TYPE_META['accommodation'];
 
-  /**
-   * Menu items theo businessTypes từ JWT:
-   *   ['sale']                  → Dashboard + POS + Danh mục + Báo cáo + Cài đặt
-   *   ['accommodation']         → Dashboard + POS(lưu trú) + Danh mục + Báo cáo + Cài đặt
-   *   ['sale','accommodation']  → Dashboard + POS(cả 2 tab) + Danh mục + Báo cáo + Cài đặt
-   * PosResident tự render đúng tab bên trong dựa theo JWT.
-   * CategoryManagement tự render đúng tab bên trong dựa theo JWT.
-   */
+  // Label menu POS theo businessTypes
+  const posMenuLabel = hasSale && hasAccommodation
+    ? 'Bán hàng & Lưu trú'
+    : hasSale
+    ? 'Bán hàng'
+    : 'Lưu trú';
+
+  // Dùng labelOverride thay vì labelDef để tránh bị i18n key override
   const menuItems = [
     MENU_DASHBOARD,
-    MENU_POS,
+    { ...MENU_POS, labelOverride: posMenuLabel },
     MENU_CATEGORIES,
     MENU_REPORT,
     MENU_SETTING,
@@ -218,7 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       ? { color: '#fff' }
                       : styles.menuLabelActive),
                 ]}>
-                {t(item.labelKey, item.labelDef)}
+                {(item as any).labelOverride ?? t(item.labelKey, item.labelDef)}
               </Text>
               {isActive && <View style={styles.activeDot} />}
             </TouchableOpacity>

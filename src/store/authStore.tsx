@@ -22,6 +22,7 @@ import axios from 'axios';
 import { tokenManager } from '../services/token-manager';
 import { AUTH_API_BASE, API_V1 } from '../services/api-client';
 import { createModuleLogger, AppModules } from '../logger';
+import { findMockAccount } from '../mocks/mockAccounts';
 
 const logger = createModuleLogger(AppModules.AUTH_STORE);
 
@@ -186,7 +187,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const hydrate = async () => {
 
       console.log('[AuthStore] Starting hydrate...');
-      dispatch({type: 'HYDRATE_START'});
 
       try {
         await tokenManager.init();
@@ -195,15 +195,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const method = tokenManager.getAuthMethod();
         console.log('[AuthStore] User:', user, 'Method:', method);
 
-
-        if (savedUser && method) {
+        if (user && method) {
           dispatch({
             type: 'HYDRATE_DONE',
-            payload: { user: savedUser, authMethod: method },
+            payload: { user: user, authMethod: method },
           });
           logger.info('[AuthStore] ✅ Hydrate thành công', {
-            userId: savedUser.id,
-            businessTypes: savedUser.businessTypes,
+            userId: user.id,
+            businessTypes: user.businessTypes,
           });
         } else {
 
@@ -224,6 +223,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginCredentials = useCallback(
     async (username: string, password: string): Promise<boolean> => {
       dispatch({ type: 'CLEAR_ERROR' });
+
+      // ── [MOCK] Kiểm tra tài khoản hardcoded trước khi gọi BE ─────────────
+      // Nếu khớp → đăng nhập ngay, không cần mạng / server.
+      const mockAccount = findMockAccount(username, password);
+      if (mockAccount) {
+        logger.info('[AuthStore] 🧪 Mock login:', mockAccount.username, '-', mockAccount.description);
+
+        const user = buildUserFromToken(mockAccount.accessToken, true);
+        if (!user) {
+          dispatch({ type: 'SET_ERROR', payload: '[Mock] Token không hợp lệ' });
+          return false;
+        }
+
+        await tokenManager.setTokens({
+          accessToken: mockAccount.accessToken,
+          refreshToken: mockAccount.accessToken,
+          authMethod: 'credentials',
+          user,
+          expiresIn: 9999999, // hết hạn rất xa
+        });
+
+        dispatch({
+          type: 'LOGIN_SUCCESS',
+          payload: { user, authMethod: 'credentials' },
+        });
+
+        logger.info('[AuthStore] ✅ Mock đăng nhập thành công', {
+          userId: user.id,
+          businessTypes: user.businessTypes,
+        });
+
+        return true;
+      }
+      // ── [/MOCK] ────────────────────────────────────────────────────────────
+
       try {
         logger.info('[AuthStore] 🔐 Đăng nhập credentials:', username);
 
